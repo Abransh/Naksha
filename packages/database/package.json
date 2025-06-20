@@ -1,0 +1,21 @@
+{
+  "name": "@nakksha/database",
+  "version": "0.0.0",
+  "main": "index.ts",
+  "types": "index.ts",
+  "dependencies": {
+    "@prisma/client": "^5.7.0",
+    "prisma": "^5.7.0"
+  },
+  "scripts": {
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma db push --force-reset",
+    "db:migrate": "prisma migrate dev",
+    "db:seed": "tsx seed.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.6.0"
+  }
+}

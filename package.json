@@ -1,0 +1,35 @@
+{
+  "name": "nakksha-platform",
+  "version": "1.0.0",
+  "private": true,
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
+  "scripts": {
+    "dev": "concurrently \"npm run dev:dashboard\" \"npm run dev:api\"",
+    "dev:dashboard": "cd apps/dashboard && npm run dev",
+    "dev:api": "cd apps/api && npm run dev",
+    "build": "npm run build:packages && npm run build:apps",
+    "build:packages": "npm run build --workspaces --if-present",
+    "build:apps": "npm run build:dashboard && npm run build:api",
+    "build:dashboard": "cd apps/dashboard && npm run build",
+    "build:api": "cd apps/api && npm run build",
+    "test": "npm run test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "clean": "rm -rf node_modules apps/*/node_modules packages/*/node_modules",
+    "setup": "npm install && npm run db:setup",
+    "db:setup": "cd packages/database && npx prisma generate && npx prisma db push",
+    "db:reset": "cd packages/database && npx prisma db push --force-reset",
+    "db:studio": "cd packages/database && npx prisma studio"
+  },
+  "devDependencies": {
+    "concurrently": "^8.2.2",
+    "@types/node": "^20.10.0",
+    "typescript": "^5.3.0"
+  },
+  "engines": {
+    "node": ">=18.17.0",
+    "npm": ">=9.0.0"
+  }
+}
