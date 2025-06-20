@@ -1,0 +1,405 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================================
+// USER MANAGEMENT MODELS
+// ============================================================================
+
+// Main consultants table - users who provide consulting services
+model Consultant {
+  id                    String   @id @default(cuid())
+  email                 String   @unique
+  passwordHash          String   @map("password_hash")
+  firstName             String   @map("first_name")
+  lastName              String   @map("last_name")
+  phoneCountryCode      String   @default("+91") @map("phone_country_code")
+  phoneNumber           String   @map("phone_number")
+  consultancySector     String?  @map("consultancy_sector")
+  bankName              String?  @map("bank_name")
+  accountNumber         String?  @map("account_number")
+  ifscCode              String?  @map("ifsc_code")
+  personalSessionTitle String?  @map("personal_session_title")
+  webinarSessionTitle   String?  @map("webinar_session_title")
+  description           String?
+  experienceMonths      Int      @default(0) @map("experience_months")
+  personalSessionPrice Decimal? @map("personal_session_price") @db.Decimal(10, 2)
+  webinarSessionPrice   Decimal? @map("webinar_session_price") @db.Decimal(10, 2)
+  instagramUrl          String?  @map("instagram_url")
+  linkedinUrl           String?  @map("linkedin_url")
+  twitterUrl            String?  @map("twitter_url")
+  profilePhotoUrl       String?  @map("profile_photo_url")
+  slug                  String?  @unique // For /[consultantName] URLs
+  isActive              Boolean  @default(true) @map("is_active")
+  emailVerified         Boolean  @default(false) @map("email_verified")
+  subscriptionPlan      String   @default("free") @map("subscription_plan")
+  subscriptionExpiresAt DateTime? @map("subscription_expires_at")
+  createdAt             DateTime @default(now()) @map("created_at")
+  updatedAt             DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  clients               Client[]
+  sessions              Session[]
+  quotations            Quotation[]
+  conversations         Conversation[]
+  availabilitySlots     AvailabilitySlot[]
+  paymentTransactions   PaymentTransaction[]
+  emailLogs            EmailLog[]
+  dailyAnalytics       DailyAnalytics[]
+
+  @@map("consultants")
+}
+
+// Admin users for platform management
+model Admin {
+  id           String   @id @default(cuid())
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  fullName     String   @map("full_name")
+  role         String   @default("admin")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  @@map("admins")
+}
+
+// ============================================================================
+// CLIENT MANAGEMENT MODELS
+// ============================================================================
+
+// Clients who book sessions with consultants
+model Client {
+  id               String   @id @default(cuid())
+  consultantId     String   @map("consultant_id")
+  name             String
+  email            String
+  phoneCountryCode String   @default("+91") @map("phone_country_code")
+  phoneNumber      String?  @map("phone_number")
+  address          String?
+  city             String?
+  state            String?
+  country          String   @default("India")
+  isActive         Boolean  @default(true) @map("is_active")
+  totalSessions    Int      @default(0) @map("total_sessions")
+  totalAmountPaid  Decimal  @default(0) @map("total_amount_paid") @db.Decimal(10, 2)
+  createdAt        DateTime @default(now()) @map("created_at")
+  updatedAt        DateTime @updatedAt @map("updated_at")
+
+  // Relations
+  consultant    Consultant     @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+  sessions      Session[]
+  quotations    Quotation[]
+  conversations Conversation[]
+  messages      Message[]
+
+  @@unique([consultantId, email]) // One client per consultant per email
+  @@map("clients")
+}
+
+// ============================================================================
+// SESSION MANAGEMENT MODELS
+// ============================================================================
+
+// Sessions/appointments between consultants and clients
+model Session {
+  id              String       @id @default(cuid())
+  consultantId    String       @map("consultant_id")
+  clientId        String       @map("client_id")
+  title           String
+  sessionType     SessionType  @map("session_type")
+  scheduledDate   DateTime     @map("scheduled_date") @db.Date
+  scheduledTime   DateTime     @map("scheduled_time") @db.Time
+  durationMinutes Int          @default(60) @map("duration_minutes")
+  amount          Decimal      @db.Decimal(10, 2)
+  currency        String       @default("INR")
+  platform        Platform
+  meetingLink     String?      @map("meeting_link")
+  meetingId       String?      @map("meeting_id")
+  meetingPassword String?      @map("meeting_password")
+  status          SessionStatus @default(PENDING)
+  paymentStatus   PaymentStatus @default(PENDING) @map("payment_status")
+  paymentId       String?      @map("payment_id") // Razorpay payment_id
+  paymentMethod   String?      @map("payment_method")
+  notes           String?
+  consultantNotes String?      @map("consultant_notes")
+  isRepeatClient  Boolean      @default(false) @map("is_repeat_client")
+  bookingSource   String       @default("website") @map("booking_source")
+  createdAt       DateTime     @default(now()) @map("created_at")
+  updatedAt       DateTime     @updatedAt @map("updated_at")
+
+  // Relations
+  consultant         Consultant           @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+  client             Client               @relation(fields: [clientId], references: [id], onDelete: Cascade)
+  availabilitySlot   AvailabilitySlot?
+  paymentTransactions PaymentTransaction[]
+
+  @@map("sessions")
+}
+
+// ============================================================================
+// AVAILABILITY MANAGEMENT MODELS
+// ============================================================================
+
+// Available time slots for consultants
+model AvailabilitySlot {
+  id           String      @id @default(cuid())
+  consultantId String      @map("consultant_id")
+  sessionType  SessionType @map("session_type")
+  date         DateTime    @db.Date
+  startTime    DateTime    @map("start_time") @db.Time
+  endTime      DateTime    @map("end_time") @db.Time
+  isBooked     Boolean     @default(false) @map("is_booked")
+  sessionId    String?     @unique @map("session_id")
+  createdAt    DateTime    @default(now()) @map("created_at")
+
+  // Relations
+  consultant Consultant @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+  session    Session?   @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+
+  @@unique([consultantId, sessionType, date, startTime])
+  @@map("availability_slots")
+}
+
+// ============================================================================
+// QUOTATION MANAGEMENT MODELS
+// ============================================================================
+
+// Quotations sent to clients
+model Quotation {
+  id                 String          @id @default(cuid())
+  consultantId       String          @map("consultant_id")
+  clientId           String?         @map("client_id")
+  clientEmail        String          @map("client_email")
+  clientName         String          @map("client_name")
+  quotationName      String          @map("quotation_name")
+  description        String?
+  baseAmount         Decimal         @map("base_amount") @db.Decimal(10, 2)
+  discountPercentage Decimal         @default(0) @map("discount_percentage") @db.Decimal(5, 2)
+  finalAmount        Decimal         @map("final_amount") @db.Decimal(10, 2)
+  currency           String          @default("INR")
+  durationText       String?         @map("duration_text")
+  expiresAt          DateTime?       @map("expires_at")
+  status             QuotationStatus @default(DRAFT)
+  quotationImageUrl  String?         @map("quotation_image_url")
+  viewCount          Int             @default(0) @map("view_count")
+  lastViewedAt       DateTime?       @map("last_viewed_at")
+  sentAt             DateTime?       @map("sent_at")
+  respondedAt        DateTime?       @map("responded_at")
+  notes              String?
+  createdAt          DateTime        @default(now()) @map("created_at")
+  updatedAt          DateTime        @updatedAt @map("updated_at")
+
+  // Relations
+  consultant          Consultant           @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+  client              Client?              @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  paymentTransactions PaymentTransaction[]
+
+  @@map("quotations")
+}
+
+// ============================================================================
+// CONVERSATION MANAGEMENT MODELS
+// ============================================================================
+
+// Conversations between consultants and clients
+model Conversation {
+  id            String            @id @default(cuid())
+  consultantId  String            @map("consultant_id")
+  clientId      String?           @map("client_id")
+  clientEmail   String            @map("client_email")
+  clientName    String            @map("client_name")
+  subject       String?
+  status        ConversationStatus @default(ACTIVE)
+  lastMessageAt DateTime          @default(now()) @map("last_message_at")
+  createdAt     DateTime          @default(now()) @map("created_at")
+
+  // Relations
+  consultant Consultant @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+  client     Client?    @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  messages   Message[]
+
+  @@map("conversations")
+}
+
+// Messages within conversations
+model Message {
+  id             String   @id @default(cuid())
+  conversationId String   @map("conversation_id")
+  senderType     SenderType @map("sender_type")
+  senderId       String?  @map("sender_id")
+  senderName     String   @map("sender_name")
+  messageText    String   @map("message_text")
+  attachments    Json?    // Array of file URLs
+  isRead         Boolean  @default(false) @map("is_read")
+  sentAt         DateTime @default(now()) @map("sent_at")
+
+  // Relations
+  conversation Conversation @relation(fields: [conversationId], references: [id], onDelete: Cascade)
+  client       Client?      @relation(fields: [senderId], references: [id])
+
+  @@map("messages")
+}
+
+// ============================================================================
+// PAYMENT TRACKING MODELS
+// ============================================================================
+
+// Payment transactions
+model PaymentTransaction {
+  id                String        @id @default(cuid())
+  consultantId      String        @map("consultant_id")
+  sessionId         String?       @map("session_id")
+  quotationId       String?       @map("quotation_id")
+  clientEmail       String        @map("client_email")
+  amount            Decimal       @db.Decimal(10, 2)
+  currency          String        @default("INR")
+  paymentGateway    String        @default("razorpay") @map("payment_gateway")
+  gatewayPaymentId  String?       @map("gateway_payment_id")
+  gatewayOrderId    String?       @map("gateway_order_id")
+  status            PaymentStatus
+  paymentMethod     String?       @map("payment_method")
+  gatewayResponse   Json?         @map("gateway_response")
+  processedAt       DateTime?     @map("processed_at")
+  createdAt         DateTime      @default(now()) @map("created_at")
+
+  // Relations
+  consultant Consultant @relation(fields: [consultantId], references: [id])
+  session    Session?   @relation(fields: [sessionId], references: [id])
+  quotation  Quotation? @relation(fields: [quotationId], references: [id])
+
+  @@map("payment_transactions")
+}
+
+// ============================================================================
+// NOTIFICATION & EMAIL LOGS
+// ============================================================================
+
+// Email logs for tracking all sent emails
+model EmailLog {
+  id            String     @id @default(cuid())
+  consultantId  String?    @map("consultant_id")
+  recipientEmail String    @map("recipient_email")
+  emailType     String     @map("email_type")
+  subject       String?
+  templateUsed  String?    @map("template_used")
+  status        EmailStatus
+  externalId    String?    @map("external_id") // SendGrid message ID
+  errorMessage  String?    @map("error_message")
+  metadata      Json?
+  sentAt        DateTime?  @map("sent_at")
+  deliveredAt   DateTime?  @map("delivered_at")
+  createdAt     DateTime   @default(now()) @map("created_at")
+
+  // Relations
+  consultant Consultant? @relation(fields: [consultantId], references: [id])
+
+  @@map("email_logs")
+}
+
+// ============================================================================
+// ANALYTICS & REPORTING MODELS
+// ============================================================================
+
+// Daily analytics aggregations for dashboard performance
+model DailyAnalytics {
+  id                   String   @id @default(cuid())
+  consultantId         String   @map("consultant_id")
+  date                 DateTime @db.Date
+  sessionsCreated      Int      @default(0) @map("sessions_created")
+  sessionsCompleted    Int      @default(0) @map("sessions_completed")
+  sessionsCancelled    Int      @default(0) @map("sessions_cancelled")
+  newClients           Int      @default(0) @map("new_clients")
+  revenueEarned        Decimal  @default(0) @map("revenue_earned") @db.Decimal(10, 2)
+  quotationsSent       Int      @default(0) @map("quotations_sent")
+  quotationsAccepted   Int      @default(0) @map("quotations_accepted")
+  createdAt            DateTime @default(now()) @map("created_at")
+
+  // Relations
+  consultant Consultant @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+
+  @@unique([consultantId, date])
+  @@map("daily_analytics")
+}
+
+// ============================================================================
+// ENUMS
+// ============================================================================
+
+enum SessionType {
+  PERSONAL
+  WEBINAR
+
+  @@map("session_type")
+}
+
+enum Platform {
+  ZOOM
+  MEET
+  TEAMS
+
+  @@map("platform")
+}
+
+enum SessionStatus {
+  PENDING
+  CONFIRMED
+  COMPLETED
+  CANCELLED
+  RETURNED
+  ABANDONED
+  NO_SHOW
+
+  @@map("session_status")
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  REFUNDED
+  FAILED
+
+  @@map("payment_status")
+}
+
+enum QuotationStatus {
+  DRAFT
+  SENT
+  VIEWED
+  ACCEPTED
+  REJECTED
+  EXPIRED
+
+  @@map("quotation_status")
+}
+
+enum ConversationStatus {
+  ACTIVE
+  CLOSED
+  ARCHIVED
+
+  @@map("conversation_status")
+}
+
+enum SenderType {
+  CONSULTANT
+  CLIENT
+
+  @@map("sender_type")
+}
+
+enum EmailStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+
+  @@map("email_status")
+}
