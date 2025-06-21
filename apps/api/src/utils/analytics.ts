@@ -132,22 +132,22 @@ export const calculateSessionMetrics = async (
     });
 
     const totalSessions = sessions.length;
-    const completedSessions = sessions.filter(s => s.status === 'COMPLETED');
-    const cancelledSessions = sessions.filter(s => s.status === 'CANCELLED');
-    const pendingSessions = sessions.filter(s => s.status === 'PENDING');
+    const completedSessions = sessions.filter((s:any) => s.status === 'COMPLETED');
+    const cancelledSessions = sessions.filter((s:any) => s.status === 'CANCELLED');
+    const pendingSessions = sessions.filter((s:any) => s.status === 'PENDING');
 
     // Calculate revenue
-    const paidSessions = sessions.filter(s => s.paymentStatus === 'PAID');
-    const revenueGenerated = paidSessions.reduce((sum, session) => sum + Number(session.amount), 0);
+    const paidSessions = sessions.filter((s:any) => s.paymentStatus === 'PAID');
+    const revenueGenerated = paidSessions.reduce((sum: any, session:any ) => sum + Number(session.amount), 0);
 
     // Calculate completion and cancellation rates
     const completionRate = totalSessions > 0 ? (completedSessions.length / totalSessions) * 100 : 0;
     const cancellationRate = totalSessions > 0 ? (cancelledSessions.length / totalSessions) * 100 : 0;
 
     // Calculate average duration
-    const sessionsWithDuration = sessions.filter(s => s.durationMinutes > 0);
+    const sessionsWithDuration = sessions.filter((s:any) => s.durationMinutes > 0);
     const averageDuration = sessionsWithDuration.length > 0
-      ? sessionsWithDuration.reduce((sum, s) => sum + s.durationMinutes, 0) / sessionsWithDuration.length
+      ? sessionsWithDuration.reduce((sum:any, s:any) => sum + s.durationMinutes, 0) / sessionsWithDuration.length
       : 0;
 
     // Calculate average revenue
@@ -159,7 +159,7 @@ export const calculateSessionMetrics = async (
 
     // Analyze peak hours
     const hourCounts = new Map<number, number>();
-    sessions.forEach(session => {
+    sessions.forEach((session:any) => {
       if (session.scheduledTime) {
         const hour = new Date(`1970-01-01T${session.scheduledTime}`).getHours();
         hourCounts.set(hour, (hourCounts.get(hour) || 0) + 1);
@@ -168,11 +168,11 @@ export const calculateSessionMetrics = async (
 
     const peakHours = Array.from(hourCounts.entries())
       .map(([hour, count]) => ({ hour, count }))
-      .sort((a, b) => b.count - a.count)
+      .sort((a, b) => (b.count as number) - (a.count as number))
       .slice(0, 5);
 
     // Sessions by type
-    const typeGroups = sessions.reduce((acc, session) => {
+    const typeGroups = sessions.reduce((acc:any, session:any) => {
       const type = session.sessionType;
       if (!acc[type]) {
         acc[type] = { count: 0, revenue: 0 };
@@ -186,12 +186,12 @@ export const calculateSessionMetrics = async (
 
     const sessionsByType = Object.entries(typeGroups).map(([type, data]) => ({
       type,
-      count: data.count,
-      revenue: data.revenue
+      count: (data as any).count,
+      revenue: (data as any).revenue
     }));
 
     // Sessions by platform
-    const platformGroups = sessions.reduce((acc, session) => {
+    const platformGroups = sessions.reduce((acc:any, session:any) => {
       const platform = session.platform;
       acc[platform] = (acc[platform] || 0) + 1;
       return acc;
@@ -199,7 +199,7 @@ export const calculateSessionMetrics = async (
 
     const sessionsByPlatform = Object.entries(platformGroups).map(([platform, count]) => ({
       platform,
-      count
+      count: count as number
     }));
 
     const metrics: SessionMetrics = {
@@ -250,24 +250,24 @@ export const generateClientInsights = async (
     });
 
     const totalClients = allClients.length;
-    const activeClients = allClients.filter(c => c.totalSessions > 0).length;
-    const repeatClients = allClients.filter(c => c.totalSessions > 1).length;
+    const activeClients = allClients.filter((c:any)=> c.totalSessions > 0).length;
+    const repeatClients = allClients.filter((c:any) => c.totalSessions > 1).length;
 
     // Calculate growth metrics
     const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-    const newClients = allClients.filter(c => c.createdAt >= thirtyDaysAgo).length;
+    const newClients = allClients.filter((c:any) => c.createdAt >= thirtyDaysAgo).length;
 
     const clientRetentionRate = totalClients > 0 ? (repeatClients / totalClients) * 100 : 0;
     const averageSessionsPerClient = totalClients > 0 
-      ? allClients.reduce((sum, c) => sum + c.totalSessions, 0) / totalClients 
+      ? allClients.reduce((sum:any, c:any) => sum + c.totalSessions, 0) / totalClients 
       : 0;
     const averageRevenuePerClient = totalClients > 0
-      ? allClients.reduce((sum, c) => sum + Number(c.totalAmountPaid), 0) / totalClients
+      ? allClients.reduce((sum:any, c:any) => sum + Number(c.totalAmountPaid), 0) / totalClients
       : 0;
 
     // Calculate growth rate
     const sixtyDaysAgo = new Date(Date.now() - 60 * 24 * 60 * 60 * 1000);
-    const previousPeriodClients = allClients.filter(c => 
+    const previousPeriodClients = allClients.filter((c:any) => 
       c.createdAt >= sixtyDaysAgo && c.createdAt < thirtyDaysAgo
     ).length;
     
@@ -277,9 +277,9 @@ export const generateClientInsights = async (
 
     // Top clients by revenue
     const topClientsByRevenue = allClients
-      .sort((a, b) => Number(b.totalAmountPaid) - Number(a.totalAmountPaid))
+      .sort((a:any, b:any) => Number(b.totalAmountPaid) - Number(a.totalAmountPaid))
       .slice(0, 10)
-      .map(client => ({
+      .map((client:any) => ({
         id: client.id,
         name: client.name,
         email: client.email,
@@ -288,7 +288,7 @@ export const generateClientInsights = async (
       }));
 
     // Clients by location
-    const locationGroups = allClients.reduce((acc, client) => {
+    const locationGroups = allClients.reduce((acc:any, client:any) => {
       if (client.city && client.state) {
         const location = `${client.city}, ${client.state}`;
         acc[location] = (acc[location] || 0) + 1;
@@ -297,8 +297,8 @@ export const generateClientInsights = async (
     }, {} as Record<string, number>);
 
     const clientsByLocation = Object.entries(locationGroups)
-      .map(([location, count]) => ({ location, count }))
-      .sort((a, b) => b.count - a.count)
+      .map(([location, count]) => ({ location, count: count as number }))
+      .sort((a, b) => (b.count as number) - (a.count as number))
       .slice(0, 10);
 
     return {
@@ -349,7 +349,7 @@ export const calculateRevenueAnalytics = async (
       }
     });
 
-    const totalRevenue = paidSessions.reduce((sum, session) => sum + Number(session.amount), 0);
+    const totalRevenue = paidSessions.reduce((sum:any, session:any) => sum + Number(session.amount), 0);
     const totalTransactions = paidSessions.length;
     const averageTransactionValue = totalTransactions > 0 ? totalRevenue / totalTransactions : 0;
 
@@ -369,12 +369,12 @@ export const calculateRevenueAnalytics = async (
       }
     });
 
-    const previousRevenue = previousPaidSessions.reduce((sum, session) => sum + Number(session.amount), 0);
+    const previousRevenue = previousPaidSessions.reduce((sum:any, session:any) => sum + Number(session.amount), 0);
     const revenueGrowth = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
 
     // Revenue by month
     const monthlyRevenue = new Map<string, { revenue: number; transactions: number }>();
-    paidSessions.forEach(session => {
+    paidSessions.forEach((session:any) => {
       const monthKey = session.createdAt.toISOString().substring(0, 7); // YYYY-MM
       const existing = monthlyRevenue.get(monthKey) || { revenue: 0, transactions: 0 };
       monthlyRevenue.set(monthKey, {
@@ -392,7 +392,7 @@ export const calculateRevenueAnalytics = async (
       .sort((a, b) => a.month.localeCompare(b.month));
 
     // Revenue by session type
-    const typeRevenue = paidSessions.reduce((acc, session) => {
+    const typeRevenue = paidSessions.reduce((acc:any, session:any) => {
       const type = session.sessionType;
       acc[type] = (acc[type] || 0) + Number(session.amount);
       return acc;
@@ -400,20 +400,20 @@ export const calculateRevenueAnalytics = async (
 
     const revenueBySessionType = Object.entries(typeRevenue).map(([type, revenue]) => ({
       type,
-      revenue,
-      percentage: totalRevenue > 0 ? (revenue / totalRevenue) * 100 : 0
+      revenue: revenue as number,
+      percentage: totalRevenue > 0 ? ((revenue as number) / totalRevenue) * 100 : 0
     }));
 
     // Calculate recurring vs one-time revenue
     const clientSessionCounts = new Map<string, number>();
-    paidSessions.forEach(session => {
+    paidSessions.forEach((session:any) => {
       const clientId = session.clientId;
       clientSessionCounts.set(clientId, (clientSessionCounts.get(clientId) || 0) + 1);
     });
 
     const recurringRevenue = paidSessions
-      .filter(session => (clientSessionCounts.get(session.clientId) || 0) > 1)
-      .reduce((sum, session) => sum + Number(session.amount), 0);
+      .filter((session:any) => (clientSessionCounts.get(session.clientId) || 0) > 1)
+      .reduce((sum:any, session:any) => sum + Number(session.amount), 0);
     
     const oneTimeRevenue = totalRevenue - recurringRevenue;
 
@@ -476,14 +476,14 @@ export const analyzeConsultantPerformance = async (
 
     const sessions = consultant.sessions;
     const totalSessions = sessions.length;
-    const completedSessions = sessions.filter(s => s.status === 'COMPLETED');
-    const paidSessions = sessions.filter(s => s.paymentStatus === 'PAID');
+    const completedSessions = sessions.filter((s:any) => s.status === 'COMPLETED');
+    const paidSessions = sessions.filter((s:any) => s.paymentStatus === 'PAID');
 
-    const totalRevenue = paidSessions.reduce((sum, session) => sum + Number(session.amount), 0);
+    const totalRevenue = paidSessions.reduce((sum:any, session:any) => sum + Number(session.amount), 0);
 
     // Calculate average session duration
     const averageSessionDuration = completedSessions.length > 0
-      ? completedSessions.reduce((sum, s) => sum + s.durationMinutes, 0) / completedSessions.length
+      ? completedSessions.reduce((sum:any, s:any) => sum + s.durationMinutes, 0) / completedSessions.length
       : 0;
 
     // Calculate booking conversion rate (simplified)
@@ -491,7 +491,7 @@ export const analyzeConsultantPerformance = async (
 
     // Calculate repeat client rate
     const clientSessionCounts = new Map<string, number>();
-    sessions.forEach(session => {
+    sessions.forEach((session:any) => {
       clientSessionCounts.set(session.clientId, (clientSessionCounts.get(session.clientId) || 0) + 1);
     });
     
@@ -502,15 +502,15 @@ export const analyzeConsultantPerformance = async (
 
     // Calculate monthly growth
     const currentMonth = new Date().getMonth();
-    const currentMonthSessions = sessions.filter(s => s.createdAt.getMonth() === currentMonth);
-    const previousMonthSessions = sessions.filter(s => s.createdAt.getMonth() === currentMonth - 1);
+    const currentMonthSessions = sessions.filter((s:any) => s.createdAt.getMonth() === currentMonth);
+    const previousMonthSessions = sessions.filter((s:any) => s.createdAt.getMonth() === currentMonth - 1);
     
     const monthlyGrowth = previousMonthSessions.length > 0
       ? ((currentMonthSessions.length - previousMonthSessions.length) / previousMonthSessions.length) * 100
       : 0;
 
     // Analyze top performing services
-    const servicePerformance = sessions.reduce((acc, session) => {
+    const servicePerformance = sessions.reduce((acc:any, session:any) => {
       const service = session.sessionType;
       if (!acc[service]) {
         acc[service] = { bookings: 0, revenue: 0 };
@@ -525,8 +525,8 @@ export const analyzeConsultantPerformance = async (
     const topPerformingServices = Object.entries(servicePerformance)
       .map(([service, data]) => ({
         service,
-        bookings: data.bookings,
-        revenue: data.revenue
+        bookings: (data as any).bookings,
+        revenue: (data as any).revenue
       }))
       .sort((a, b) => b.revenue - a.revenue);
 
@@ -583,7 +583,7 @@ export const generateTrendAnalysis = async (
       newClients: Set<string>;
     }>();
 
-    sessions.forEach(session => {
+    sessions.forEach((session:any) => {
       const monthKey = session.createdAt.toISOString().substring(0, 7);
       const existing = monthlyData.get(monthKey) || {
         sessions: 0,

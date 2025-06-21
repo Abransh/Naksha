@@ -456,14 +456,14 @@ export const schemaComposition = {
   /**
    * Merge multiple schemas
    */
-  merge: (...schemas: ZodSchema[]) => {
+  merge: (...schemas: z.ZodObject<any>[]) => {
     return schemas.reduce((acc, schema) => acc.merge(schema));
   },
 
   /**
    * Make all fields in a schema optional
    */
-  makeOptional: (schema: ZodSchema) => {
+  makeOptional: (schema: z.ZodObject<any>) => {
     return schema.partial();
   },
 

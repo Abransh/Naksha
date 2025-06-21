@@ -19,7 +19,7 @@ import { validateRequest, commonSchemas, validationUtils } from '../../middlewar
 import { AppError, NotFoundError, ValidationError, ConflictError } from '../../middleware/errorHandler';
 import { sendEmail } from '../../services/emailService';
 import { generateClientInsights } from '../../utils/analytics';
-import { exportClientsToCSV } from '../utils/export';
+import { exportToCSV } from '../../utils/export';
 
 const router = Router();
 
@@ -189,10 +189,10 @@ router.get('/',
       });
 
       // Format response data
-      const formattedClients = clients.map(client => {
+      const formattedClients = clients.map((client:any) => {
         const lastSession = client.sessions[0];
-        const activeSessions = client.sessions.filter(s => ['PENDING', 'CONFIRMED'].includes(s.status));
-        const completedSessions = client.sessions.filter(s => s.status === 'COMPLETED');
+        const activeSessions = client.sessions.filter((s:any) => ['PENDING', 'CONFIRMED'].includes(s.status));
+        const completedSessions = client.sessions.filter((s:any) => s.status === 'COMPLETED');
 
         return {
           id: client.id,
@@ -214,10 +214,10 @@ router.get('/',
             completedSessions: completedSessions.length,
             lastSessionDate: lastSession?.scheduledDate || null,
             averageSessionValue: completedSessions.length > 0 
-              ? completedSessions.reduce((sum, s) => sum + Number(s.amount), 0) / completedSessions.length 
+              ? completedSessions.reduce((sum:any, s:any) => sum + Number(s.amount), 0) / completedSessions.length 
               : 0
           },
-          recentSessions: client.sessions.slice(0, 3).map(session => ({
+          recentSessions: client.sessions.slice(0, 3).map((session:any) => ({
             id: session.id,
             status: session.status,
             scheduledDate: session.scheduledDate,
@@ -229,11 +229,11 @@ router.get('/',
       // Calculate summary statistics
       const summaryStats = {
         totalClients: totalCount,
-        activeClients: formattedClients.filter(c => c.isActive).length,
-        clientsWithActiveSessions: formattedClients.filter(c => c.stats.activeSessions > 0).length,
-        totalRevenue: formattedClients.reduce((sum, c) => sum + c.totalAmountPaid, 0),
+        activeClients: formattedClients.filter((c:any) => c.isActive).length,
+        clientsWithActiveSessions: formattedClients.filter((c:any) => c.stats.activeSessions > 0).length,
+        totalRevenue: formattedClients.reduce((sum:any, c:any) => sum + c.totalAmountPaid, 0),
         averageRevenuePerClient: totalCount > 0 
-          ? formattedClients.reduce((sum, c) => sum + c.totalAmountPaid, 0) / totalCount 
+          ? formattedClients.reduce((sum:any, c:any) => sum + c.totalAmountPaid, 0) / totalCount 
           : 0
       };
 
@@ -297,37 +297,11 @@ router.get('/:id',
               status: true,
               paymentStatus: true,
               platform: true,
-              notes: true,
+              clientNotes: true,
               createdAt: true
             },
             orderBy: { scheduledDate: 'desc' }
           },
-          quotations: {
-            select: {
-              id: true,
-              quotationName: true,
-              baseAmount: true,
-              finalAmount: true,
-              status: true,
-              viewCount: true,
-              sentAt: true,
-              createdAt: true
-            },
-            orderBy: { createdAt: 'desc' }
-          },
-          conversations: {
-            select: {
-              id: true,
-              subject: true,
-              status: true,
-              lastMessageAt: true,
-              createdAt: true,
-              _count: {
-                select: { messages: true }
-              }
-            },
-            orderBy: { lastMessageAt: 'desc' }
-          }
         }
       });
 
@@ -342,14 +316,9 @@ router.get('/:id',
       const formattedClient = {
         ...client,
         totalAmountPaid: Number(client.totalAmountPaid),
-        sessions: client.sessions.map(session => ({
+        sessions: client.sessions.map((session:any) => ({
           ...session,
           amount: Number(session.amount)
-        })),
-        quotations: client.quotations.map(quotation => ({
-          ...quotation,
-          baseAmount: Number(quotation.baseAmount),
-          finalAmount: Number(quotation.finalAmount)
         })),
         insights
       };
@@ -393,11 +362,17 @@ router.post('/',
         throw new ConflictError('A client with this email address already exists');
       }
 
-      // Create client
+      // Create client - need to set both name and firstName/lastName
+      const nameParts = clientData.name.trim().split(' ');
+      const firstName = nameParts[0] || '';
+      const lastName = nameParts.slice(1).join(' ') || '';
+      
       const client = await prisma.client.create({
         data: {
           consultantId,
           ...clientData,
+          firstName,
+          lastName,
           isActive: true,
           totalSessions: 0,
           totalAmountPaid: 0
@@ -410,9 +385,9 @@ router.post('/',
           to: client.email,
           data: {
             clientName: client.name,
-            consultantName: `${req.user!.firstName} ${req.user!.lastName}`,
+            consultantName: `${req.user!.firstName || ''} ${req.user!.lastName || ''}`.trim(),
             consultantEmail: req.user!.email,
-            profileUrl: `${process.env.FRONTEND_URL}/${req.user!.consultantSlug}`
+            profileUrl: `${process.env.FRONTEND_URL}/${req.user!.slug || ''}`
           }
         });
       } catch (emailError) {
@@ -630,11 +605,17 @@ router.post('/import',
             continue;
           }
 
-          // Create client
+          // Create client - need to set both name and firstName/lastName
+          const nameParts = clientData.name.trim().split(' ');
+          const firstName = nameParts[0] || '';
+          const lastName = nameParts.slice(1).join(' ') || '';
+          
           await prisma.client.create({
             data: {
               consultantId,
               ...clientData,
+              firstName,
+              lastName,
               isActive: true,
               totalSessions: 0,
               totalAmountPaid: 0
@@ -712,7 +693,10 @@ router.get('/export',
       });
 
       // Generate CSV
-      const csvData = await exportClientsToCSV(clients);
+      const csvData = await exportToCSV(clients, {
+        headers: ['Name', 'Email', 'Phone', 'City', 'Total Sessions', 'Total Amount'],
+        fields: ['name', 'email', 'phoneNumber', 'city', 'totalSessions', 'totalAmountPaid']
+      });
 
       // Set response headers for file download
       res.setHeader('Content-Type', 'text/csv');
@@ -817,7 +801,7 @@ router.get('/analytics',
           by: ['city', 'state'],
           where: { consultantId, city: { not: null } },
           _count: true,
-          orderBy: { _count: { _all: 'desc' } },
+          orderBy: { _count: { city: 'desc' } },
           take: 10
         }),
 
@@ -844,15 +828,15 @@ router.get('/analytics',
           inactiveClients: totalClients - activeClients,
           clientRetentionRate: totalClients > 0 ? (activeClients / totalClients) * 100 : 0
         },
-        topClients: topClients.map(client => ({
+        topClients: topClients.map((client:any) => ({
           ...client,
           totalAmountPaid: Number(client.totalAmountPaid)
         })),
-        locationDistribution: locationData.map(location => ({
+        locationDistribution: locationData.map((location:any) => ({
           location: `${location.city}, ${location.state}`,
           count: location._count
         })),
-        sessionPatterns: sessionData.map(pattern => ({
+        sessionPatterns: sessionData.map((pattern:any) => ({
           status: pattern.status,
           count: pattern._count,
           revenue: Number(pattern._sum.amount || 0)

@@ -289,7 +289,7 @@ router.post('/login',
       prisma.consultant.update({
         where: { id: user.id },
         data: { updatedAt: new Date() }
-      }).catch(err => console.error('Failed to update last login:', err));
+      }).catch((err:any) => console.error('Failed to update last login:', err));
 
       console.log(`✅ User logged in: ${user.email}`);
 
@@ -578,7 +578,7 @@ router.get('/verify-email/:token', async (req: Request, res: Response): Promise<
     await prisma.consultant.update({
       where: { id: verificationData.userId },
       data: {
-        emailVerified: true,
+        isEmailVerified: true,
         updatedAt: new Date()
       }
     });

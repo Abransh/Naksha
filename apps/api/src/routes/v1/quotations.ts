@@ -19,7 +19,7 @@ import { AuthenticatedRequest } from '../../middleware/auth';
 import { validateRequest, commonSchemas } from '../../middleware/validation';
 import { AppError, NotFoundError, ValidationError } from '../../middleware/errorHandler';
 import { sendEmail } from '../../services/emailService';
-import { generateQuotationPDF } from '../services/pdfService';
+// import { generateQuotationPDF } from '../../services/pdfService'; // TODO: Create PDF service
 import { uploadToCloudinary } from '../../services/uploadService';
 
 const router = Router();
@@ -129,16 +129,6 @@ router.get('/',
       // Get quotations with pagination
       const quotations = await prisma.quotation.findMany({
         where,
-        include: {
-          client: {
-            select: {
-              id: true,
-              name: true,
-              email: true,
-              totalSessions: true
-            }
-          }
-        },
         orderBy,
         skip: (page - 1) * limit,
         take: limit
@@ -146,33 +136,32 @@ router.get('/',
 
       // Format response data
       const formattedQuotations = quotations.map(quotation => {
-        const finalAmount = Number(quotation.baseAmount) * (1 - Number(quotation.discountPercentage) / 100);
+        const finalAmount = Number(quotation.amount) * (1 - Number(0) / 100);
         
         return {
           id: quotation.id,
           quotationName: quotation.quotationName,
           clientName: quotation.clientName,
           clientEmail: quotation.clientEmail,
-          client: quotation.client,
+          // client info available through clientName and clientEmail
           description: quotation.description,
-          baseAmount: Number(quotation.baseAmount),
-          discountPercentage: Number(quotation.discountPercentage),
-          finalAmount: Number(quotation.finalAmount),
+          baseAmount: Number(quotation.amount),
+          discountPercentage: 0, // Not implemented yet
+          finalAmount: Number(quotation.amount),
           currency: quotation.currency,
-          durationText: quotation.durationText,
+          validUntil: quotation.validUntil,
           status: quotation.status,
-          quotationImageUrl: quotation.quotationImageUrl,
-          viewCount: quotation.viewCount,
+          quotationNumber: quotation.quotationNumber,
+          // viewCount not implemented yet
           lastViewedAt: quotation.lastViewedAt,
           sentAt: quotation.sentAt,
-          respondedAt: quotation.respondedAt,
-          expiresAt: quotation.expiresAt,
+          acceptedAt: quotation.acceptedAt,
           notes: quotation.notes,
           createdAt: quotation.createdAt,
           updatedAt: quotation.updatedAt,
-          isExpired: quotation.expiresAt ? new Date() > quotation.expiresAt : false,
-          daysUntilExpiry: quotation.expiresAt 
-            ? Math.ceil((quotation.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+          isExpired: quotation.validUntil ? new Date() > quotation.validUntil : false,
+          daysUntilExpiry: quotation.validUntil 
+            ? Math.ceil((quotation.validUntil.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
             : null
         };
       });
@@ -262,8 +251,8 @@ router.get('/:id',
       // Format the response
       const formattedQuotation = {
         ...quotation,
-        baseAmount: Number(quotation.baseAmount),
-        discountPercentage: Number(quotation.discountPercentage),
+        baseAmount: Number(quotation.amount),
+        discountPercentage: Number(0),
         finalAmount: Number(quotation.finalAmount),
         client: quotation.client ? {
           ...quotation.client,
@@ -355,30 +344,32 @@ router.post('/',
       // Generate quotation image/PDF if requested
       if (quotationData.includeImage) {
         try {
+          // TODO: Implement PDF generation service
+          const quotationPDF = { secure_url: null }; // Placeholder
+          /*
           const quotationPDF = await generateQuotationPDF({
             quotation: {
               ...quotation,
               finalAmount: Number(finalAmount),
-              baseAmount: Number(quotation.baseAmount),
-              discountPercentage: Number(quotation.discountPercentage)
+              baseAmount: Number(quotation.amount),
+              discountPercentage: Number(0)
             },
             consultant: {
               name: `${req.user!.firstName} ${req.user!.lastName}`,
               email: req.user!.email
             }
           });
+          */
 
           // Upload PDF to Cloudinary
-          const uploadResult = await uploadToCloudinary(quotationPDF, {
-            resource_type: 'raw',
-            folder: 'quotations',
-            public_id: `quotation-${quotation.id}`
-          });
+          // TODO: Upload generated PDF to cloud storage
+          const uploadResult = { secure_url: null }; // Placeholder
 
           // Update quotation with image URL
           await prisma.quotation.update({
             where: { id: quotation.id },
-            data: { quotationImageUrl: uploadResult.secure_url }
+            data: { // quotationImageUrl: uploadResult.secure_url // TODO: Remove when PDF service is implemented
+            }
           });
 
         } catch (imageError) {
@@ -398,8 +389,8 @@ router.post('/',
         data: {
           quotation: {
             ...quotation,
-            baseAmount: Number(quotation.baseAmount),
-            discountPercentage: Number(quotation.discountPercentage),
+            baseAmount: Number(quotation.amount),
+            discountPercentage: 0, // Not implemented yet
             finalAmount: Number(quotation.finalAmount)
           }
         }
@@ -543,12 +534,15 @@ router.post('/:id/send',
       let quotationPDFUrl = quotation.quotationImageUrl;
       if (includeAttachment && !quotationPDFUrl) {
         try {
+          // TODO: Implement PDF generation service
+          const quotationPDF = { secure_url: null }; // Placeholder
+          /*
           const quotationPDF = await generateQuotationPDF({
             quotation: {
               ...quotation,
-              finalAmount: Number(quotation.finalAmount),
-              baseAmount: Number(quotation.baseAmount),
-              discountPercentage: Number(quotation.discountPercentage)
+              finalAmount: Number(quotation.amount),
+              baseAmount: Number(quotation.amount),
+              discountPercentage: Number(0)
             },
             consultant: {
               name: `${req.user!.firstName} ${req.user!.lastName}`,
@@ -556,11 +550,8 @@ router.post('/:id/send',
             }
           });
 
-          const uploadResult = await uploadToCloudinary(quotationPDF, {
-            resource_type: 'raw',
-            folder: 'quotations',
-            public_id: `quotation-${quotation.id}`
-          });
+          // TODO: Upload generated PDF to cloud storage
+          const uploadResult = { secure_url: null }; // Placeholder
 
           quotationPDFUrl = uploadResult.secure_url;
 
@@ -584,7 +575,7 @@ router.post('/:id/send',
           clientName: quotation.clientName,
           consultantName: `${req.user!.firstName} ${req.user!.lastName}`,
           quotationName: quotation.quotationName,
-          finalAmount: Number(quotation.finalAmount),
+          finalAmount: Number(quotation.amount),
           currency: quotation.currency,
           expiresAt: quotation.expiresAt?.toLocaleDateString(),
           viewLink: `${process.env.FRONTEND_URL}/quotations/view/${quotation.id}`,

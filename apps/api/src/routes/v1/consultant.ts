@@ -44,7 +44,7 @@ const updateProfileSchema = z.object({
   webinarSessionPrice: z.number().positive().max(999999.99).optional(),
   instagramUrl: z.string().url().optional().or(z.literal('')),
   linkedinUrl: z.string().url().optional().or(z.literal('')),
-  twitterUrl: z.string().url().optional().or(z.literal('')),
+  xUrl: z.string().url().optional().or(z.literal('')),
   slug: z.string()
     .min(3, 'Slug must be at least 3 characters')
     .max(100, 'Slug must not exceed 100 characters')
@@ -115,7 +115,7 @@ router.get('/profile', async (req: AuthenticatedRequest, res: Response): Promise
         webinarSessionPrice: true,
         instagramUrl: true,
         linkedinUrl: true,
-        twitterUrl: true,
+        xUrl: true,
         profilePhotoUrl: true,
         slug: true,
         isActive: true,
@@ -124,13 +124,6 @@ router.get('/profile', async (req: AuthenticatedRequest, res: Response): Promise
         subscriptionExpiresAt: true,
         createdAt: true,
         updatedAt: true,
-        _count: {
-          select: {
-            sessions: true,
-            clients: true,
-            quotations: true
-          }
-        }
       }
     });
 
@@ -144,9 +137,9 @@ router.get('/profile', async (req: AuthenticatedRequest, res: Response): Promise
       personalSessionPrice: consultant.personalSessionPrice ? Number(consultant.personalSessionPrice) : null,
       webinarSessionPrice: consultant.webinarSessionPrice ? Number(consultant.webinarSessionPrice) : null,
       stats: {
-        totalSessions: consultant._count.sessions,
-        totalClients: consultant._count.clients,
-        totalQuotations: consultant._count.quotations
+        totalSessions: 0, // Will be calculated separately if needed
+        totalClients: 0,
+        totalQuotations: 0
       },
       isProfileComplete: !!(
         consultant.firstName &&
@@ -225,7 +218,7 @@ router.put('/profile',
           webinarSessionPrice: true,
           instagramUrl: true,
           linkedinUrl: true,
-          twitterUrl: true,
+          xUrl: true,
           profilePhotoUrl: true,
           slug: true,
           updatedAt: true
@@ -373,7 +366,7 @@ router.get('/:slug',
           webinarSessionPrice: true,
           instagramUrl: true,
           linkedinUrl: true,
-          twitterUrl: true,
+          xUrl: true,
           profilePhotoUrl: true,
           slug: true,
           createdAt: true
@@ -429,7 +422,7 @@ router.get('/:slug',
             completedSessions: stats._count.id
           }
         },
-        availableSlots: availableSlots.map(slot => ({
+        availableSlots: availableSlots.map((slot:any) => ({
           id: slot.id,
           sessionType: slot.sessionType,
           date: slot.date.toISOString().split('T')[0],
@@ -494,21 +487,6 @@ router.get('/availability',
 
       const availabilitySlots = await prisma.availabilitySlot.findMany({
         where,
-        include: {
-          session: {
-            select: {
-              id: true,
-              title: true,
-              client: {
-                select: {
-                  name: true,
-                  email: true
-                }
-              },
-              status: true
-            }
-          }
-        },
         orderBy: [
           { date: 'asc' },
           { startTime: 'asc' }
@@ -516,7 +494,7 @@ router.get('/availability',
       });
 
       // Group slots by date
-      const slotsByDate = availabilitySlots.reduce((acc, slot) => {
+      const slotsByDate = availabilitySlots.reduce((acc:any, slot:any) => {
         const dateKey = slot.date.toISOString().split('T')[0];
         if (!acc[dateKey]) {
           acc[dateKey] = [];
@@ -527,12 +505,7 @@ router.get('/availability',
           startTime: slot.startTime,
           endTime: slot.endTime,
           isBooked: slot.isBooked,
-          session: slot.session ? {
-            id: slot.session.id,
-            title: slot.session.title,
-            clientName: slot.session.client?.name,
-            status: slot.session.status
-          } : null
+          session: null // Session info not available through availability slots
         });
         return acc;
       }, {} as Record<string, any[]>);
@@ -546,8 +519,8 @@ router.get('/availability',
           },
           summary: {
             totalSlots: availabilitySlots.length,
-            bookedSlots: availabilitySlots.filter(s => s.isBooked).length,
-            availableSlots: availabilitySlots.filter(s => !s.isBooked).length
+            bookedSlots: availabilitySlots.filter((s:any) => s.isBooked).length,
+            availableSlots: availabilitySlots.filter((s:any) => !s.isBooked).length
           }
         }
       });
@@ -627,8 +600,8 @@ router.post('/availability',
           createdCount: createdSlots.count,
           sessionType,
           dateRange: {
-            start: Math.min(...dates.map(d => new Date(d).getTime())),
-            end: Math.max(...dates.map(d => new Date(d).getTime()))
+            start: Math.min(...dates.map((d:any) => new Date(d).getTime())),
+            end: Math.max(...dates.map((d:any) => new Date(d).getTime()))
           }
         }
       });

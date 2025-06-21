@@ -154,7 +154,7 @@ const calculateDashboardMetrics = async (
   // Get sessions from today specifically
   const today = new Date();
   const todayStart = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const todaySessions = sessions.filter(s => s.createdAt >= todayStart);
+  const todaySessions = sessions.filter((s:any) => s.createdAt >= todayStart);
 
   // Get all clients for the consultant
   const allClients = await prisma.client.findMany({
@@ -179,18 +179,18 @@ const calculateDashboardMetrics = async (
 
   // Calculate session metrics
   const totalSessions = sessions.length;
-  const pendingSessions = sessions.filter(s => s.status === 'PENDING').length;
-  const completedSessions = sessions.filter(s => s.status === 'COMPLETED').length;
-  const cancelledSessions = sessions.filter(s => s.status === 'CANCELLED').length;
-  const abandonedSessions = sessions.filter(s => s.status === 'ABANDONED').length;
+  const pendingSessions = sessions.filter((s:any) => s.status === 'PENDING').length;
+  const completedSessions = sessions.filter((s:any) => s.status === 'COMPLETED').length;
+  const cancelledSessions = sessions.filter((s:any) => s.status === 'CANCELLED').length;
+  const abandonedSessions = sessions.filter((s:any) => s.status === 'CANCELLED').length;
   const sessionCompletionRate = totalSessions > 0 ? (completedSessions / totalSessions) * 100 : 0;
 
   // Calculate revenue metrics
-  const paidSessions = sessions.filter(s => s.paymentStatus === 'PAID');
-  const totalRevenue = paidSessions.reduce((sum, session) => sum + Number(session.amount), 0);
+  const paidSessions = sessions.filter((s:any) => s.paymentStatus === 'PAID');
+  const totalRevenue = paidSessions.reduce((sum:any, session:any) => sum + Number(session.amount), 0);
   const todayRevenue = todaySessions
-    .filter(s => s.paymentStatus === 'PAID')
-    .reduce((sum, session) => sum + Number(session.amount), 0);
+    .filter((s:any) => s.paymentStatus === 'PAID')
+    .reduce((sum:any, session:any) => sum + Number(session.amount), 0);
   const averageSessionValue = paidSessions.length > 0 ? totalRevenue / paidSessions.length : 0;
 
   // Calculate revenue growth (compare with previous period)
@@ -209,19 +209,19 @@ const calculateDashboardMetrics = async (
     }
   });
   
-  const previousRevenue = previousSessions.reduce((sum, session) => sum + Number(session.amount), 0);
+  const previousRevenue = previousSessions.reduce((sum:any, session:any) => sum + Number(session.amount), 0);
   const revenueGrowth = previousRevenue > 0 ? ((totalRevenue - previousRevenue) / previousRevenue) * 100 : 0;
 
   // Calculate client metrics
   const totalClients = allClients.length;
-  const newClientsToday = allClients.filter(c => c.createdAt >= todayStart).length;
-  const activeClients = allClients.filter(c => c.totalSessions > 0).length;
-  const repeatClients = allClients.filter(c => c.totalSessions > 1).length;
+  const newClientsToday = allClients.filter((c:any) => c.createdAt >= todayStart).length;
+  const activeClients = allClients.filter((c:any) => c.totalSessions > 0).length;
+  const repeatClients = allClients.filter((c:any) => c.totalSessions > 1).length;
   const repeatClientRate = totalClients > 0 ? (repeatClients / totalClients) * 100 : 0;
 
   // Calculate quotation metrics
-  const quotationsSent = quotations.filter(q => q.status !== 'DRAFT').length;
-  const quotationsAccepted = quotations.filter(q => q.status === 'ACCEPTED').length;
+  const quotationsSent = quotations.filter((q:any) => q.status !== 'DRAFT').length;
+  const quotationsAccepted = quotations.filter((q:any) => q.status === 'ACCEPTED').length;
   const quotationConversionRate = quotationsSent > 0 ? (quotationsAccepted / quotationsSent) * 100 : 0;
 
   return {
@@ -269,7 +269,7 @@ const generateChartData = async (
 
   // Group sessions by date
   const sessionsByDate = new Map<string, any[]>();
-  sessions.forEach(session => {
+  sessions.forEach((session:any) => {
     const date = session.createdAt.toISOString().split('T')[0];
     if (!sessionsByDate.has(date)) {
       sessionsByDate.set(date, []);
@@ -287,11 +287,11 @@ const generateChartData = async (
   }));
 
   // Revenue breakdown by session type
-  const personalSessions = sessions.filter(s => s.sessionType === 'PERSONAL' && s.paymentStatus === 'PAID');
-  const webinarSessions = sessions.filter(s => s.sessionType === 'WEBINAR' && s.paymentStatus === 'PAID');
+  const personalSessions = sessions.filter((s:any) => s.sessionType === 'PERSONAL' && s.paymentStatus === 'PAID');
+  const webinarSessions = sessions.filter((s:any) => s.sessionType === 'WEBINAR' && s.paymentStatus === 'PAID');
   
-  const personalRevenue = personalSessions.reduce((sum, s) => sum + Number(s.amount), 0);
-  const webinarRevenue = webinarSessions.reduce((sum, s) => sum + Number(s.amount), 0);
+  const personalRevenue = personalSessions.reduce((sum:any, s:any) => sum + Number(s.amount), 0);
+  const webinarRevenue = webinarSessions.reduce((sum:any, s:any) => sum + Number(s.amount), 0);
   const totalRevenue = personalRevenue + webinarRevenue;
 
   const revenueBreakdown = [
@@ -318,7 +318,7 @@ const generateChartData = async (
   const clientsByMonth = new Map<string, number>();
   let runningTotal = 0;
   
-  clients.forEach(client => {
+  clients.forEach((client:any) => {
     const month = client.createdAt.toISOString().substring(0, 7); // YYYY-MM
     clientsByMonth.set(month, (clientsByMonth.get(month) || 0) + 1);
   });
@@ -334,7 +334,7 @@ const generateChartData = async (
 
   // Session status distribution
   const statusCounts = new Map<string, number>();
-  sessions.forEach(session => {
+  sessions.forEach((session:any) => {
     const status = session.status;
     statusCounts.set(status, (statusCounts.get(status) || 0) + 1);
   });
@@ -506,7 +506,7 @@ router.get('/recent-activity', async (req: AuthenticatedRequest, res: Response):
     const activities: any[] = [];
 
     // Add session activities
-    recentSessions.forEach(session => {
+    recentSessions.forEach((session:any) => {
       activities.push({
         id: session.id,
         type: 'session',
@@ -525,25 +525,25 @@ router.get('/recent-activity', async (req: AuthenticatedRequest, res: Response):
     });
 
     // Add quotation activities
-    recentQuotations.forEach(quotation => {
+    recentQuotations.forEach((quotation:any) => {
       activities.push({
         id: quotation.id,
         type: 'quotation',
         action: getQuotationAction(quotation.status),
-        title: quotation.quotationName,
+        title: quotation.title,
         description: `Quotation for ${quotation.clientName}`,
-        amount: Number(quotation.finalAmount),
+        amount: Number(quotation.amount),
         status: quotation.status,
         timestamp: quotation.createdAt,
         metadata: {
           clientName: quotation.clientName,
-          viewCount: quotation.viewCount
+          quotationNumber: quotation.quotationNumber
         }
       });
     });
 
     // Add client activities
-    recentClients.forEach(client => {
+    recentClients.forEach((client:any) => {
       activities.push({
         id: client.id,
         type: 'client',

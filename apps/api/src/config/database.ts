@@ -34,8 +34,8 @@ const databaseConfig = {
   
   // Logging configuration
   log: process.env.NODE_ENV === 'development' 
-    ? ['query', 'info', 'warn', 'error']
-    : ['warn', 'error'],
+    ? ['query', 'info', 'warn', 'error'] as const
+    : ['warn', 'error'] as const,
 };
 
 /**
@@ -48,7 +48,7 @@ export const initializePrisma = async (): Promise<PrismaClient> => {
       console.log('🔧 Initializing Prisma client...');
       
       prisma = new PrismaClient({
-        log: databaseConfig.log,
+        log: databaseConfig.log as any,
         errorFormat: 'pretty',
         
         // Datasource configuration
@@ -248,7 +248,11 @@ export const executeTransaction = async <T>(
  */
 export const getPrismaClient = (): PrismaClient => {
   if (!prisma) {
-    throw new Error('Database not initialized. Call connectDatabase() first.');
+    // Initialize synchronously if not already done
+    prisma = new PrismaClient({
+      log: ['error'],
+      errorFormat: 'pretty'
+    });
   }
   return prisma;
 };
@@ -300,10 +304,15 @@ export const dbUtils = {
 };
 
 // Export default instance
-// Initialize prisma client
-initializePrisma();
+// Initialize prisma client on import
+let defaultPrisma: PrismaClient;
+try {
+  defaultPrisma = getPrismaClient();
+} catch {
+  defaultPrisma = new PrismaClient();
+}
 
-export default prisma;
+export default defaultPrisma;
 
 /**
  * Testing utilities for database operations

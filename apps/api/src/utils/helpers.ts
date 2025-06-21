@@ -534,7 +534,7 @@ export const objectUtils = {
   /**
    * Pick specific keys from object
    */
-  pick: <T, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
+  pick: <T extends object, K extends keyof T>(obj: T, keys: K[]): Pick<T, K> => {
     const result = {} as Pick<T, K>;
     keys.forEach(key => {
       if (key in obj) {
@@ -547,7 +547,7 @@ export const objectUtils = {
   /**
    * Omit specific keys from object
    */
-  omit: <T, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
+  omit: <T extends object, K extends keyof T>(obj: T, keys: K[]): Omit<T, K> => {
     const result = { ...obj };
     keys.forEach(key => delete result[key]);
     return result;
@@ -563,7 +563,7 @@ export const objectUtils = {
   /**
    * Check if object is empty
    */
-  isEmpty: (obj: object): boolean => {
+  isEmpty: (obj: Record<string, any>): boolean => {
     return Object.keys(obj).length === 0;
   },
 

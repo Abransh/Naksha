@@ -163,7 +163,7 @@ router.get('/',
       });
 
       // Format response data
-      const formattedSessions = sessions.map(session => ({
+      const formattedSessions = sessions.map((session:any) => ({
         id: session.id,
         title: session.title,
         sessionType: session.sessionType,
@@ -276,7 +276,7 @@ router.get('/:id',
           ...session.client,
           totalAmountPaid: Number(session.client.totalAmountPaid)
         },
-        paymentTransactions: session.paymentTransactions.map(tx => ({
+        paymentTransactions: session.paymentTransactions.map((tx:any) => ({
           ...tx,
           amount: Number(tx.amount)
         }))
