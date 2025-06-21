@@ -71,7 +71,6 @@ export const initializeRedis = async (): Promise<RedisClientType> => {
         // Connection options
         socket: {
           connectTimeout: redisConfig.connectTimeout,
-          commandTimeout: redisConfig.commandTimeout,
           reconnectStrategy: (retries) => {
             if (retries >= redisConfig.maxRetries) {
               console.error('❌ Redis max retries reached');
@@ -85,7 +84,7 @@ export const initializeRedis = async (): Promise<RedisClientType> => {
         },
         
         // Disable offline queue to fail fast
-        enableOfflineQueue: false,
+        disableOfflineQueue: false,
       });
 
       // Error handling
@@ -486,7 +485,20 @@ export const realTimeUtils = {
 };
 
 // Export default instance
-export default redisClient;
+/**
+ * Cache Manager - high-level cache interface
+ */
+export const CacheManager = {
+  set: cacheUtils.set,
+  get: cacheUtils.get,
+  del: cacheUtils.delete,
+  exists: cacheUtils.exists,
+  setWithAutoTTL: cacheUtils.setWithAutoTTL,
+  clearPattern: cacheUtils.clearPattern
+};
+
+// Export the current instance for direct access
+export { redisClient };
 
 /**
  * Testing utilities for Redis operations

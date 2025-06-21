@@ -1,21 +1,38 @@
 {
   "name": "@nakksha/database",
-  "version": "0.0.0",
-  "main": "index.ts",
-  "types": "index.ts",
+  "version": "1.0.0",
+  "description": "Shared database utilities and Prisma client for Nakksha platform",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "db:generate": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio",
+    "db:reset": "prisma migrate reset --force",
+    "db:seed": "tsx prisma/seed.ts"
+  },
   "dependencies": {
     "@prisma/client": "^5.7.0",
     "prisma": "^5.7.0"
   },
-  "scripts": {
-    "db:generate": "prisma generate",
-    "db:push": "prisma db push",
-    "db:studio": "prisma studio",
-    "db:reset": "prisma db push --force-reset",
-    "db:migrate": "prisma migrate dev",
-    "db:seed": "tsx seed.ts"
-  },
   "devDependencies": {
-    "tsx": "^4.6.0"
+    "typescript": "^5.3.0",
+    "tsx": "^4.6.0",
+    "@types/node": "^20.10.0"
+  },
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/index.d.ts"
+    },
+    "./client": {
+      "import": "./dist/client.js",
+      "require": "./dist/client.js",
+      "types": "./dist/client.d.ts"
+    }
   }
 }

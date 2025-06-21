@@ -1,477 +1,654 @@
-/**
- * Authentication Middleware
- * 
- * This module provides comprehensive authentication and authorization:
- * - JWT token validation
- * - User session management
- * - Role-based access control
- * - Rate limiting integration
- * - Security headers
- * - Request logging and monitoring
- */
+// apps/api/src/middleware/auth.ts
+// Nakksha Consulting Platform - Authentication Middleware
+// Implements JWT authentication with admin approval logic for consultants
+// Separate auth systems for consultants vs admins as per CTO decision
 
 import { Request, Response, NextFunction } from 'express';
-import jwt, { JwtPayload } from 'jsonwebtoken';
-import { getPrismaClient } from '../config/database';
-import { sessionUtils, rateLimitUtils } from '../config/redis';
+import jwt from 'jsonwebtoken';
+import { PrismaClient } from '@prisma/client';
+import { logger } from '../utils/logger';
+import { AppError } from '../utils/appError';
+import { getRedisClient } from '../config/redis';
 
-/**
- * Extended Request interface to include user data
- */
-export interface AuthenticatedRequest extends Request {
-  user?: {
-    id: string;
-    email: string;
-    role: 'consultant' | 'admin';
-    firstName?: string;
-    lastName?: string;
-    consultantSlug?: string;
-    isActive: boolean;
-    emailVerified: boolean;
-  };
-  sessionId?: string;
-}
+const prisma = new PrismaClient();
 
-/**
- * JWT Payload interface
- */
-interface TokenPayload extends JwtPayload {
-  sub: string; // user ID
+// JWT payload interfaces
+interface ConsultantJWTPayload {
+  sub: string; // consultant ID
   email: string;
-  role: 'consultant' | 'admin';
-  consultantSlug?: string;
-  sessionId: string;
+  role: 'consultant';
+  isApproved: boolean;
+  slug?: string;
   iat: number;
   exp: number;
 }
 
+interface AdminJWTPayload {
+  sub: string; // admin ID
+  email: string;
+  role: 'admin' | 'super_admin' | 'moderator';
+  iat: number;
+  exp: number;
+}
+
+type JWTPayload = ConsultantJWTPayload | AdminJWTPayload;
+
+// Extend Express Request type
+declare global {
+  namespace Express {
+    interface Request {
+      user?: {
+        id: string;
+        email: string;
+        role: string;
+        isApproved?: boolean;
+        slug?: string;
+      };
+    }
+  }
+}
+
 /**
- * Authentication configuration
+ * Generate JWT tokens for authentication
  */
-const authConfig = {
-  // JWT settings
-  jwtSecret: process.env.JWT_SECRET || 'fallback-secret-change-in-production',
-  jwtRefreshSecret: process.env.JWT_REFRESH_SECRET || 'fallback-refresh-secret',
-  
-  // Token expiry times
-  accessTokenExpiry: '15m',  // 15 minutes
-  refreshTokenExpiry: '7d',  // 7 days
-  
-  // Rate limiting for auth endpoints
-  maxLoginAttempts: 5,
-  loginWindowMinutes: 15,
-  
-  // Security settings
-  requireEmailVerification: process.env.NODE_ENV === 'production',
-  allowInactiveUsers: false,
+export const generateTokens = async (user: any, userType: 'consultant' | 'admin') => {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+  const ACCESS_TOKEN_EXPIRES = process.env.ACCESS_TOKEN_EXPIRES || '15m';
+  const REFRESH_TOKEN_EXPIRES = process.env.REFRESH_TOKEN_EXPIRES || '7d';
+
+  if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
+    throw new AppError('JWT secrets not configured', 500);
+  }
+
+  try {
+    // Access token payload
+    const accessTokenPayload: ConsultantJWTPayload | AdminJWTPayload = 
+      userType === 'consultant' 
+        ? {
+            sub: user.id,
+            email: user.email,
+            role: 'consultant',
+            isApproved: user.isApprovedByAdmin,
+            slug: user.slug,
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
+          }
+        : {
+            sub: user.id,
+            email: user.email,
+            role: user.role.toLowerCase(),
+            iat: Math.floor(Date.now() / 1000),
+            exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
+          };
+
+    // Generate tokens
+    const accessToken = jwt.sign(accessTokenPayload, JWT_SECRET);
+    const refreshToken = jwt.sign(
+      { sub: user.id, type: userType },
+      JWT_REFRESH_SECRET
+    );
+
+    // Store refresh token in database
+    const expiresAt = new Date();
+    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+    await prisma.refreshToken.create({
+      data: {
+        token: refreshToken,
+        expiresAt,
+        consultantId: userType === 'consultant' ? user.id : null,
+        adminId: userType === 'admin' ? user.id : null
+      }
+    });
+
+    // Cache user session in Redis for faster lookups
+    const redisClient = getRedisClient();
+    await redisClient.setEx(
+      `user_session:${user.id}`,
+      900, // 15 minutes (same as access token)
+      JSON.stringify({
+        id: user.id,
+        email: user.email,
+        role: userType === 'consultant' ? 'consultant' : user.role.toLowerCase(),
+        isApproved: userType === 'consultant' ? user.isApprovedByAdmin : true,
+        slug: userType === 'consultant' ? user.slug : undefined
+      })
+    );
+
+    return { accessToken, refreshToken };
+
+  } catch (error) {
+    logger.error('Error generating tokens:', error);
+    throw new AppError('Failed to generate authentication tokens', 500);
+  }
 };
 
 /**
- * Main authentication middleware
- * Validates JWT tokens and populates req.user with authenticated user data
+ * Verify JWT token and extract user information
  */
-export const authMiddleware = async (
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+const verifyToken = async (token: string): Promise<JWTPayload> => {
+  const JWT_SECRET = process.env.JWT_SECRET;
+  
+  if (!JWT_SECRET) {
+    throw new AppError('JWT secret not configured', 500);
+  }
+
   try {
-    // Extract token from Authorization header
+    return jwt.verify(token, JWT_SECRET) as JWTPayload;
+  } catch (error) {
+    if (error instanceof jwt.TokenExpiredError) {
+      throw new AppError('Token expired', 401);
+    } else if (error instanceof jwt.JsonWebTokenError) {
+      throw new AppError('Invalid token', 401);
+    } else {
+      throw new AppError('Token verification failed', 401);
+    }
+  }
+};
+
+/**
+ * Basic authentication middleware
+ * Verifies JWT token and attaches user to request
+ */
+export const authenticate = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  try {
+    // Extract token from multiple sources
+    let token: string | undefined;
+
+    // 1. Authorization header (Bearer token)
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      token = authHeader.substring(7);
+    }
+
+    // 2. Cookie (for web clients)
+    if (!token && req.cookies.accessToken) {
+      token = req.cookies.accessToken;
+    }
+
+    // 3. Query parameter (for specific endpoints like file downloads)
+    if (!token && req.query.token && typeof req.query.token === 'string') {
+      token = req.query.token;
+    }
+
+    if (!token) {
       res.status(401).json({
-        error: 'Access denied',
-        message: 'No valid authentication token provided',
+        error: 'Authentication required',
+        message: 'No authentication token provided',
         code: 'NO_TOKEN'
       });
       return;
     }
 
-    const token = authHeader.substring(7); // Remove 'Bearer ' prefix
+    // Verify token
+    const payload = await verifyToken(token);
 
-    // Verify JWT token
-    let payload: TokenPayload;
-    try {
-      payload = jwt.verify(token, authConfig.jwtSecret) as TokenPayload;
-    } catch (jwtError: any) {
-      console.log(`🔐 JWT verification failed: ${jwtError.message}`);
-      
-      if (jwtError.name === 'TokenExpiredError') {
-        res.status(401).json({
-          error: 'Token expired',
-          message: 'Your session has expired. Please login again.',
-          code: 'TOKEN_EXPIRED'
+    // Check if user session exists in Redis (for faster lookups)
+    const redisClient = getRedisClient();
+    const cachedUser = await redisClient.get(`user_session:${payload.sub}`);
+    
+    if (cachedUser) {
+      req.user = JSON.parse(cachedUser);
+    } else {
+      // Fallback to database lookup
+      if (payload.role === 'consultant') {
+        const consultant = await prisma.consultant.findUnique({
+          where: { id: payload.sub },
+          select: {
+            id: true,
+            email: true,
+            isApprovedByAdmin: true,
+            isActive: true,
+            slug: true
+          }
         });
-        return;
-      }
-      
-      res.status(401).json({
-        error: 'Invalid token',
-        message: 'The provided authentication token is invalid',
-        code: 'INVALID_TOKEN'
-      });
-      return;
-    }
 
-    // Check if session exists in Redis
-    const sessionData = await sessionUtils.getSession(payload.sessionId);
-    if (!sessionData) {
-      res.status(401).json({
-        error: 'Session expired',
-        message: 'Your session is no longer valid. Please login again.',
-        code: 'SESSION_EXPIRED'
-      });
-      return;
-    }
-
-    // Get user from database
-    const prisma = getPrismaClient();
-    let user;
-
-    if (payload.role === 'consultant') {
-      user = await prisma.consultant.findUnique({
-        where: { id: payload.sub },
-        select: {
-          id: true,
-          email: true,
-          firstName: true,
-          lastName: true,
-          slug: true,
-          isActive: true,
-          emailVerified: true,
-          subscriptionPlan: true,
-          subscriptionExpiresAt: true,
+        if (!consultant || !consultant.isActive) {
+          res.status(401).json({
+            error: 'Authentication failed',
+            message: 'Account not found or inactive',
+            code: 'ACCOUNT_INACTIVE'
+          });
+          return;
         }
-      });
-    } else if (payload.role === 'admin') {
-      user = await prisma.admin.findUnique({
-        where: { id: payload.sub },
-        select: {
-          id: true,
-          email: true,
-          fullName: true,
-          role: true,
-        }
-      });
-    }
 
-    if (!user) {
-      res.status(401).json({
-        error: 'User not found',
-        message: 'The authenticated user no longer exists',
-        code: 'USER_NOT_FOUND'
-      });
-      return;
-    }
-
-    // Check if user is active
-    if (payload.role === 'consultant' && !authConfig.allowInactiveUsers && !user.isActive) {
-      res.status(403).json({
-        error: 'Account inactive',
-        message: 'Your account has been deactivated. Please contact support.',
-        code: 'ACCOUNT_INACTIVE'
-      });
-      return;
-    }
-
-    // Check email verification in production
-    if (authConfig.requireEmailVerification && 
-        payload.role === 'consultant' && 
-        !user.emailVerified) {
-      res.status(403).json({
-        error: 'Email not verified',
-        message: 'Please verify your email address to continue',
-        code: 'EMAIL_NOT_VERIFIED'
-      });
-      return;
-    }
-
-    // Check subscription status for consultants
-    if (payload.role === 'consultant' && user.subscriptionExpiresAt) {
-      if (new Date() > user.subscriptionExpiresAt) {
-        res.status(403).json({
-          error: 'Subscription expired',
-          message: 'Your subscription has expired. Please renew to continue.',
-          code: 'SUBSCRIPTION_EXPIRED'
+        req.user = {
+          id: consultant.id,
+          email: consultant.email,
+          role: 'consultant',
+          isApproved: consultant.isApprovedByAdmin,
+          slug: consultant.slug
+        };
+      } else {
+        // Admin user
+        const admin = await prisma.admin.findUnique({
+          where: { id: payload.sub },
+          select: {
+            id: true,
+            email: true,
+            role: true,
+            isActive: true
+          }
         });
-        return;
+
+        if (!admin || !admin.isActive) {
+          res.status(401).json({
+            error: 'Authentication failed',
+            message: 'Admin account not found or inactive',
+            code: 'ACCOUNT_INACTIVE'
+          });
+          return;
+        }
+
+        req.user = {
+          id: admin.id,
+          email: admin.email,
+          role: admin.role.toLowerCase()
+        };
       }
     }
 
-    // Populate user data in request
-    req.user = {
-      id: user.id,
-      email: user.email,
-      role: payload.role,
-      firstName: payload.role === 'consultant' ? user.firstName : undefined,
-      lastName: payload.role === 'consultant' ? user.lastName : undefined,
-      consultantSlug: payload.role === 'consultant' ? user.slug : undefined,
-      isActive: payload.role === 'consultant' ? user.isActive : true,
-      emailVerified: payload.role === 'consultant' ? user.emailVerified : true,
-    };
-
-    req.sessionId = payload.sessionId;
-
-    // Extend session TTL
-    await sessionUtils.extendSession(payload.sessionId);
-
-    // Log successful authentication (in development)
-    if (process.env.NODE_ENV === 'development') {
-      console.log(`✅ User authenticated: ${user.email} (${payload.role})`);
+    // Update last activity
+    if (req.user?.role === 'consultant') {
+      await prisma.consultant.update({
+        where: { id: req.user.id },
+        data: { lastLoginAt: new Date() }
+      });
+    } else if (req.user?.role) {
+      await prisma.admin.update({
+        where: { id: req.user.id },
+        data: { lastLoginAt: new Date() }
+      });
     }
 
     next();
 
   } catch (error) {
-    console.error('❌ Authentication middleware error:', error);
-    res.status(500).json({
-      error: 'Authentication error',
-      message: 'An error occurred during authentication',
-      code: 'AUTH_ERROR'
-    });
+    if (error instanceof AppError) {
+      res.status(error.statusCode).json({
+        error: 'Authentication failed',
+        message: error.message,
+        code: 'AUTH_ERROR'
+      });
+    } else {
+      logger.error('Authentication error:', error);
+      res.status(500).json({
+        error: 'Internal server error',
+        message: 'Authentication verification failed',
+        code: 'INTERNAL_ERROR'
+      });
+    }
   }
 };
 
 /**
- * Role-based authorization middleware
- * Restricts access to specific user roles
+ * Consultant-specific authentication with admin approval check
+ * CRITICAL: Implements the admin approval requirement
  */
-export const requireRole = (allowedRoles: Array<'consultant' | 'admin'>) => {
-  return (req: AuthenticatedRequest, res: Response, next: NextFunction): void => {
-    if (!req.user) {
-      res.status(401).json({
-        error: 'Authentication required',
-        message: 'You must be logged in to access this resource',
-        code: 'AUTH_REQUIRED'
+export const authenticateConsultant = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  // First run basic authentication
+  await authenticate(req, res, () => {
+    if (!req.user) return; // authenticate already handled the error
+
+    // Check if user is a consultant
+    if (req.user.role !== 'consultant') {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'This endpoint is only accessible to consultants',
+        code: 'CONSULTANT_ONLY'
       });
       return;
     }
 
-    if (!allowedRoles.includes(req.user.role)) {
+    // CRITICAL CHECK: Admin approval required for dashboard access
+    if (!req.user.isApproved) {
       res.status(403).json({
-        error: 'Insufficient permissions',
-        message: `This resource requires ${allowedRoles.join(' or ')} access`,
-        code: 'INSUFFICIENT_PERMISSIONS'
+        error: 'Account pending approval',
+        message: 'Your account is pending admin approval. You can login but cannot access the dashboard until approved.',
+        code: 'PENDING_APPROVAL',
+        details: {
+          canLogin: true,
+          canAccessDashboard: false,
+          needsAdminApproval: true
+        }
       });
       return;
     }
 
     next();
-  };
+  });
 };
 
 /**
- * Admin-only authorization middleware
+ * Consultant authentication that allows unapproved access
+ * Used for settings page and profile completion
  */
-export const requireAdmin = requireRole(['admin']);
+export const authenticateConsultantBasic = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  await authenticate(req, res, () => {
+    if (!req.user) return;
+
+    if (req.user.role !== 'consultant') {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'This endpoint is only accessible to consultants',
+        code: 'CONSULTANT_ONLY'
+      });
+      return;
+    }
+
+    // Allow access even if not approved (for profile completion)
+    next();
+  });
+};
 
 /**
- * Consultant-only authorization middleware
+ * Admin-only authentication middleware
  */
-export const requireConsultant = requireRole(['consultant']);
+export const authenticateAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  await authenticate(req, res, () => {
+    if (!req.user) return;
+
+    if (!['admin', 'super_admin', 'moderator'].includes(req.user.role)) {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'This endpoint requires administrator privileges',
+        code: 'ADMIN_ONLY'
+      });
+      return;
+    }
+
+    next();
+  });
+};
 
 /**
- * Optional authentication middleware
- * Populates user data if token is provided, but doesn't fail if not
+ * Super admin only authentication
  */
-export const optionalAuth = async (
-  req: AuthenticatedRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const authenticateSuperAdmin = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+  await authenticate(req, res, () => {
+    if (!req.user) return;
+
+    if (req.user.role !== 'super_admin') {
+      res.status(403).json({
+        error: 'Access denied',
+        message: 'This endpoint requires super administrator privileges',
+        code: 'SUPER_ADMIN_ONLY'
+      });
+      return;
+    }
+
+    next();
+  });
+};
+
+/**
+ * Optional authentication - continues even if no token provided
+ */
+export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
-  
-  if (!authHeader || !authHeader.startsWith('Bearer ')) {
-    // No token provided, continue without authentication
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : req.cookies.accessToken;
+
+  if (!token) {
     next();
     return;
   }
 
   try {
-    // Try to authenticate, but don't fail if it doesn't work
-    await authMiddleware(req, res, next);
+    await authenticate(req, res, next);
   } catch (error) {
-    // Authentication failed, but continue anyway
-    console.log('🔓 Optional auth failed, continuing without authentication');
+    // Continue without authentication if token is invalid
     next();
   }
 };
 
 /**
- * Rate limiting middleware for authentication endpoints
+ * Refresh token endpoint logic
  */
-export const authRateLimit = async (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): Promise<void> => {
+export const refreshTokens = async (req: Request, res: Response): Promise<void> => {
   try {
-    const identifier = req.ip || 'unknown';
-    const { allowed, remaining, resetTime } = await rateLimitUtils.checkRateLimit(
-      `auth:${identifier}`,
-      authConfig.maxLoginAttempts,
-      authConfig.loginWindowMinutes * 60
-    );
+    const { refreshToken } = req.body;
 
-    if (!allowed) {
-      res.status(429).json({
-        error: 'Too many attempts',
-        message: `Too many authentication attempts. Try again after ${new Date(resetTime).toLocaleString()}`,
-        code: 'RATE_LIMITED',
-        retryAfter: Math.ceil((resetTime - Date.now()) / 1000)
+    if (!refreshToken) {
+      res.status(400).json({
+        error: 'Refresh token required',
+        message: 'No refresh token provided',
+        code: 'NO_REFRESH_TOKEN'
       });
       return;
     }
 
-    // Add rate limit headers
-    res.set({
-      'X-RateLimit-Limit': authConfig.maxLoginAttempts.toString(),
-      'X-RateLimit-Remaining': remaining.toString(),
-      'X-RateLimit-Reset': new Date(resetTime).toISOString()
+    // Verify refresh token
+    const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+    if (!JWT_REFRESH_SECRET) {
+      throw new AppError('JWT refresh secret not configured', 500);
+    }
+
+    const payload = jwt.verify(refreshToken, JWT_REFRESH_SECRET) as any;
+
+    // Check if refresh token exists and is not revoked
+    const storedToken = await prisma.refreshToken.findUnique({
+      where: { token: refreshToken },
+      include: {
+        consultant: true,
+        admin: true
+      }
     });
 
-    next();
+    if (!storedToken || storedToken.isRevoked || storedToken.expiresAt < new Date()) {
+      res.status(401).json({
+        error: 'Invalid refresh token',
+        message: 'Refresh token is invalid or expired',
+        code: 'INVALID_REFRESH_TOKEN'
+      });
+      return;
+    }
+
+    // Revoke old refresh token
+    await prisma.refreshToken.update({
+      where: { id: storedToken.id },
+      data: { isRevoked: true }
+    });
+
+    // Generate new tokens
+    const user = storedToken.consultant || storedToken.admin;
+    const userType = storedToken.consultant ? 'consultant' : 'admin';
+    
+    const tokens = await generateTokens(user, userType);
+
+    res.json({
+      message: 'Tokens refreshed successfully',
+      data: tokens
+    });
+
   } catch (error) {
-    console.error('❌ Rate limit check failed:', error);
-    // Fail open - allow request if Redis is down
-    next();
+    logger.error('Refresh token error:', error);
+    res.status(401).json({
+      error: 'Token refresh failed',
+      message: 'Could not refresh authentication tokens',
+      code: 'REFRESH_FAILED'
+    });
   }
 };
 
 /**
- * JWT token utilities
+ * Logout functionality - revoke refresh tokens
  */
+export const logout = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { refreshToken } = req.body;
+    const userId = req.user?.id;
+
+    if (refreshToken) {
+      // Revoke specific refresh token
+      await prisma.refreshToken.updateMany({
+        where: { token: refreshToken },
+        data: { isRevoked: true }
+      });
+    } else if (userId) {
+      // Revoke all refresh tokens for user
+      await prisma.refreshToken.updateMany({
+        where: {
+          OR: [
+            { consultantId: userId },
+            { adminId: userId }
+          ]
+        },
+        data: { isRevoked: true }
+      });
+    }
+
+    // Clear Redis session
+    if (userId) {
+      const redisClient = getRedisClient();
+      await redisClient.del(`user_session:${userId}`);
+    }
+
+    // Clear cookies
+    res.clearCookie('accessToken');
+    res.clearCookie('refreshToken');
+
+    res.json({
+      message: 'Logged out successfully'
+    });
+
+  } catch (error) {
+    logger.error('Logout error:', error);
+    res.status(500).json({
+      error: 'Logout failed',
+      message: 'Could not complete logout process',
+      code: 'LOGOUT_FAILED'
+    });
+  }
+};
+
+// Utility function to check permissions
+export const hasPermission = (userRole: string, requiredPermissions: string[]): boolean => {
+  const rolePermissions: Record<string, string[]> = {
+    'super_admin': ['*'], // All permissions
+    'admin': ['read:consultants', 'update:consultants', 'read:sessions', 'read:analytics'],
+    'moderator': ['read:consultants', 'read:sessions'],
+    'consultant': ['read:own', 'update:own', 'create:sessions', 'read:own_clients']
+  };
+
+  const userPermissions = rolePermissions[userRole] || [];
+  
+  if (userPermissions.includes('*')) {
+    return true;
+  }
+
+  return requiredPermissions.some(permission => userPermissions.includes(permission));
+};
+
+// ============================================================================
+// TOKEN UTILITIES - Used by auth routes
+// ============================================================================
+
 export const tokenUtils = {
   /**
-   * Generate access token
+   * Generate access token with user payload
    */
-  generateAccessToken: (payload: Omit<TokenPayload, 'iat' | 'exp'>): string => {
-    return jwt.sign(payload, authConfig.jwtSecret, {
-      expiresIn: authConfig.accessTokenExpiry,
-      issuer: 'nakksha-api',
-      audience: 'nakksha-app'
-    });
+  generateAccessToken: (payload: {
+    sub: string;
+    email: string;
+    role: string;
+    consultantSlug?: string;
+    sessionId: string;
+  }): string => {
+    const JWT_SECRET = process.env.JWT_SECRET;
+    if (!JWT_SECRET) {
+      throw new AppError('JWT secret not configured', 500);
+    }
+
+    const tokenPayload = {
+      ...payload,
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
+    };
+
+    return jwt.sign(tokenPayload, JWT_SECRET);
   },
 
   /**
    * Generate refresh token
    */
   generateRefreshToken: (userId: string, sessionId: string): string => {
-    return jwt.sign(
-      { sub: userId, sessionId, type: 'refresh' },
-      authConfig.jwtRefreshSecret,
-      {
-        expiresIn: authConfig.refreshTokenExpiry,
-        issuer: 'nakksha-api',
-        audience: 'nakksha-app'
-      }
-    );
+    const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+    if (!JWT_REFRESH_SECRET) {
+      throw new AppError('JWT refresh secret not configured', 500);
+    }
+
+    const payload = {
+      sub: userId,
+      sessionId,
+      type: 'refresh',
+      iat: Math.floor(Date.now() / 1000),
+      exp: Math.floor(Date.now() / 1000) + (7 * 24 * 60 * 60) // 7 days
+    };
+
+    return jwt.sign(payload, JWT_REFRESH_SECRET);
   },
 
   /**
    * Verify refresh token
    */
   verifyRefreshToken: (token: string): any => {
-    try {
-      return jwt.verify(token, authConfig.jwtRefreshSecret);
-    } catch (error) {
-      throw new Error('Invalid refresh token');
+    const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
+    if (!JWT_REFRESH_SECRET) {
+      throw new AppError('JWT refresh secret not configured', 500);
     }
-  },
 
-  /**
-   * Extract token from request
-   */
-  extractToken: (req: Request): string | null => {
-    const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
-      return null;
-    }
-    return authHeader.substring(7);
-  },
-
-  /**
-   * Decode token without verification (for debugging)
-   */
-  decodeToken: (token: string): any => {
     try {
-      return jwt.decode(token);
+      return jwt.verify(token, JWT_REFRESH_SECRET);
     } catch (error) {
-      return null;
+      if (error instanceof jwt.TokenExpiredError) {
+        throw new AppError('Refresh token expired', 401);
+      } else if (error instanceof jwt.JsonWebTokenError) {
+        throw new AppError('Invalid refresh token', 401);
+      } else {
+        throw new AppError('Refresh token verification failed', 401);
+      }
     }
   }
 };
 
-/**
- * Security middleware for additional protection
- */
-export const securityMiddleware = (
-  req: Request,
-  res: Response,
-  next: NextFunction
-): void => {
-  // Add security headers
-  res.set({
-    'X-Content-Type-Options': 'nosniff',
-    'X-Frame-Options': 'DENY',
-    'X-XSS-Protection': '1; mode=block',
-    'Strict-Transport-Security': 'max-age=31536000; includeSubDomains',
-    'Referrer-Policy': 'strict-origin-when-cross-origin',
-    'Cache-Control': 'no-store, no-cache, must-revalidate, proxy-revalidate',
-    'Pragma': 'no-cache',
-    'Expires': '0'
-  });
+// ============================================================================
+// RATE LIMITING
+// ============================================================================
 
+// Rate limiter for auth endpoints
+export const authRateLimit = (req: Request, res: Response, next: NextFunction) => {
+  // In production, implement proper rate limiting with Redis
+  // For now, allow all requests but log them
+  logger.info(`Auth request from ${req.ip}: ${req.method} ${req.path}`);
   next();
 };
 
+// ============================================================================
+// SESSION MANAGEMENT
+// ============================================================================
+
+export interface AuthenticatedRequest extends Request {
+  user?: {
+    id: string;
+    email: string;
+    role: string;
+    isApproved?: boolean;
+    slug?: string;
+  };
+  sessionId?: string;
+}
+
 /**
- * Logout utility to invalidate sessions
+ * Logout user by invalidating session
  */
 export const logoutUser = async (sessionId: string): Promise<boolean> => {
   try {
-    return await sessionUtils.deleteSession(sessionId);
+    const redisClient = getRedisClient();
+    const deleted = await redisClient.del(`session:${sessionId}`);
+    return deleted > 0;
   } catch (error) {
-    console.error('❌ Error during logout:', error);
+    logger.error('Error logging out user:', error);
     return false;
   }
 };
-
-/**
- * Authentication testing utilities
- * Only available in development/test environments
- */
-export const authTestUtils = process.env.NODE_ENV !== 'production' ? {
-  /**
-   * Generate test token for testing
-   */
-  generateTestToken: (userId: string, role: 'consultant' | 'admin' = 'consultant'): string => {
-    const payload: Omit<TokenPayload, 'iat' | 'exp'> = {
-      sub: userId,
-      email: 'test@example.com',
-      role,
-      sessionId: 'test-session-id'
-    };
-    
-    return tokenUtils.generateAccessToken(payload);
-  },
-
-  /**
-   * Create test session
-   */
-  createTestSession: async (userId: string, role: 'consultant' | 'admin' = 'consultant'): Promise<string> => {
-    const sessionId = `test-session-${Date.now()}`;
-    const sessionData = {
-      userId,
-      role,
-      loginTime: new Date().toISOString(),
-      ip: '127.0.0.1',
-      userAgent: 'test-agent'
-    };
-    
-    await sessionUtils.setSession(sessionId, sessionData);
-    return sessionId;
-  }
-} : {};
-
-export default authMiddleware;

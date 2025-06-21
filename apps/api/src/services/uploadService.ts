@@ -522,8 +522,8 @@ export const getUploadStats = async (userId?: string): Promise<any> => {
     });
 
     return {
-      totalUploads: stats.reduce((sum, stat) => sum + stat._count, 0),
-      byType: stats.map(stat => ({
+      totalUploads: stats.reduce((sum: any, stat: any) => sum + stat._count, 0),
+      byType: stats.map((stat:any) => ({
         type: stat.emailType,
         count: stat._count
       }))

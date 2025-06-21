@@ -9,7 +9,7 @@
  * - Error handling and reconnection logic
  */
 
-import { PrismaClient } from '@nakksha/database';
+import { PrismaClient } from '@prisma/client';
 
 /**
  * Global Prisma client instance
@@ -34,8 +34,8 @@ const databaseConfig = {
   
   // Logging configuration
   log: process.env.NODE_ENV === 'development' 
-    ? ['query', 'info', 'warn', 'error'] as const
-    : ['warn', 'error'] as const,
+    ? ['query', 'info', 'warn', 'error']
+    : ['warn', 'error'],
 };
 
 /**
@@ -61,7 +61,7 @@ export const initializePrisma = async (): Promise<PrismaClient> => {
 
       // Add middleware for query logging in development
       if (process.env.NODE_ENV === 'development') {
-        prisma.$use(async (params, next) => {
+        prisma.$use(async (params: any, next: any) => {
           const before = Date.now();
           const result = await next(params);
           const after = Date.now();
@@ -72,7 +72,7 @@ export const initializePrisma = async (): Promise<PrismaClient> => {
       }
 
       // Add middleware for error logging
-      prisma.$use(async (params, next) => {
+      prisma.$use(async (params: any, next: any) => {
         try {
           return await next(params);
         } catch (error) {
@@ -205,7 +205,7 @@ export const getDatabaseInfo = async () => {
  * @returns Promise<T> - Result of the operation
  */
 export const executeTransaction = async <T>(
-  operation: (tx: PrismaClient) => Promise<T>
+  operation: (tx: any) => Promise<T>
 ): Promise<T> => {
   if (!prisma) {
     throw new Error('Database not connected');
@@ -300,6 +300,9 @@ export const dbUtils = {
 };
 
 // Export default instance
+// Initialize prisma client
+initializePrisma();
+
 export default prisma;
 
 /**
@@ -352,11 +355,10 @@ export const dbTestUtils = process.env.NODE_ENV !== 'production' ? {
         personalSessionPrice: 1000.00,
         webinarSessionPrice: 500.00,
         isActive: true,
-        emailVerified: true
+        isEmailVerified: true
       }
     });
 
     console.log('✅ Test data seeded successfully');
-    return testConsultant;
   }
 } : {};

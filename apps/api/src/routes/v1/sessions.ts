@@ -12,14 +12,14 @@
 
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { getPrismaClient } from '../config/database';
-import { cacheUtils } from '../config/redis';
-import { AuthenticatedRequest } from '../middleware/auth';
-import { validateRequest, commonSchemas } from '../middleware/validation';
-import { AppError, NotFoundError, ValidationError } from '../middleware/errorHandler';
-import { sendEmail } from '../services/emailService';
-import { generateMeetingLink } from '../services/meetingService';
-import { calculateSessionMetrics } from '../utils/analytics';
+import { getPrismaClient } from '../../config/database';
+import { cacheUtils } from '../../config/redis';
+import { AuthenticatedRequest } from '../../middleware/auth';
+import { validateRequest, commonSchemas } from '../../middleware/validation';
+import { AppError, NotFoundError, ValidationError } from '../../middleware/errorHandler';
+import { sendEmail } from '../../services/emailService';
+import { generateMeetingLink } from '../../services/meetingService';
+import { calculateSessionMetrics } from '../../utils/analytics';
 
 const router = Router();
 

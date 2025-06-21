@@ -510,12 +510,12 @@ export const getPaymentAnalytics = async (
       }
     });
 
-    const completedTransactions = transactions.filter(t => t.status === 'COMPLETED');
-    const failedTransactions = transactions.filter(t => t.status === 'FAILED');
-    const refundedTransactions = transactions.filter(t => t.status === 'REFUNDED');
+    const completedTransactions = transactions.filter((t: any) => t.status === 'COMPLETED');
+    const failedTransactions = transactions.filter((t: any) => t.status === 'FAILED');
+    const refundedTransactions = transactions.filter((t:any) => t.status === 'REFUNDED');
 
-    const totalAmount = completedTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
-    const refundedAmount = refundedTransactions.reduce((sum, t) => sum + Number(t.amount), 0);
+    const totalAmount = completedTransactions.reduce((sum:any, t:any) => sum + Number(t.amount), 0);
+    const refundedAmount = refundedTransactions.reduce((sum:any, t:any) => sum + Number(t.amount), 0);
 
     return {
       totalAmount,

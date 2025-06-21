@@ -14,12 +14,12 @@ import { Router, Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import { z } from 'zod';
 import { v4 as uuidv4 } from 'uuid';
-import { getPrismaClient } from '../config/database';
-import { sessionUtils, cacheUtils } from '../config/redis';
-import { tokenUtils, authRateLimit, logoutUser, AuthenticatedRequest } from '../middleware/auth';
-import { validateRequest } from '../middleware/validation';
-import { sendEmail } from '../services/emailService';
-import { generateSlug } from '../utils/helpers';
+import { getPrismaClient } from '../../config/database';
+import { sessionUtils, cacheUtils } from '../../config/redis';
+import { tokenUtils, authRateLimit, logoutUser, AuthenticatedRequest } from '../../middleware/auth';
+import { validateRequest } from '../../middleware/validation';
+import { sendEmail } from '../../services/emailService';
+import { generateSlug } from '../../utils/helpers';
 
 const router = Router();
 
@@ -90,7 +90,7 @@ router.post('/signup',
       // Check if user already exists
       const existingUser = await prisma.consultant.findUnique({
         where: { email },
-        select: { id: true, emailVerified: true }
+        select: { id: true, isEmailVerified: true }
       });
 
       if (existingUser) {
@@ -132,7 +132,7 @@ router.post('/signup',
           slug,
           phoneNumber: '', // Will be filled in settings
           isActive: true,
-          emailVerified: false, // Require email verification
+          isEmailVerified: false, // Require email verification
         },
         select: {
           id: true,
@@ -140,7 +140,7 @@ router.post('/signup',
           firstName: true,
           lastName: true,
           slug: true,
-          emailVerified: true,
+          isEmailVerified: true,
           createdAt: true
         }
       });
@@ -173,7 +173,7 @@ router.post('/signup',
             firstName: user.firstName,
             lastName: user.lastName,
             slug: user.slug,
-            emailVerified: user.emailVerified
+            isEmailVerified: user.isEmailVerified
           }
         },
         instructions: 'Please check your email and click the verification link to activate your account'
@@ -213,7 +213,7 @@ router.post('/login',
           lastName: true,
           slug: true,
           isActive: true,
-          emailVerified: true,
+          isEmailVerified: true,
           subscriptionPlan: true,
           subscriptionExpiresAt: true
         }
@@ -250,7 +250,7 @@ router.post('/login',
       }
 
       // Check email verification in production
-      if (process.env.NODE_ENV === 'production' && !user.emailVerified) {
+      if (process.env.NODE_ENV === 'production' && !user.isEmailVerified) {
         res.status(403).json({
           error: 'Email not verified',
           message: 'Please verify your email address before logging in',
@@ -302,7 +302,7 @@ router.post('/login',
             firstName: user.firstName,
             lastName: user.lastName,
             slug: user.slug,
-            emailVerified: user.emailVerified,
+            isEmailVerified: user.isEmailVerified,
             subscriptionPlan: user.subscriptionPlan,
             subscriptionExpiresAt: user.subscriptionExpiresAt
           },
@@ -370,7 +370,7 @@ router.post('/refresh',
           lastName: true,
           slug: true,
           isActive: true,
-          emailVerified: true
+          isEmailVerified: true
         }
       });
 
@@ -630,7 +630,7 @@ router.get('/me', async (req: AuthenticatedRequest, res: Response): Promise<void
         slug: true,
         profilePhotoUrl: true,
         isActive: true,
-        emailVerified: true,
+        isEmailVerified: true,
         subscriptionPlan: true,
         subscriptionExpiresAt: true,
         createdAt: true

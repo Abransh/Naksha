@@ -12,13 +12,13 @@
 
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { getPrismaClient } from '../config/database';
-import { cacheUtils } from '../config/redis';
-import { AuthenticatedRequest } from '../middleware/auth';
-import { validateRequest, commonSchemas, validationUtils } from '../middleware/validation';
-import { AppError, NotFoundError, ValidationError, ConflictError } from '../middleware/errorHandler';
-import { sendEmail } from '../services/emailService';
-import { generateClientInsights } from '../utils/analytics';
+import { getPrismaClient } from '../../config/database';
+import { cacheUtils } from '../../config/redis';
+import { AuthenticatedRequest } from '../../middleware/auth';
+import { validateRequest, commonSchemas, validationUtils } from '../../middleware/validation';
+import { AppError, NotFoundError, ValidationError, ConflictError } from '../../middleware/errorHandler';
+import { sendEmail } from '../../services/emailService';
+import { generateClientInsights } from '../../utils/analytics';
 import { exportClientsToCSV } from '../utils/export';
 
 const router = Router();

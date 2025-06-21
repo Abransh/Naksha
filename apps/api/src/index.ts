@@ -28,21 +28,29 @@ import dotenv from 'dotenv';
 import { connectDatabase } from './config/database';
 import { connectRedis } from './config/redis';
 import { errorHandler, notFoundHandler } from './middleware/errorHandler';
-import { authMiddleware } from './middleware/auth';
+import { authenticate, authenticateConsultant, authenticateAdmin } from './middleware/auth';
 import { validateRequest } from './middleware/validation';
 
 // Route imports
-import authRoutes from './routes/auth';
-import consultantRoutes from './routes/consultant';
-import dashboardRoutes from './routes/dashboard';
-import sessionRoutes from './routes/sessions';
-import clientRoutes from './routes/clients';
-import quotationRoutes from './routes/quotations';
-import conversationRoutes from './routes/conversations';
-import adminRoutes from './routes/admin';
-import uploadRoutes from './routes/upload';
-import paymentRoutes from './routes/payments';
-import webhookRoutes from './routes/webhooks';
+import consultantRoutes from './routes/v1/consultant';
+import dashboardRoutes from './routes/v1/dashboard';
+import sessionRoutes from './routes/v1/sessions';
+import clientRoutes from './routes/v1/clients';
+import quotationRoutes from './routes/v1/quotations';
+import adminRoutes from './routes/v1/admin';
+
+// Controller imports for direct routing
+import { 
+  consultantSignup, 
+  consultantLogin, 
+  adminLogin,
+  verifyEmail,
+  forgotPassword,
+  resetPassword,
+  getCurrentUser
+} from './controllers/auth.controller';
+
+import { refreshTokens, logout } from './middleware/auth';
 
 // Service imports
 import { setupSocketHandlers } from './services/socketService';
@@ -178,69 +186,111 @@ class App {
    * Each route group handles a specific domain of the application
    */
   private initializeRoutes(): void {
-    // Public routes (no authentication required)
-    this.app.use('/api/auth', authRoutes);
-    this.app.use('/api/webhooks', webhookRoutes); // Razorpay webhooks
+    // Public auth routes (no authentication required)
+    this.app.post('/api/auth/consultant/signup', consultantSignup);
+    this.app.post('/api/auth/consultant/login', consultantLogin);
+    this.app.post('/api/auth/admin/login', adminLogin);
+    this.app.get('/api/auth/verify-email/:token', verifyEmail);
+    this.app.post('/api/auth/forgot-password', forgotPassword);
+    this.app.post('/api/auth/reset-password', resetPassword);
+    
+    // Protected auth routes (authentication required)
+    this.app.get('/api/auth/me', authenticate, getCurrentUser);
+    this.app.post('/api/auth/refresh', refreshTokens);
+    this.app.post('/api/auth/logout', authenticate, logout);
     
     // Protected routes (authentication required)
-    this.app.use('/api/consultant', authMiddleware, consultantRoutes);
-    this.app.use('/api/dashboard', authMiddleware, dashboardRoutes);
-    this.app.use('/api/sessions', authMiddleware, sessionRoutes);
-    this.app.use('/api/clients', authMiddleware, clientRoutes);
-    this.app.use('/api/quotations', authMiddleware, quotationRoutes);
-    this.app.use('/api/conversations', authMiddleware, conversationRoutes);
-    this.app.use('/api/upload', authMiddleware, uploadRoutes);
-    this.app.use('/api/payments', authMiddleware, paymentRoutes);
+    this.app.use('/api/v1/consultant', authenticateConsultant, consultantRoutes);
+    this.app.use('/api/v1/dashboard', authenticateConsultant, dashboardRoutes);
+    this.app.use('/api/v1/sessions', authenticateConsultant, sessionRoutes);
+    this.app.use('/api/v1/clients', authenticateConsultant, clientRoutes);
+    this.app.use('/api/v1/quotations', authenticateConsultant, quotationRoutes);
 
     // Admin routes (admin authentication required)
-    this.app.use('/api/admin', authMiddleware, adminRoutes);
+    this.app.use('/api/v1/admin', authenticateAdmin, adminRoutes);
 
     // API documentation (if in development)
     if (process.env.NODE_ENV === 'development') {
       this.app.get('/api/docs', (req: Request, res: Response) => {
         res.json({
+          name: 'Nakksha Consulting Platform API',
+          version: '1.0.0',
+          description: 'Backend API for consultant management platform with admin approval workflow',
+          baseUrl: '/api',
           endpoints: {
-            auth: [
-              'POST /api/auth/signup',
-              'POST /api/auth/login',
-              'POST /api/auth/refresh',
-              'POST /api/auth/logout',
-              'POST /api/auth/forgot-password',
-              'POST /api/auth/reset-password'
-            ],
+            authentication: {
+              consultant: [
+                'POST /api/auth/consultant/signup - Register new consultant',
+                'POST /api/auth/consultant/login - Consultant login',
+                'GET /api/auth/verify-email/:token - Verify email address',
+                'POST /api/auth/forgot-password - Request password reset',
+                'POST /api/auth/reset-password - Reset password with token'
+              ],
+              admin: [
+                'POST /api/auth/admin/login - Admin login'
+              ],
+              common: [
+                'GET /api/auth/me - Get current user info (protected)',
+                'POST /api/auth/refresh - Refresh access token',
+                'POST /api/auth/logout - Logout user (protected)'
+              ]
+            },
             consultant: [
-              'GET /api/consultant/profile',
-              'PUT /api/consultant/profile',
-              'GET /api/consultant/:slug',
-              'PUT /api/consultant/availability'
+              'GET /api/v1/consultant/profile - Get consultant profile',
+              'PUT /api/v1/consultant/profile - Update consultant profile',
+              'GET /api/v1/consultant/:slug - Get public consultant page',
+              'POST /api/v1/consultant/availability - Create availability slots',
+              'GET /api/v1/consultant/availability - Get availability slots',
+              'PUT /api/v1/consultant/availability - Update availability slots',
+              'DELETE /api/v1/consultant/availability/:id - Delete availability slot'
             ],
             dashboard: [
-              'GET /api/dashboard/metrics',
-              'GET /api/dashboard/analytics',
-              'GET /api/dashboard/recent-activity'
+              'GET /api/v1/dashboard/metrics - Get dashboard metrics',
+              'GET /api/v1/dashboard/charts - Get chart data',
+              'GET /api/v1/dashboard/recent-activity - Get recent activity',
+              'GET /api/v1/dashboard/summary - Get quick summary stats'
             ],
             sessions: [
-              'GET /api/sessions',
-              'POST /api/sessions',
-              'GET /api/sessions/:id',
-              'PUT /api/sessions/:id',
-              'DELETE /api/sessions/:id'
+              'GET /api/v1/sessions - List sessions',
+              'POST /api/v1/sessions - Create new session',
+              'GET /api/v1/sessions/:id - Get session details',
+              'PUT /api/v1/sessions/:id - Update session',
+              'DELETE /api/v1/sessions/:id - Cancel session'
             ],
             clients: [
-              'GET /api/clients',
-              'POST /api/clients',
-              'GET /api/clients/:id',
-              'PUT /api/clients/:id',
-              'DELETE /api/clients/:id'
+              'GET /api/v1/clients - List clients',
+              'POST /api/v1/clients - Create new client',
+              'GET /api/v1/clients/:id - Get client details',
+              'PUT /api/v1/clients/:id - Update client',
+              'DELETE /api/v1/clients/:id - Delete client'
             ],
             quotations: [
-              'GET /api/quotations',
-              'POST /api/quotations',
-              'GET /api/quotations/:id',
-              'PUT /api/quotations/:id',
-              'DELETE /api/quotations/:id',
-              'POST /api/quotations/:id/send'
+              'GET /api/v1/quotations - List quotations',
+              'POST /api/v1/quotations - Create new quotation',
+              'GET /api/v1/quotations/:id - Get quotation details',
+              'PUT /api/v1/quotations/:id - Update quotation',
+              'DELETE /api/v1/quotations/:id - Delete quotation',
+              'POST /api/v1/quotations/:id/send - Send quotation to client'
+            ],
+            admin: [
+              'GET /api/v1/admin/dashboard - Admin dashboard overview',
+              'GET /api/v1/admin/consultants - List all consultants',
+              'GET /api/v1/admin/consultants/:id - Get consultant details',
+              'POST /api/v1/admin/consultants/approve - Approve/reject consultant (CRITICAL)',
+              'PUT /api/v1/admin/consultants/:id - Update consultant info',
+              'POST /api/v1/admin/admins - Create new admin (Super Admin only)',
+              'GET /api/v1/admin/admins - List all admins (Super Admin only)',
+              'GET /api/v1/admin/system/health - System health status'
             ]
+          },
+          features: {
+            'Admin Approval Workflow': 'Consultants require admin approval before accessing dashboard',
+            'Separate Authentication': 'Different auth systems for consultants and admins',
+            'Real-time Updates': 'Socket.io integration for live updates',
+            'File Uploads': 'Cloudinary integration for profile photos and documents',
+            'Email Notifications': 'Automated email system with templates',
+            'Analytics': 'Comprehensive dashboard metrics and reporting',
+            'Security': 'JWT tokens, rate limiting, input validation'
           }
         });
       });

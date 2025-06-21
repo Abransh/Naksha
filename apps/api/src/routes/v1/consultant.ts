@@ -14,13 +14,13 @@
 
 import { Router, Response } from 'express';
 import { z } from 'zod';
-import { getPrismaClient } from '../config/database';
-import { cacheUtils } from '../config/redis';
-import { AuthenticatedRequest, optionalAuth } from '../middleware/auth';
-import { validateRequest, commonSchemas, validationUtils } from '../middleware/validation';
-import { AppError, NotFoundError, ValidationError, ConflictError } from '../middleware/errorHandler';
-import { uploadToCloudinary } from '../services/uploadService';
-import { generateSlug } from '../utils/helpers';
+import { getPrismaClient } from '../../config/database';
+import { cacheUtils } from '../../config/redis';
+import { AuthenticatedRequest, optionalAuth } from '../../middleware/auth';
+import { validateRequest, commonSchemas, validationUtils } from '../../middleware/validation';
+import { AppError, NotFoundError, ValidationError, ConflictError } from '../../middleware/errorHandler';
+import { uploadToCloudinary } from '../../services/uploadService';
+import { generateSlug } from '../../utils/helpers';
 
 const router = Router();
 
@@ -119,7 +119,7 @@ router.get('/profile', async (req: AuthenticatedRequest, res: Response): Promise
         profilePhotoUrl: true,
         slug: true,
         isActive: true,
-        emailVerified: true,
+        isEmailVerified: true,
         subscriptionPlan: true,
         subscriptionExpiresAt: true,
         createdAt: true,
@@ -358,7 +358,7 @@ router.get('/:slug',
         where: {
           slug,
           isActive: true,
-          emailVerified: true
+          isEmailVerified: true
         },
         select: {
           id: true,
