@@ -533,9 +533,12 @@ router.post('/:id/send',
       // Generate quotation PDF if not exists and attachment requested
       let quotationPDFUrl = quotation.quotationImageUrl;
       if (includeAttachment && !quotationPDFUrl) {
-        try {
+        try { 
           // TODO: Implement PDF generation service
-          const quotationPDF = { secure_url: null }; // Placeholder
+          
+          const quotationPDF = { secure_url: null };}
+    
+      } // Placeholder
           /*
           const quotationPDF = await generateQuotationPDF({
             quotation: {
@@ -617,7 +620,7 @@ router.post('/:id/send',
     }
   }
 );
-
+        
 /**
  * DELETE /api/quotations/:id
  * Delete a quotation (only if draft)
@@ -838,5 +841,5 @@ router.get('/analytics',
     }
   }
 );
-
-export default router;
+        
+export default router; 
