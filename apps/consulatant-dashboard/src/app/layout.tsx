@@ -18,8 +18,8 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard - Fusion Starter",
-  description: "Modern dashboard built with Next.js and TailwindCSS",
+  title: "Dashboard - Nakksha",
+  description: "lmao",
 };
 
 export default function RootLayout({

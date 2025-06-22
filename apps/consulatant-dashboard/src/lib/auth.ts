@@ -23,31 +23,42 @@ const tokenManager = {
    * Store authentication tokens
    */
   setTokens(tokens: AuthTokens): void {
-    localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
-    localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(ACCESS_TOKEN_KEY, tokens.accessToken);
+      localStorage.setItem(REFRESH_TOKEN_KEY, tokens.refreshToken);
+    }
   },
 
   /**
+   /**
    * Get access token
    */
   getAccessToken(): string | null {
-    return localStorage.getItem(ACCESS_TOKEN_KEY);
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem(ACCESS_TOKEN_KEY);
+    }
+    return null;
   },
 
   /**
    * Get refresh token
    */
   getRefreshToken(): string | null {
+    if (typeof window !== 'undefined') {
     return localStorage.getItem(REFRESH_TOKEN_KEY);
+    }
+    return null;
   },
 
   /**
    * Clear all tokens
    */
   clearTokens(): void {
+    if (typeof window !== 'undefined') {
     localStorage.removeItem(ACCESS_TOKEN_KEY);
     localStorage.removeItem(REFRESH_TOKEN_KEY);
     localStorage.removeItem(USER_KEY);
+    }
   },
 
   /**
@@ -86,7 +97,9 @@ const tokenManager = {
    * Store user data
    */
   setUser(user: Consultant): void {
+    if (typeof window !== 'undefined') {
     localStorage.setItem(USER_KEY, JSON.stringify(user));
+    }
   },
 
   /**
@@ -94,8 +107,11 @@ const tokenManager = {
    */
   getUser(): Consultant | null {
     try {
+      if (typeof window !== 'undefined') {
       const userData = localStorage.getItem(USER_KEY);
       return userData ? JSON.parse(userData) : null;
+      }
+      return null; 
     } catch (error) {
       console.error('Failed to parse user data:', error);
       return null;
@@ -106,7 +122,9 @@ const tokenManager = {
    * Clear user data
    */
   clearUser(): void {
+    if (typeof window !== 'undefined') {
     localStorage.removeItem(USER_KEY);
+    }
   },
 
   /**
@@ -331,8 +349,6 @@ const tokenManager = {
     needsProfileCompletion: boolean;
     canAccessDashboard: boolean;
   } {
-    const user = userManager.getUser();
-    
     return {
       needsEmailVerification: !this.isEmailVerified(),
       needsAdminApproval: !this.isApprovedByAdmin(),

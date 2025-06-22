@@ -27,7 +27,6 @@ import {
   Calendar,
   Send,
   Copy,
-  ChevronLeft,
   ArrowLeft,
   ArrowRight,
 } from "lucide-react";
@@ -288,6 +287,7 @@ export default function SessionsPage() {
                       <Menu size={20} className="text-[var(--black-60)]" />
                     </button>
                   </SheetTrigger>
+                  
                   <SheetContent side="left" className="w-80 p-0 bg-white">
                     <div className="flex flex-col h-full">
                       <SidebarContent />
@@ -447,7 +447,7 @@ export default function SessionsPage() {
                   </div>
                   <div>
                     <p className="text-[var(--action-red)] text-sm">
-                      Client Didn't Join
+                      Client Didn&apos;t Join
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">

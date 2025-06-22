@@ -25,7 +25,7 @@ import {
 } from "lucide-react";
 
 const SidebarContent = () => {
-  const { user, logout } = useAuth();
+  const { logout } = useAuth();
 
   const handleLogout = async () => {
     try {
@@ -174,6 +174,7 @@ export default function Dashboard() {
                       <Menu size={20} className="text-[var(--black-60)]" />
                     </button>
                   </SheetTrigger>
+             
                   <SheetContent side="left" className="w-80 p-0 bg-white">
                     <div className="flex flex-col h-full">
                       <SidebarContent />

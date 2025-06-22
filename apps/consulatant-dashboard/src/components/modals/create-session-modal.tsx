@@ -3,9 +3,7 @@
 import { useState } from "react";
 import {
   Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
+  DialogContent
 } from "@/components/ui/dialog";
 import {
   Select,
@@ -20,7 +18,6 @@ import { Button } from "@/components/ui/button";
 import { Switch } from "@/components/ui/switch";
 import {
   X,
-  ChevronDown,
   Calendar,
   Clock,
   Search,
@@ -43,9 +40,9 @@ export function CreateSessionModal({
       <DialogContent className="max-w-[850px] w-[850px] h-[739px] p-7 bg-white rounded-xl border-0 shadow-lg">
         {/* Custom header to match design */}
         <div className="flex items-center justify-between h-8 mb-7">
-          <DialogTitle className="text-xl font-medium text-black font-poppins">
+          <span className="text-xl font-medium text-black font-poppins">
             Create New Session
-          </DialogTitle>
+          </span>
           <button
             onClick={() => onOpenChange(false)}
             className="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--secondary-30)] hover:bg-[var(--secondary-30)]/80"

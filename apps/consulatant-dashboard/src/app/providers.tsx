@@ -7,7 +7,7 @@
 
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { authService, type AuthState, type Consultant } from '@/lib/auth';
+import { authService, type AuthState } from '@/lib/auth';
 import { ApiError } from '@/lib/api';
 
 // Query Provider

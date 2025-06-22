@@ -9,12 +9,12 @@ const API_VERSION = 'v1';
 const API_URL = `${API_BASE_URL}/api/${API_VERSION}`;
 
 // Types for API responses
-export interface ApiResponse<T = any> {
+export interface ApiResponse<T = unknown> {
   message: string;
   data?: T;
   error?: string;
   code?: string;
-  details?: any;
+  details?: string;
 }
 
 export interface Consultant {
@@ -53,7 +53,7 @@ export class ApiError extends Error {
     public status: number,
     public code: string,
     message: string,
-    public details?: any
+    public details?: unknown
   ) {
     super(message);
     this.name = 'ApiError';
@@ -66,7 +66,7 @@ async function apiRequest<T>(
   options: {
     method?: string;
     headers?: Record<string, string>;
-    body?: any;
+    body?: unknown;
     requireAuth?: boolean;
   } = {}
 ): Promise<T> {
@@ -85,7 +85,7 @@ async function apiRequest<T>(
   };
 
   // Add auth token if required
-  if (requireAuth) {
+  if (requireAuth && typeof window !== 'undefined') {
     const token = localStorage.getItem('accessToken');
     if (token) {
       requestHeaders.Authorization = `Bearer ${token}`;
@@ -225,7 +225,7 @@ export const dashboardApi = {
   /**
    * Get dashboard overview data
    */
-  async getOverview(): Promise<any> {
+  async getOverview(): Promise<unknown> {
     const response = await apiRequest<ApiResponse>('/dashboard/overview', {
       requireAuth: true,
     });
@@ -235,7 +235,7 @@ export const dashboardApi = {
   /**
    * Get dashboard statistics
    */
-  async getStats(): Promise<any> {
+  async getStats(): Promise<unknown> {
     const response = await apiRequest<ApiResponse>('/dashboard/stats', {
       requireAuth: true,
     });

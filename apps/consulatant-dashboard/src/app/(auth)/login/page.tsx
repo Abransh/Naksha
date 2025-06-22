@@ -1,5 +1,4 @@
 "use client";
-
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
@@ -16,7 +15,7 @@ export default function LoginPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login, error, clearError, isAuthenticated } = useAuth();
+  const { login, error, clearError } = useAuth();
   const router = useRouter();
 
   const handleSubmit = async (e: React.FormEvent) => {
