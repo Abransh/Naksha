@@ -82,7 +82,7 @@ interface EmailData {
  * Create nodemailer transporter
  */
 const createTransporter = () => {
-  return nodemailer.createTransporter(emailConfig.smtp);
+  return nodemailer.createTransport(emailConfig.smtp);
 };
 
 /**

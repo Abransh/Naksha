@@ -6,7 +6,7 @@
 import { Request, Response } from 'express';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@nakksha/database';
 import { z } from 'zod';
 import { logger } from '../utils/logger';
 import { AppError } from '../utils/appError';
@@ -15,22 +15,56 @@ import { CacheManager } from '../config/redis';
 import { sendEmail } from '../services/emailService';
 import { generateSlug } from '../utils/helpers';
 
-const prisma = new PrismaClient();
+// Using shared prisma instance from @nakksha/database
+
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+
+/**
+ * Smart name parsing function as per CEO specification:
+ * - 1 word: firstName = word, lastName = ""
+ * - 2 words: firstName = first word, lastName = second word
+ * - 3+ words: firstName = first word, lastName = remaining words joined
+ */
+function parseFullName(fullName: string): { firstName: string; lastName: string } {
+  const nameParts = fullName.trim().split(/\s+/).filter(part => part.length > 0);
+  
+  if (nameParts.length === 0) {
+    throw new AppError('Name cannot be empty', 400);
+  } else if (nameParts.length === 1) {
+    return {
+      firstName: nameParts[0],
+      lastName: ''
+    };
+  } else if (nameParts.length === 2) {
+    return {
+      firstName: nameParts[0],
+      lastName: nameParts[1]
+    };
+  } else {
+    // 3+ words: first word is firstName, rest are lastName
+    return {
+      firstName: nameParts[0],
+      lastName: nameParts.slice(1).join(' ')
+    };
+  }
+}
 
 // ============================================================================
 // VALIDATION SCHEMAS
 // ============================================================================
 
 const consultantSignupSchema = z.object({
-  firstName: z.string().min(2, 'First name must be at least 2 characters').max(50),
-  lastName: z.string().min(2, 'Last name must be at least 2 characters').max(50),
+  name: z.string()
+    .min(2, 'Name must be at least 2 characters')
+    .max(100, 'Name must not exceed 100 characters')
+    .regex(/^[a-zA-Z\s]+$/, 'Name must contain only letters and spaces'),
   email: z.string().email('Invalid email address'),
   password: z.string()
     .min(8, 'Password must be at least 8 characters')
     .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 
-           'Password must contain uppercase, lowercase, number and special character'),
-  phoneCountryCode: z.string().optional().default('+91'),
-  phoneNumber: z.string().min(10, 'Phone number must be at least 10 digits').max(15)
+           'Password must contain uppercase, lowercase, number and special character')
 });
 
 const consultantLoginSchema = z.object({
@@ -68,6 +102,9 @@ export const consultantSignup = async (req: Request, res: Response): Promise<voi
     // Validate input
     const validatedData = consultantSignupSchema.parse(req.body);
 
+    // Parse full name into firstName and lastName using smart parsing
+    const { firstName, lastName } = parseFullName(validatedData.name);
+
     // Check if consultant already exists
     const existingConsultant = await prisma.consultant.findUnique({
       where: { email: validatedData.email.toLowerCase() }
@@ -86,8 +123,8 @@ export const consultantSignup = async (req: Request, res: Response): Promise<voi
     const saltRounds = 12;
     const passwordHash = await bcrypt.hash(validatedData.password, saltRounds);
 
-    // Generate unique slug
-    const baseSlug = generateSlug(`${validatedData.firstName} ${validatedData.lastName}`);
+    // Generate unique slug from parsed name
+    const baseSlug = generateSlug(`${firstName} ${lastName}`.trim());
     let slug = baseSlug;
     let counter = 1;
 
@@ -102,10 +139,10 @@ export const consultantSignup = async (req: Request, res: Response): Promise<voi
       data: {
         email: validatedData.email.toLowerCase(),
         passwordHash,
-        firstName: validatedData.firstName,
-        lastName: validatedData.lastName,
-        phoneCountryCode: validatedData.phoneCountryCode,
-        phoneNumber: validatedData.phoneNumber,
+        firstName,
+        lastName,
+        phoneCountryCode: '+91', // Default for MVP
+        phoneNumber: '', // Empty for MVP - to be filled in profile
         slug,
         isEmailVerified: false,
         isApprovedByAdmin: false, // CRITICAL: Requires admin approval

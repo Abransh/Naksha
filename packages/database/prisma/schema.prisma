@@ -62,6 +62,12 @@ model Consultant {
   // Dynamic URL slug for consultant pages
   slug                  String   @unique // Generated from name
   
+  // Email Verification & Password Reset Tokens
+  emailVerificationToken        String?   @map("email_verification_token")
+  emailVerificationTokenExpires DateTime? @map("email_verification_token_expires")
+  passwordResetToken           String?   @map("password_reset_token")  
+  passwordResetTokenExpires    DateTime? @map("password_reset_token_expires")
+  
   // Metadata
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
@@ -73,6 +79,7 @@ model Consultant {
   quotations            Quotation[]
   availabilitySlots     AvailabilitySlot[]
   refreshTokens         RefreshToken[]
+  paymentTransactions   PaymentTransaction[]
   
   @@map("consultants")
   @@index([email])
@@ -162,6 +169,7 @@ model Client {
   
   // Relationships
   sessions     Session[]
+  paymentTransactions PaymentTransaction[]
   
   @@map("clients")
   @@unique([email, consultantId]) // Same email can book with different consultants
@@ -197,6 +205,7 @@ model Session {
   timezone          String      @default("Asia/Kolkata")
   
   // Meeting Information
+  meetingId         String?     @map("meeting_id")
   meetingLink       String?     @map("meeting_link")
   meetingPassword   String?     @map("meeting_password")
   platform          String?     @default("zoom") // zoom, meet, teams
@@ -205,17 +214,23 @@ model Session {
   amount            Decimal     @db.Decimal(10,2)
   currency          String      @default("INR")
   paymentStatus     PaymentStatus @default(PENDING) @map("payment_status")
+  paymentMethod     String?     @map("payment_method") // razorpay, stripe, etc
   paymentId         String?     @map("payment_id") // Razorpay payment ID
   
   // Additional Information
   clientNotes       String?     @map("client_notes") // Notes from client during booking
   consultantNotes   String?     @map("consultant_notes") // Internal notes
+  notes             String?     // General notes field
+  reminderSent      Boolean     @default(false) @map("reminder_sent") // Reminder email sent
   
   // Metadata
   createdAt         DateTime    @default(now()) @map("created_at")
   updatedAt         DateTime    @updatedAt @map("updated_at")
   completedAt       DateTime?   @map("completed_at")
   cancelledAt       DateTime?   @map("cancelled_at")
+  
+  // Relationships
+  paymentTransactions PaymentTransaction[]
   
   @@map("sessions")
   @@index([consultantId])
@@ -234,10 +249,12 @@ enum SessionType {
 enum SessionStatus {
   PENDING       // Awaiting payment/confirmation
   CONFIRMED     // Payment successful, scheduled
-  ONGOING       // Currently in progress
+  IN_PROGRESS   // Currently in progress
+  ONGOING       // Currently in progress (alias)
   COMPLETED     // Successfully completed
   CANCELLED     // Cancelled by client or consultant
   NO_SHOW       // Client didn't attend
+  RETURNED      // Payment returned/refunded
 }
 
 enum PaymentStatus {
@@ -268,6 +285,7 @@ model AvailabilitySlot {
   // Slot Status
   isBooked     Boolean     @default(false) @map("is_booked")
   isBlocked    Boolean     @default(false) @map("is_blocked") // Manually blocked by consultant
+  sessionId    String?     @map("session_id") // Link to session if booked
   
   // Metadata
   createdAt    DateTime    @default(now()) @map("created_at")
@@ -299,10 +317,15 @@ model Quotation {
   
   // Quotation Details
   title           String
+  quotationName   String          @map("quotation_name") // Alias for title
   description     String
-  amount          Decimal         @db.Decimal(10,2)
+  baseAmount      Decimal         @db.Decimal(10,2) @map("base_amount")
+  discountPercentage Decimal      @default(0) @db.Decimal(5,2) @map("discount_percentage")
+  finalAmount     Decimal         @db.Decimal(10,2) @map("final_amount") // Calculated: baseAmount - (baseAmount * discountPercentage / 100)
+  amount          Decimal         @db.Decimal(10,2) // Alias for finalAmount for compatibility
   currency        String          @default("INR")
   validUntil      DateTime        @map("valid_until")
+  expiresAt       DateTime        @map("expires_at") // Alias for validUntil
   
   // Status
   status          QuotationStatus @default(DRAFT)
@@ -311,6 +334,10 @@ model Quotation {
   terms           String?
   notes           String?
   
+  // Additional Fields
+  quotationImageUrl String?        @map("quotation_image_url")
+  viewCount       Int             @default(0) @map("view_count")
+  
   // Metadata
   quotationNumber String          @unique @map("quotation_number") // Auto-generated
   createdAt       DateTime        @default(now()) @map("created_at")
@@ -318,6 +345,10 @@ model Quotation {
   sentAt          DateTime?       @map("sent_at")
   acceptedAt      DateTime?       @map("accepted_at")
   rejectedAt      DateTime?       @map("rejected_at")
+  respondedAt     DateTime?       @map("responded_at")
+  
+  // Relationships
+  paymentTransactions PaymentTransaction[]
   
   @@map("quotations")
   @@index([consultantId])
@@ -333,6 +364,67 @@ enum QuotationStatus {
   ACCEPTED      // Client accepted
   REJECTED      // Client rejected
   EXPIRED       // Validity period expired
+}
+
+// ============================================================================
+// PAYMENT MANAGEMENT  
+// ============================================================================
+
+// Payment Transactions - Track all payment transactions
+model PaymentTransaction {
+  id                String        @id @default(cuid())
+  
+  // Related entities
+  sessionId         String?       @map("session_id")
+  quotationId       String?       @map("quotation_id")
+  consultantId      String        @map("consultant_id")
+  clientId          String?       @map("client_id")
+  
+  session           Session?      @relation(fields: [sessionId], references: [id], onDelete: SetNull)
+  quotation         Quotation?    @relation(fields: [quotationId], references: [id], onDelete: SetNull)
+  consultant        Consultant    @relation(fields: [consultantId], references: [id], onDelete: Restrict)
+  client            Client?       @relation(fields: [clientId], references: [id], onDelete: SetNull)
+  
+  // Payment Details
+  amount            Decimal       @db.Decimal(10,2)
+  currency          String        @default("INR")
+  paymentMethod     String?       @map("payment_method") // razorpay, stripe, etc
+  
+  // External Payment Gateway Information
+  gatewayPaymentId  String?       @map("gateway_payment_id") // Razorpay payment ID
+  gatewayOrderId    String?       @map("gateway_order_id")   // Razorpay order ID
+  gatewaySignature  String?       @map("gateway_signature")  // Payment signature for verification
+  gatewayResponse   Json?         @map("gateway_response")   // Full gateway response for debugging
+  clientEmail       String?       @map("client_email")       // Client email for reference
+  
+  // Transaction Status and Details
+  status            PaymentTransactionStatus @default(PENDING)
+  transactionType   String        @map("transaction_type") // payment, refund, partial_refund
+  description       String?
+  failureReason     String?       @map("failure_reason")
+  
+  // Metadata
+  createdAt         DateTime      @default(now()) @map("created_at")
+  updatedAt         DateTime      @updatedAt @map("updated_at")
+  processedAt       DateTime?     @map("processed_at")
+  
+  @@map("payment_transactions")
+  @@index([sessionId])
+  @@index([quotationId])
+  @@index([consultantId])
+  @@index([status])
+  @@index([gatewayPaymentId])
+}
+
+enum PaymentTransactionStatus {
+  PENDING           // Transaction initiated
+  PROCESSING        // Being processed by gateway
+  SUCCESS           // Successfully completed
+  COMPLETED         // Completed (alias for SUCCESS)
+  FAILED            // Transaction failed
+  CANCELLED         // User cancelled
+  REFUNDED          // Money refunded
+  PARTIALLY_REFUNDED // Partially refunded
 }
 
 // ============================================================================
@@ -411,4 +503,42 @@ model EmailTemplate {
   updatedAt   DateTime @updatedAt @map("updated_at")
   
   @@map("email_templates")
+}
+
+// Email Logs - Track email sending status for monitoring and retries
+model EmailLog {
+  id           String     @id @default(cuid())
+  
+  // Email Details
+  to           String
+  recipientEmail String  @map("recipient_email") // Alias for to
+  from         String?
+  subject      String
+  templateName String?    @map("template_name")
+  emailType    String?    @map("email_type") // welcome, reminder, etc
+  
+  // Status Tracking
+  status       EmailStatus @default(PENDING)
+  errorMessage String?    @map("error_message")
+  sentAt       DateTime?  @map("sent_at")
+  
+  // Metadata
+  consultantId String?    @map("consultant_id") // Who triggered this email
+  clientId     String?    @map("client_id")     // Related client if applicable
+  sessionId    String?    @map("session_id")    // Related session if applicable
+  
+  createdAt    DateTime   @default(now()) @map("created_at")
+  updatedAt    DateTime   @updatedAt @map("updated_at")
+  
+  @@map("email_logs")
+  @@index([status])
+  @@index([createdAt])
+  @@index([consultantId])
+}
+
+enum EmailStatus {
+  PENDING       // Email queued for sending
+  SENT          // Email sent successfully
+  FAILED        // Email failed to send
+  QUEUED        // Email queued for retry
 }

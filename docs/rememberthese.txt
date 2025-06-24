@@ -1,0 +1,84 @@
+apps/api/src/routes/quotations.ts
+
+ // Placeholder
+          /*
+          const quotationPDF = await generateQuotationPDF({
+            quotation: {
+              ...quotation,
+              finalAmount: Number(quotation.amount),
+              baseAmount: Number(quotation.amount),
+              discountPercentage: Number(0)
+            },
+            consultant: {
+              name: `${req.user!.firstName} ${req.user!.lastName}`,
+              email: req.user!.email
+            }
+          });
+
+          // TODO: Upload generated PDF to cloud storage
+          const uploadResult = { secure_url: null }; // Placeholder
+
+          quotationPDFUrl = uploadResult.secure_url;
+
+          // Update quotation with PDF URL
+          await prisma.quotation.update({
+            where: { id },
+            data: { quotationImageUrl: quotationPDFUrl }
+          });
+
+        } catch (pdfError) {
+          console.error('❌ PDF generation failed:', pdfError);
+          // Continue without attachment
+          quotationPDFUrl = null;
+        }
+      }
+
+      // Send quotation email
+      await sendEmail('quotation_shared', {
+        to: quotation.clientEmail,
+        data: {
+          clientName: quotation.clientName,
+          consultantName: `${req.user!.firstName} ${req.user!.lastName}`,
+          quotationName: quotation.quotationName,
+          finalAmount: Number(quotation.amount),
+          currency: quotation.currency,
+          expiresAt: quotation.expiresAt?.toLocaleDateString(),
+          viewLink: `${process.env.FRONTEND_URL}/quotations/view/${quotation.id}`,
+          customMessage: emailMessage,
+          attachmentUrl: includeAttachment ? quotationPDFUrl : null
+        }
+      });
+
+      // Update quotation status and sent date
+      await prisma.quotation.update({
+        where: { id },
+        data: {
+          status: 'SENT',
+          sentAt: new Date(),
+          updatedAt: new Date()
+        }
+      });
+
+      // Clear related caches
+      await cacheUtils.clearPattern(`quotations:${consultantId}:*`);
+      await cacheUtils.clearPattern(`dashboard_*:${consultantId}:*`);
+
+      console.log(`✅ Quotation sent: ${id} to ${quotation.clientEmail}`);
+
+      res.json({
+        message: 'Quotation sent successfully',
+        data: {
+          sentAt: new Date().toISOString(),
+          recipientEmail: quotation.clientEmail
+        }
+      });
+
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof ValidationError) {
+        throw error;
+      }
+      console.error('❌ Send quotation error:', error);
+      throw new AppError('Failed to send quotation', 500, 'QUOTATION_SEND_ERROR');
+    }
+  }
+);

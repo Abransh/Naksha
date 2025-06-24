@@ -1,3 +1,5 @@
+// apps/consulatant-dashboard/src/app/(auth)/login/page.tsx
+
 "use client";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -103,7 +105,7 @@ export default function LoginPage() {
 
             <form
               onSubmit={handleSubmit}
-              className="flex flex-col items-end gap-3 w-full"
+              className="flex flex-col items-center gap-3 w-full"
             >
               {/* Input Fields */}
               <div className="flex flex-col items-start gap-[30px] w-full">
@@ -150,12 +152,23 @@ export default function LoginPage() {
               </div>
 
               {/* Recover Password Link */}
-              <Link
-                href="/forgot-password"
-                className="text-sm text-[var(--primary-100)] font-inter hover:underline"
+              <div className="w-full flex justify-end">
+                <Link
+                  href="/forgot-password"
+                  className="text-sm text-[var(--primary-100)] font-inter hover:underline"
+                >
+                  Recover Password
+                </Link>
+              </div>
+
+              {/* Login Button - MOVED INSIDE FORM */}
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="w-[180px] h-[54px] bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white text-xl font-inter rounded-xl disabled:opacity-50 disabled:cursor-not-allowed mt-6"
               >
-                Recover Password
-              </Link>
+                {isLoading ? "Logging in..." : "Login"}
+              </Button>
             </form>
 
             {/* Sign Up Link */}
@@ -170,15 +183,6 @@ export default function LoginPage() {
                 Sign Up
               </Link>
             </p>
-
-            {/* Login Button */}
-            <Button
-              type="submit"
-              disabled={isLoading}
-              className="w-[180px] h-[54px] bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white text-xl font-inter rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Logging in..." : "Login"}
-            </Button>
           </div>
         </div>
       </div>

@@ -15,7 +15,7 @@ export { PrismaClient } from '@prisma/client';
 // Re-export database utilities
 export * from './client';
 export * from './types';
-export * from './utils';
+// export * from './utils';
 
 import { PrismaClient } from '@prisma/client';
 

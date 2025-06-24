@@ -135,7 +135,7 @@ router.get('/',
       });
 
       // Format response data
-      const formattedQuotations = quotations.map(quotation => {
+      const formattedQuotations = quotations.map((quotation:any) => {
         const finalAmount = Number(quotation.amount) * (1 - Number(0) / 100);
         
         return {
@@ -169,15 +169,15 @@ router.get('/',
       // Calculate summary statistics
       const summaryStats = {
         totalQuotations: totalCount,
-        draftQuotations: formattedQuotations.filter(q => q.status === 'DRAFT').length,
-        sentQuotations: formattedQuotations.filter(q => q.status === 'SENT').length,
-        acceptedQuotations: formattedQuotations.filter(q => q.status === 'ACCEPTED').length,
-        totalValue: formattedQuotations.reduce((sum, q) => sum + q.finalAmount, 0),
+        draftQuotations: formattedQuotations.filter((q:any) => q.status === 'DRAFT').length,
+        sentQuotations: formattedQuotations.filter((q:any) => q.status === 'SENT').length,
+        acceptedQuotations: formattedQuotations.filter((q:any) => q.status === 'ACCEPTED').length,
+        totalValue: formattedQuotations.reduce((sum:any, q:any) => sum + q.finalAmount, 0),
         averageValue: formattedQuotations.length > 0 
-          ? formattedQuotations.reduce((sum, q) => sum + q.finalAmount, 0) / formattedQuotations.length 
+          ? formattedQuotations.reduce((sum:any , q:any) => sum + q.finalAmount, 0) / formattedQuotations.length 
           : 0,
-        conversionRate: formattedQuotations.filter(q => q.status === 'SENT').length > 0
-          ? (formattedQuotations.filter(q => q.status === 'ACCEPTED').length / formattedQuotations.filter(q => q.status === 'SENT').length) * 100
+        conversionRate: formattedQuotations.filter((q:any) => q.status === 'SENT').length > 0
+          ? (formattedQuotations.filter((q:any) => q.status === 'ACCEPTED').length / formattedQuotations.filter((q:any) => q.status === 'SENT').length) * 100
           : 0
       };
 
@@ -536,91 +536,23 @@ router.post('/:id/send',
         try { 
           // TODO: Implement PDF generation service
           
-          const quotationPDF = { secure_url: null };}
-    
-      } // Placeholder
-          /*
-          const quotationPDF = await generateQuotationPDF({
-            quotation: {
-              ...quotation,
-              finalAmount: Number(quotation.amount),
-              baseAmount: Number(quotation.amount),
-              discountPercentage: Number(0)
-            },
-            consultant: {
-              name: `${req.user!.firstName} ${req.user!.lastName}`,
-              email: req.user!.email
-            }
-          });
-
-          // TODO: Upload generated PDF to cloud storage
-          const uploadResult = { secure_url: null }; // Placeholder
-
-          quotationPDFUrl = uploadResult.secure_url;
-
-          // Update quotation with PDF URL
-          await prisma.quotation.update({
-            where: { id },
-            data: { quotationImageUrl: quotationPDFUrl }
-          });
-
-        } catch (pdfError) {
-          console.error('❌ PDF generation failed:', pdfError);
-          // Continue without attachment
-          quotationPDFUrl = null;
+          const quotationPDF = { secure_url: null };
         }
-      }
-
-      // Send quotation email
-      await sendEmail('quotation_shared', {
-        to: quotation.clientEmail,
-        data: {
-          clientName: quotation.clientName,
-          consultantName: `${req.user!.firstName} ${req.user!.lastName}`,
-          quotationName: quotation.quotationName,
-          finalAmount: Number(quotation.amount),
-          currency: quotation.currency,
-          expiresAt: quotation.expiresAt?.toLocaleDateString(),
-          viewLink: `${process.env.FRONTEND_URL}/quotations/view/${quotation.id}`,
-          customMessage: emailMessage,
-          attachmentUrl: includeAttachment ? quotationPDFUrl : null
+            catch (error) {
+            console.error('Error generating quotation PDF:', error);
+            throw new ValidationError('Failed to generate quotation PDF');
+          }}
         }
-      });
-
-      // Update quotation status and sent date
-      await prisma.quotation.update({
-        where: { id },
-        data: {
-          status: 'SENT',
-          sentAt: new Date(),
-          updatedAt: new Date()
+        catch (error) {
+          console.error('❌ Send quotation error:', error);
+          throw new AppError('Failed to send quotation', 500, 'QUOTATION_SEND_ERROR');
         }
-      });
-
-      // Clear related caches
-      await cacheUtils.clearPattern(`quotations:${consultantId}:*`);
-      await cacheUtils.clearPattern(`dashboard_*:${consultantId}:*`);
-
-      console.log(`✅ Quotation sent: ${id} to ${quotation.clientEmail}`);
-
-      res.json({
-        message: 'Quotation sent successfully',
-        data: {
-          sentAt: new Date().toISOString(),
-          recipientEmail: quotation.clientEmail
-        }
-      });
-
-    } catch (error) {
-      if (error instanceof NotFoundError || error instanceof ValidationError) {
-        throw error;
-      }
-      console.error('❌ Send quotation error:', error);
-      throw new AppError('Failed to send quotation', 500, 'QUOTATION_SEND_ERROR');
-    }
-  }
-);
         
+  });
+    
+    
+    
+            
 /**
  * DELETE /api/quotations/:id
  * Delete a quotation (only if draft)
@@ -798,26 +730,26 @@ router.get('/analytics',
           highestValue: Number(valueAnalytics._max.finalAmount || 0),
           lowestValue: Number(valueAnalytics._min.finalAmount || 0)
         },
-        statusBreakdown: statusBreakdown.map(item => ({
+        statusBreakdown: statusBreakdown.map((item:any) => ({
           status: item.status,
           count: item._count,
           totalValue: Number(item._sum.finalAmount || 0)
         })),
         conversion: {
-          viewedQuotations: conversionAnalytics.filter(q => q.status === 'VIEWED').length,
-          acceptedQuotations: conversionAnalytics.filter(q => q.status === 'ACCEPTED').length,
-          rejectedQuotations: conversionAnalytics.filter(q => q.status === 'REJECTED').length,
+          viewedQuotations: conversionAnalytics.filter((q:any) => q.status === 'VIEWED').length,
+          acceptedQuotations: conversionAnalytics.filter((q:any) => q.status === 'ACCEPTED').length,
+          rejectedQuotations: conversionAnalytics.filter((q:any) => q.status === 'REJECTED').length,
           conversionRate: conversionAnalytics.length > 0 
-            ? (conversionAnalytics.filter(q => q.status === 'ACCEPTED').length / conversionAnalytics.length) * 100 
+            ? (conversionAnalytics.filter((q:any) => q.status === 'ACCEPTED').length / conversionAnalytics.length) * 100 
             : 0,
           averageResponseTime: conversionAnalytics
-            .filter(q => q.sentAt && q.respondedAt)
-            .reduce((sum, q) => {
+            .filter((q:any) => q.sentAt && q.respondedAt)
+            .reduce((sum:any, q:any) => {
               const responseTime = new Date(q.respondedAt!).getTime() - new Date(q.sentAt!).getTime();
               return sum + responseTime;
-            }, 0) / Math.max(1, conversionAnalytics.filter(q => q.sentAt && q.respondedAt).length)
+            }, 0) / Math.max(1, conversionAnalytics.filter((q:any) => q.sentAt && q.respondedAt).length)
         },
-        topQuotations: topQuotations.map(q => ({
+        topQuotations: topQuotations.map((q:any) => ({
           ...q,
           finalAmount: Number(q.finalAmount)
         })),
@@ -841,5 +773,5 @@ router.get('/analytics',
     }
   }
 );
-        
-export default router; 
+
+export default router;

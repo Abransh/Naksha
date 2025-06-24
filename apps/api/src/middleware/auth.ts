@@ -5,12 +5,10 @@
 
 import { Request, Response, NextFunction } from 'express';
 import jwt from 'jsonwebtoken';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@nakksha/database';
 import { logger } from '../utils/logger';
 import { AppError } from '../utils/appError';
 import { getRedisClient } from '../config/redis';
-
-const prisma = new PrismaClient();
 
 // JWT payload interfaces
 interface ConsultantJWTPayload {

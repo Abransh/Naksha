@@ -13,7 +13,7 @@
  */
 
 import { Request, Response, NextFunction } from 'express';
-import { Prisma } from '@nakksha/database';
+import { Prisma } from '../../../../packages/database';
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import { ZodError } from 'zod';
 

@@ -53,7 +53,7 @@ import {
 import { refreshTokens, logout } from './middleware/auth';
 
 // Service imports
-import { setupSocketHandlers } from './services/socketService';
+//import { setupSocketHandlers } from './services/socketService';
 import { startBackgroundJobs } from './services/jobService';
 import { setupEmailTemplates } from './services/emailService';
 
@@ -82,7 +82,7 @@ class App {
     this.initializeMiddleware();
     this.initializeRoutes();
     this.initializeErrorHandling();
-    this.initializeSocketIO();
+    // this.initializeSocketIO();
   }
 
   /**
@@ -178,7 +178,7 @@ class App {
     });
 
     // Apply auth limiter to auth routes
-    this.app.use('/api/auth', authLimiter);
+    this.app.use('/api/v1/auth', authLimiter);
   }
 
   /**
@@ -186,18 +186,18 @@ class App {
    * Each route group handles a specific domain of the application
    */
   private initializeRoutes(): void {
-    // Public auth routes (no authentication required)
-    this.app.post('/api/auth/consultant/signup', consultantSignup);
-    this.app.post('/api/auth/consultant/login', consultantLogin);
-    this.app.post('/api/auth/admin/login', adminLogin);
-    this.app.get('/api/auth/verify-email/:token', verifyEmail);
-    this.app.post('/api/auth/forgot-password', forgotPassword);
-    this.app.post('/api/auth/reset-password', resetPassword);
+    // Public auth routes (no authentication required) - v1 API
+    this.app.post('/api/v1/auth/signup', consultantSignup);
+    this.app.post('/api/v1/auth/login', consultantLogin);
+    this.app.post('/api/v1/auth/admin/login', adminLogin);
+    this.app.get('/api/v1/auth/verify-email/:token', verifyEmail);
+    this.app.post('/api/v1/auth/forgot-password', forgotPassword);
+    this.app.post('/api/v1/auth/reset-password', resetPassword);
     
-    // Protected auth routes (authentication required)
-    this.app.get('/api/auth/me', authenticate, getCurrentUser);
-    this.app.post('/api/auth/refresh', refreshTokens);
-    this.app.post('/api/auth/logout', authenticate, logout);
+    // Protected auth routes (authentication required) - v1 API
+    this.app.get('/api/v1/auth/me', authenticate, getCurrentUser);
+    this.app.post('/api/v1/auth/refresh', refreshTokens);
+    this.app.post('/api/v1/auth/logout', authenticate, logout);
     
     // Protected routes (authentication required)
     this.app.use('/api/v1/consultant', authenticateConsultant, consultantRoutes);
@@ -220,19 +220,19 @@ class App {
           endpoints: {
             authentication: {
               consultant: [
-                'POST /api/auth/consultant/signup - Register new consultant',
-                'POST /api/auth/consultant/login - Consultant login',
-                'GET /api/auth/verify-email/:token - Verify email address',
-                'POST /api/auth/forgot-password - Request password reset',
-                'POST /api/auth/reset-password - Reset password with token'
+                'POST /api/v1/auth/signup - Register new consultant',
+                'POST /api/v1/auth/login - Consultant login',
+                'GET /api/v1/auth/verify-email/:token - Verify email address',
+                'POST /api/v1/auth/forgot-password - Request password reset',
+                'POST /api/v1/auth/reset-password - Reset password with token'
               ],
               admin: [
-                'POST /api/auth/admin/login - Admin login'
+                'POST /api/v1/auth/admin/login - Admin login'
               ],
               common: [
-                'GET /api/auth/me - Get current user info (protected)',
-                'POST /api/auth/refresh - Refresh access token',
-                'POST /api/auth/logout - Logout user (protected)'
+                'GET /api/v1/auth/me - Get current user info (protected)',
+                'POST /api/v1/auth/refresh - Refresh access token',
+                'POST /api/v1/auth/logout - Logout user (protected)'
               ]
             },
             consultant: [
@@ -309,12 +309,12 @@ class App {
     this.app.use(errorHandler);
   }
 
-  /**
-   * Initialize Socket.IO for real-time features
-   */
-  private initializeSocketIO(): void {
-    setupSocketHandlers(this.io);
-  }
+  // /**
+  //  * Initialize Socket.IO for real-time features
+  //  */
+  // private initializeSocketIO(): void {
+  //   setupSocketHandlers(this.io);
+  // }
 
   /**
    * Start the server and initialize all connections

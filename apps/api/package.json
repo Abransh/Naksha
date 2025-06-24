@@ -18,13 +18,13 @@
     "db:studio": "cd ../../packages/database && npm run db:studio",
     "db:seed": "cd ../../packages/database && npm run db:seed",
     "type-check": "tsc --noEmit",
-    "health-check": "curl -f http://localhost:3001/health || exit 1",
+    "health-check": "curl -f http://localhost:8000/health || exit 1",
     "test:api": "newman run tests/api-tests.postman_collection.json",
     "security:scan": "npm audit",
-    "performance:test": "autocannon http://localhost:3001/health"
+    "performance:test": "autocannon http://localhost:8000/health"
   },
   "dependencies": {
-    "@nakksha/database": "*",
+    "@prisma/client": "^6.10.1",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",
     "bull": "^4.12.2",
@@ -44,7 +44,7 @@
     "razorpay": "^2.9.2",
     "redis": "^4.6.10",
     "socket.io": "^4.7.4",
-    "zod": "^3.22.4"
+    "zod": "^3.25.67"
   },
   "devDependencies": {
     "@types/bcryptjs": "^2.4.6",

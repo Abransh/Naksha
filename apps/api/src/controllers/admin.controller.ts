@@ -5,14 +5,14 @@
 
 import { Request, Response } from 'express';
 import { z } from 'zod';
-import { PrismaClient } from '@prisma/client';
+import { prisma } from '@nakksha/database';
 import { logger } from '../utils/logger';
 import { AppError, NotFoundError, ValidationError, ConflictError } from '../utils/appError';
 import { sendEmail } from '../services/emailService';
 import { generateSlug } from '../utils/helpers';
 import bcrypt from 'bcryptjs';
 
-const prisma = new PrismaClient();
+// Using shared prisma instance from @nakksha/database
 
 // ============================================================================
 // VALIDATION SCHEMAS

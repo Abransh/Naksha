@@ -385,7 +385,7 @@ router.post('/',
           to: client.email,
           data: {
             clientName: client.name,
-            consultantName: `${req.user!.firstName || ''} ${req.user!.lastName || ''}`.trim(),
+            consultantName: `${req.user!.slug || req.user!.email}`.trim(),
             consultantEmail: req.user!.email,
             profileUrl: `${process.env.FRONTEND_URL}/${req.user!.slug || ''}`
           }

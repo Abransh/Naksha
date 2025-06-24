@@ -9,7 +9,7 @@
  * - Error handling and reconnection logic
  */
 
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, prisma as sharedPrisma } from '@nakksha/database';
 
 /**
  * Global Prisma client instance
@@ -303,16 +303,8 @@ export const dbUtils = {
   }
 };
 
-// Export default instance
-// Initialize prisma client on import
-let defaultPrisma: PrismaClient;
-try {
-  defaultPrisma = getPrismaClient();
-} catch {
-  defaultPrisma = new PrismaClient();
-}
-
-export default defaultPrisma;
+// Export shared instance from @nakksha/database
+export default sharedPrisma;
 
 /**
  * Testing utilities for database operations

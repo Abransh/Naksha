@@ -15,7 +15,7 @@
 
 import cron from 'node-cron';
 import { getPrismaClient } from '../config/database';
-import { sendEmail, sendBulkEmails } from './emailService';
+import { sendEmail} from './emailService';
 import { cleanupTempFiles } from './uploadService';
 import { logger } from '../utils/logger';
 
@@ -420,7 +420,7 @@ const healthCheckJob = async (): Promise<void> => {
     });
 
     if (recentEmailLogs.length > 0) {
-      const failureRate = recentEmailLogs.filter(log => log.status === 'FAILED').length / recentEmailLogs.length;
+      const failureRate = recentEmailLogs.filter((log:any) => log.status === 'FAILED').length / recentEmailLogs.length;
       
       if (failureRate > 0.5) { // More than 50% failure rate
         console.warn(`⚠️ High email failure rate detected: ${(failureRate * 100).toFixed(1)}%`);

@@ -183,6 +183,15 @@ export default function SignupPage() {
                   </button>
                 </div>
               </div>
+
+              {/* Sign-up Button - MOVED INSIDE FORM */}
+              <Button
+                type="submit"
+                disabled={isLoading || success}
+                className="w-[180px] h-[54px] bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white text-xl font-inter rounded-xl disabled:opacity-50 disabled:cursor-not-allowed mt-6"
+              >
+                {isLoading ? "Creating..." : success ? "Created!" : "Sign-up"}
+              </Button>
             </form>
 
             {/* Login Link */}
@@ -197,15 +206,6 @@ export default function SignupPage() {
                 Login
               </Link>
             </p>
-
-            {/* Sign-up Button */}
-            <Button
-              type="submit"
-              disabled={isLoading || success}
-              className="w-[180px] h-[54px] bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white text-xl font-inter rounded-xl disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isLoading ? "Creating..." : success ? "Created!" : "Sign-up"}
-            </Button>
           </div>
         </div>
       </div>
