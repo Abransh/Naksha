@@ -515,10 +515,10 @@ export const getUploadStats = async (userId?: string): Promise<any> => {
         emailType: 'FILE_UPLOAD'
       },
       _count: true,
-      _sum: {
-        // This would need a proper file size field in a real file uploads table
-        // For now, using a placeholder
-      }
+      // _sum: {
+      //   // This would need a proper file size field in a real file uploads table
+      //   // For now, using a placeholder
+      // }
     });
 
     return {

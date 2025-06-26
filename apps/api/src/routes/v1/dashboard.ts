@@ -15,6 +15,7 @@ import { getPrismaClient } from '../../config/database';
 import { cacheUtils } from '../../config/redis';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { validateRequest } from '../../middleware/validation';
+import { getDashboardOverview, getDashboardStats } from '../../controllers/dashboard.controller';
 
 const router = Router();
 
@@ -582,6 +583,18 @@ router.get('/recent-activity', async (req: AuthenticatedRequest, res: Response):
     });
   }
 });
+
+/**
+ * GET /api/dashboard/overview
+ * Get comprehensive dashboard overview data (new simplified endpoint)
+ */
+router.get('/overview', getDashboardOverview);
+
+/**
+ * GET /api/dashboard/stats
+ * Get additional dashboard statistics (new endpoint)
+ */
+router.get('/stats', getDashboardStats);
 
 /**
  * GET /api/dashboard/summary

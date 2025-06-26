@@ -31,10 +31,14 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
-      await login(formData.email.trim(), formData.password);
+      const user = await login(formData.email.trim(), formData.password);
       
-      // Redirect to dashboard on successful login
-      router.push('/dashboard');
+      // Redirect based on profile completion status
+      if (user && !user.profileCompleted) {
+        router.push('/dashboard/settings');
+      } else {
+        router.push('/dashboard');
+      }
     } catch (err) {
       // Error is handled by the auth context
       console.error('Login error:', err);

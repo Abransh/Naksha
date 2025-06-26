@@ -43,7 +43,7 @@ const admin_1 = __importDefault(require("./routes/v1/admin"));
 const auth_controller_1 = require("./controllers/auth.controller");
 const auth_2 = require("./middleware/auth");
 // Service imports
-const socketService_1 = require("./services/socketService");
+//import { setupSocketHandlers } from './services/socketService';
 const jobService_1 = require("./services/jobService");
 const emailService_1 = require("./services/emailService");
 // Load environment variables
@@ -65,7 +65,7 @@ class App {
         this.initializeMiddleware();
         this.initializeRoutes();
         this.initializeErrorHandling();
-        this.initializeSocketIO();
+        // this.initializeSocketIO();
     }
     /**
      * Configure all middleware
@@ -152,24 +152,24 @@ class App {
             });
         });
         // Apply auth limiter to auth routes
-        this.app.use('/api/auth', authLimiter);
+        this.app.use('/api/v1/auth', authLimiter);
     }
     /**
      * Initialize all API routes
      * Each route group handles a specific domain of the application
      */
     initializeRoutes() {
-        // Public auth routes (no authentication required)
-        this.app.post('/api/auth/consultant/signup', auth_controller_1.consultantSignup);
-        this.app.post('/api/auth/consultant/login', auth_controller_1.consultantLogin);
-        this.app.post('/api/auth/admin/login', auth_controller_1.adminLogin);
-        this.app.get('/api/auth/verify-email/:token', auth_controller_1.verifyEmail);
-        this.app.post('/api/auth/forgot-password', auth_controller_1.forgotPassword);
-        this.app.post('/api/auth/reset-password', auth_controller_1.resetPassword);
-        // Protected auth routes (authentication required)
-        this.app.get('/api/auth/me', auth_1.authenticate, auth_controller_1.getCurrentUser);
-        this.app.post('/api/auth/refresh', auth_2.refreshTokens);
-        this.app.post('/api/auth/logout', auth_1.authenticate, auth_2.logout);
+        // Public auth routes (no authentication required) - v1 API
+        this.app.post('/api/v1/auth/signup', auth_controller_1.consultantSignup);
+        this.app.post('/api/v1/auth/login', auth_controller_1.consultantLogin);
+        this.app.post('/api/v1/auth/admin/login', auth_controller_1.adminLogin);
+        this.app.get('/api/v1/auth/verify-email/:token', auth_controller_1.verifyEmail);
+        this.app.post('/api/v1/auth/forgot-password', auth_controller_1.forgotPassword);
+        this.app.post('/api/v1/auth/reset-password', auth_controller_1.resetPassword);
+        // Protected auth routes (authentication required) - v1 API
+        this.app.get('/api/v1/auth/me', auth_1.authenticate, auth_controller_1.getCurrentUser);
+        this.app.post('/api/v1/auth/refresh', auth_2.refreshTokens);
+        this.app.post('/api/v1/auth/logout', auth_1.authenticate, auth_2.logout);
         // Protected routes (authentication required)
         this.app.use('/api/v1/consultant', auth_1.authenticateConsultant, consultant_1.default);
         this.app.use('/api/v1/dashboard', auth_1.authenticateConsultant, dashboard_1.default);
@@ -189,19 +189,19 @@ class App {
                     endpoints: {
                         authentication: {
                             consultant: [
-                                'POST /api/auth/consultant/signup - Register new consultant',
-                                'POST /api/auth/consultant/login - Consultant login',
-                                'GET /api/auth/verify-email/:token - Verify email address',
-                                'POST /api/auth/forgot-password - Request password reset',
-                                'POST /api/auth/reset-password - Reset password with token'
+                                'POST /api/v1/auth/signup - Register new consultant',
+                                'POST /api/v1/auth/login - Consultant login',
+                                'GET /api/v1/auth/verify-email/:token - Verify email address',
+                                'POST /api/v1/auth/forgot-password - Request password reset',
+                                'POST /api/v1/auth/reset-password - Reset password with token'
                             ],
                             admin: [
-                                'POST /api/auth/admin/login - Admin login'
+                                'POST /api/v1/auth/admin/login - Admin login'
                             ],
                             common: [
-                                'GET /api/auth/me - Get current user info (protected)',
-                                'POST /api/auth/refresh - Refresh access token',
-                                'POST /api/auth/logout - Logout user (protected)'
+                                'GET /api/v1/auth/me - Get current user info (protected)',
+                                'POST /api/v1/auth/refresh - Refresh access token',
+                                'POST /api/v1/auth/logout - Logout user (protected)'
                             ]
                         },
                         consultant: [
@@ -275,12 +275,12 @@ class App {
         // Global error handler
         this.app.use(errorHandler_1.errorHandler);
     }
-    /**
-     * Initialize Socket.IO for real-time features
-     */
-    initializeSocketIO() {
-        (0, socketService_1.setupSocketHandlers)(this.io);
-    }
+    // /**
+    //  * Initialize Socket.IO for real-time features
+    //  */
+    // private initializeSocketIO(): void {
+    //   setupSocketHandlers(this.io);
+    // }
     /**
      * Start the server and initialize all connections
      */

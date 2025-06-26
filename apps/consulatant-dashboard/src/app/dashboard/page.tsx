@@ -1,3 +1,5 @@
+
+
 "use client";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -6,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/app/providers";
+import { useDashboardMetrics, useRecentSessions } from "@/hooks/useDashboard";
 import {
   BarChart3,
   ShoppingBag,
@@ -151,10 +154,50 @@ const SidebarContent = () => {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const {
+    revenue,
+    clients,
+    sessions,
+    services,
+    revenueSplit,
+    chartData,
+    isLoading,
+    error
+  } = useDashboardMetrics();
+  
+  const { sessions: recentSessions, hasData: hasRecentSessions } = useRecentSessions();
+
+  // Helper function to format currency
+  const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
+  
+  // Helper function to format percentage change
+  const formatChange = (change: number) => {
+    const sign = change >= 0 ? '+' : '';
+    return `${sign}${change.toFixed(2)}%`;
+  };
 
   return (
     <ProtectedRoute requireAdminApproval={true}>
       <div className="min-h-screen bg-[var(--main-background)] flex">
+        {/* Loading State */}
+        {isLoading && (
+          <div className="fixed inset-0 bg-black/10 backdrop-blur-sm z-50 flex items-center justify-center">
+            <div className="bg-white rounded-lg p-6 flex items-center gap-3">
+              <div className="animate-spin rounded-full h-6 w-6 border-b-2 border-[var(--primary-100)]"></div>
+              <span className="text-[var(--black-60)]">Loading dashboard...</span>
+            </div>
+          </div>
+        )}
+        
+        {/* Error State */}
+        {error && (
+          <div className="fixed top-4 right-4 bg-red-50 border border-red-200 rounded-lg p-4 z-50 max-w-md">
+            <div className="flex items-center gap-2">
+              <div className="w-2 h-2 bg-red-500 rounded-full"></div>
+              <span className="text-red-800 text-sm">{error}</span>
+            </div>
+          </div>
+        )}
         {/* Desktop Sidebar */}
         <div className="w-80 lg:w-72 xl:w-80 bg-white min-h-screen flex-shrink-0 flex flex-col hidden lg:flex">
           <SidebarContent />
@@ -243,21 +286,21 @@ export default function Dashboard() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-8">
                   <div>
-                    <p className="text-[var(--black-30)] text-sm">Sessions</p>
+                    <p className="text-[var(--black-30)] text-sm">Revenue</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                        {"{Amount}"}
+                        {formatCurrency(revenue.amount)}
                       </span>
-                      <span className="text-[var(--action-green)] text-xs">
-                        +0.00%
+                      <span className={`text-xs ${revenue.change >= 0 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
+                        {formatChange(revenue.change)}
                       </span>
                     </div>
                   </div>
                   <div>
-                    <p className="text-[var(--black-30)] text-sm">Clients</p>
+                    <p className="text-[var(--black-30)] text-sm">Amount withdrawn</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                        0
+                        {formatCurrency(revenue.withdrawn)}
                       </span>
                       <span className="text-[var(--action-green)] text-xs">
                         +0.00%
@@ -289,21 +332,21 @@ export default function Dashboard() {
                     <p className="text-[var(--black-30)] text-sm">Clients</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                        0
+                        {clients.total}
                       </span>
-                      <span className="text-[var(--action-green)] text-xs">
-                        +0.00%
+                      <span className={`text-xs ${clients.change >= 0 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
+                        {formatChange(clients.change)}
                       </span>
                     </div>
                   </div>
                   <div>
-                    <p className="text-[var(--black-30)] text-sm">Active</p>
+                    <p className="text-[var(--black-30)] text-sm">Quotations shared</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                        0
+                        {clients.quotationsShared}
                       </span>
-                      <span className="text-[var(--action-green)] text-xs">
-                        +0.00%
+                      <span className={`text-xs ${clients.quotationChange >= 0 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
+                        {formatChange(clients.quotationChange)}
                       </span>
                     </div>
                   </div>
@@ -337,10 +380,10 @@ export default function Dashboard() {
                     </p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                        0
+                        {sessions.all}
                       </span>
-                      <span className="text-[var(--action-green)] text-xs">
-                        +0.00%
+                      <span className={`text-xs ${sessions.change >= 0 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
+                        {formatChange(sessions.change)}
                       </span>
                     </div>
                   </div>
@@ -348,10 +391,10 @@ export default function Dashboard() {
                     <p className="text-[var(--black-30)] text-sm">Pending</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                        0
+                        {sessions.pending}
                       </span>
-                      <span className="text-[var(--action-green)] text-xs">
-                        +0.00%
+                      <span className="text-[var(--black-10)] text-xs">
+                        {sessions.all > 0 ? `${Math.round((sessions.pending / sessions.all) * 100)}%` : '0%'}
                       </span>
                     </div>
                   </div>
@@ -359,10 +402,10 @@ export default function Dashboard() {
                     <p className="text-[var(--black-30)] text-sm">Completed</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                        0
+                        {sessions.completed}
                       </span>
                       <span className="text-[var(--action-green)] text-xs">
-                        +0.00%
+                        {sessions.all > 0 ? `${Math.round((sessions.completed / sessions.all) * 100)}%` : '0%'}
                       </span>
                     </div>
                   </div>
@@ -382,7 +425,7 @@ export default function Dashboard() {
                   <CardHeader>
                     <div className="flex items-center justify-between">
                       <h3 className="text-[var(--black-60)] font-inter text-base font-medium">
-                        Marketing
+                        REVENUE SPLIT
                       </h3>
                       <div className="flex items-center gap-2">
                         <span className="text-[var(--black-10)] text-xs">
@@ -398,28 +441,39 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-[var(--primary-100)]"></div>
                         <span className="text-[var(--black-20)] text-xs">
-                          Acquisition
+                          FROM NAKSHA ({formatCurrency(revenueSplit.fromNaksha)})
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-[var(--primary-50)]"></div>
                         <span className="text-[var(--black-20)] text-xs">
-                          Bookings
+                          MANUALLY ADDED ({formatCurrency(revenueSplit.manuallyAdded)})
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-[var(--secondary-100)]"></div>
                         <span className="text-[var(--black-20)] text-xs">
-                          Retention
+                          TOTAL ({formatCurrency(revenueSplit.total)})
                         </span>
                       </div>
                     </div>
                   </CardHeader>
                   <CardContent className="flex items-center justify-center">
                     <div className="w-40 h-40 lg:w-52 lg:h-52 rounded-full border-[24px] lg:border-[32px] border-gray-100 flex items-center justify-center">
-                      <span className="text-[var(--black-30)] text-sm">
-                        No data
-                      </span>
+                      {revenueSplit.total > 0 ? (
+                        <div className="text-center">
+                          <div className="text-[var(--black-60)] font-poppins text-lg font-medium">
+                            {formatCurrency(revenueSplit.total)}
+                          </div>
+                          <div className="text-[var(--black-30)] text-xs">
+                            Total Revenue
+                          </div>
+                        </div>
+                      ) : (
+                        <span className="text-[var(--black-30)] text-sm">
+                          No revenue yet
+                        </span>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
@@ -446,10 +500,10 @@ export default function Dashboard() {
                           <p className="text-white text-sm">All Services</p>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-white font-poppins text-xl font-medium">
-                              0
+                              {services.all}
                             </span>
                             <span className="text-white/70 text-xs">
-                              +0.00%
+                              {formatChange(services.change)}
                             </span>
                           </div>
                         </div>
@@ -457,10 +511,10 @@ export default function Dashboard() {
                           <p className="text-white text-sm">Active</p>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-white font-poppins text-xl font-medium">
-                              0
+                              {services.active}
                             </span>
                             <span className="text-white/70 text-xs">
-                              +0.00%
+                              {services.all > 0 ? `${Math.round((services.active / services.all) * 100)}%` : '0%'}
                             </span>
                           </div>
                         </div>
@@ -497,23 +551,23 @@ export default function Dashboard() {
                           </p>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                              0%
+                              {sessions.abandonedPercentage.toFixed(1)}%
                             </span>
-                            <span className="text-[var(--action-green)] text-xs">
-                              +0.00%
+                            <span className={`text-xs ${sessions.abandonedPercentage <= 10 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
+                              {sessions.abandonedPercentage <= 10 ? 'Good' : 'High'}
                             </span>
                           </div>
                         </div>
                         <div>
                           <p className="text-[var(--black-30)] text-sm">
-                            Clients
+                            Total Clients
                           </p>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                              0
+                              {clients.total}
                             </span>
-                            <span className="text-[var(--action-green)] text-xs">
-                              +0.00%
+                            <span className={`text-xs ${clients.change >= 0 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
+                              {formatChange(clients.change)}
                             </span>
                           </div>
                         </div>
@@ -555,36 +609,40 @@ export default function Dashboard() {
                 <CardContent className="overflow-x-auto">
                   <div className="flex justify-between items-end h-60 min-w-[500px]">
                     <div className="flex flex-col justify-end h-full text-right space-y-9 text-xs text-[var(--black-20)]">
-                      <span>100k</span>
-                      <span>80k</span>
-                      <span>60k</span>
-                      <span>40k</span>
-                      <span>20k</span>
+                      <span>10</span>
+                      <span>8</span>
+                      <span>6</span>
+                      <span>4</span>
+                      <span>2</span>
                     </div>
                     <div className="flex-1 flex justify-between items-end h-full ml-8">
-                      {[
-                        "Sept 10",
-                        "Sept 11",
-                        "Sept 12",
-                        "Sept 13",
-                        "Sept 14",
-                        "Sept 15",
-                        "Sept 16",
-                      ].map((date, index) => (
+                      {chartData.length > 0 ? chartData.map((day) => (
                         <div
-                          key={date}
+                          key={day.date}
                           className="flex flex-col items-center gap-4"
                         >
                           <div className="w-3 h-60 bg-gray-100 rounded-full relative">
                             <div
-                              className="w-3 bg-transparent rounded-full absolute bottom-0"
+                              className="w-3 bg-[var(--primary-100)] rounded-full absolute bottom-0"
                               style={{
-                                height: `${[15, 35, 60, 20, 80, 45, 80][index]}%`,
+                                height: `${Math.min((day.sessions / 10) * 100, 100)}%`,
                               }}
                             ></div>
                           </div>
                           <span className="text-xs text-[var(--black-10)]">
-                            {date}
+                            {day.date}
+                          </span>
+                        </div>
+                      )) : Array.from({ length: 7 }, (_, index) => (
+                        <div
+                          key={index}
+                          className="flex flex-col items-center gap-4"
+                        >
+                          <div className="w-3 h-60 bg-gray-100 rounded-full relative">
+                            <div className="w-3 bg-gray-200 rounded-full absolute bottom-0 h-2"></div>
+                          </div>
+                          <span className="text-xs text-[var(--black-10)]">
+                            Day {index + 1}
                           </span>
                         </div>
                       ))}
@@ -594,32 +652,82 @@ export default function Dashboard() {
               </Card>
             </div>
 
-            {/* Recent Sessions - Empty State */}
+            {/* Recent Sessions */}
             <Card className="bg-white border-0 shadow-sm rounded-xl">
               <CardHeader>
                 <h3 className="text-[var(--black-60)] font-inter text-base font-medium">
                   Recent Sessions
                 </h3>
               </CardHeader>
-              <CardContent className="flex flex-col items-center justify-center py-12 lg:py-20">
-                <div className="w-28 h-28 lg:w-35 lg:h-35 bg-[var(--main-background)] rounded-full border border-[var(--grey)] flex items-center justify-center mb-8 lg:mb-10">
-                  <ShoppingBag size={40} className="text-[var(--black-10)]" />
-                </div>
-                <div className="text-center space-y-6">
-                  <div>
-                    <h4 className="text-[var(--black-100)] font-poppins text-lg lg:text-xl font-medium mb-3">
-                      No Sessions Yet?
-                    </h4>
-                    <p className="text-[var(--black-30)] font-inter text-sm max-w-[280px]">
-                      Add services to your page and start getting bookings to
-                      see here.
-                    </p>
+              <CardContent>
+                {hasRecentSessions ? (
+                  <div className="space-y-4">
+                    {recentSessions.slice(0, 5).map((session) => (
+                      <div
+                        key={session.id}
+                        className="flex items-center justify-between p-4 border border-[var(--stroke)] rounded-lg hover:bg-gray-50 transition-colors"
+                      >
+                        <div className="flex-1">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 bg-[var(--primary-100)] rounded-lg flex items-center justify-center">
+                              <ShoppingBag size={16} className="text-white" />
+                            </div>
+                            <div>
+                              <h4 className="text-[var(--black-60)] font-medium text-sm">
+                                {session.title}
+                              </h4>
+                              <p className="text-[var(--black-30)] text-xs">
+                                {session.clientName}
+                              </p>
+                            </div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="text-[var(--black-60)] font-medium text-sm">
+                            {formatCurrency(session.amount)}
+                          </div>
+                          <div className={`text-xs px-2 py-1 rounded-full ${
+                            session.status === 'COMPLETED' 
+                              ? 'bg-green-100 text-green-800'
+                              : session.status === 'PENDING'
+                              ? 'bg-yellow-100 text-yellow-800'
+                              : 'bg-gray-100 text-gray-800'
+                          }`}>
+                            {session.status.toLowerCase()}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                    {recentSessions.length > 5 && (
+                      <div className="text-center pt-4">
+                        <Button variant="outline" className="text-[var(--primary-100)]">
+                          View All Sessions
+                        </Button>
+                      </div>
+                    )}
                   </div>
-                  <Button className="bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white rounded-xl px-6 py-4 font-inter text-base">
-                    <Plus size={20} className="mr-2" />
-                    New Client
-                  </Button>
-                </div>
+                ) : (
+                  <div className="flex flex-col items-center justify-center py-12 lg:py-20">
+                    <div className="w-28 h-28 lg:w-35 lg:h-35 bg-[var(--main-background)] rounded-full border border-[var(--grey)] flex items-center justify-center mb-8 lg:mb-10">
+                      <ShoppingBag size={40} className="text-[var(--black-10)]" />
+                    </div>
+                    <div className="text-center space-y-6">
+                      <div>
+                        <h4 className="text-[var(--black-100)] font-poppins text-lg lg:text-xl font-medium mb-3">
+                          No Sessions Yet?
+                        </h4>
+                        <p className="text-[var(--black-30)] font-inter text-sm max-w-[280px]">
+                          Add services to your page and start getting bookings to
+                          see here.
+                        </p>
+                      </div>
+                      <Button className="bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white rounded-xl px-6 py-4 font-inter text-base">
+                        <Plus size={20} className="mr-2" />
+                        New Client
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </CardContent>
             </Card>
           </div>
