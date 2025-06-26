@@ -22,6 +22,7 @@ import { AppError, NotFoundError, ValidationError, ConflictError } from '../../m
 import { uploadToCloudinary } from '../../services/uploadService';
 import { generateSlug } from '../../utils/helpers';
 
+
 const router = Router();
 
 /**
@@ -263,6 +264,7 @@ router.post('/upload-photo', async (req: AuthenticatedRequest, res: Response): P
 
     if (!file) {
       throw new ValidationError('No photo file provided');
+    
     }
 
     // Validate file type and size

@@ -1,0 +1,7 @@
+{
+    "scripts": {
+      "build": "npm run build:packages && cd apps/api && npm run build",
+      "start": "cd apps/api && npm start",
+      "postinstall": "npm run build"
+    }
+  }

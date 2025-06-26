@@ -220,26 +220,267 @@ export const authApi = {
   },
 };
 
+// Dashboard data types
+export interface DashboardOverview {
+  revenue: {
+    amount: number;
+    change: number;
+    withdrawn: number;
+  };
+  clients: {
+    total: number;
+    change: number;
+    quotationsShared: number;
+    quotationChange: number;
+  };
+  sessions: {
+    all: number;
+    pending: number;
+    completed: number;
+    change: number;
+    abandonedPercentage: number;
+  };
+  services: {
+    all: number;
+    active: number;
+    change: number;
+  };
+  revenueSplit: {
+    fromNaksha: number;
+    manuallyAdded: number;
+    total: number;
+  };
+  recentSessions: Array<{
+    id: string;
+    title: string;
+    clientName: string;
+    clientEmail: string;
+    amount: number;
+    status: string;
+    scheduledDate: string;
+    createdAt: string;
+  }>;
+  chartData: Array<{
+    date: string;
+    sessions: number;
+    revenue: number;
+  }>;
+  metrics: {
+    totalRevenue: number;
+    totalClients: number;
+    totalSessions: number;
+    completionRate: number;
+    averageSessionValue: number;
+  };
+}
+
+export interface DashboardStats {
+  monthlyRevenue: Array<{
+    month: string;
+    revenue: number;
+    transactions: number;
+  }>;
+  sessionsByType: Array<{
+    sessionType: string;
+    _count: { sessionType: number };
+    _sum: { amount: number };
+  }>;
+  paymentMethods: Array<{
+    paymentMethod: string;
+    _count: { paymentMethod: number };
+    _sum: { amount: number };
+  }>;
+  topClients: Array<{
+    id: string;
+    name: string;
+    email: string;
+    totalSessions: number;
+    totalAmountPaid: number;
+  }>;
+}
+
 // Dashboard API methods
 export const dashboardApi = {
   /**
    * Get dashboard overview data
    */
-  async getOverview(): Promise<unknown> {
-    const response = await apiRequest<ApiResponse>('/dashboard/overview', {
+  async getOverview(): Promise<DashboardOverview> {
+    const response = await apiRequest<ApiResponse<DashboardOverview>>('/dashboard/overview', {
       requireAuth: true,
     });
-    return response.data;
+    return response.data!;
   },
 
   /**
    * Get dashboard statistics
    */
-  async getStats(): Promise<unknown> {
-    const response = await apiRequest<ApiResponse>('/dashboard/stats', {
+  async getStats(): Promise<DashboardStats> {
+    const response = await apiRequest<ApiResponse<DashboardStats>>('/dashboard/stats', {
       requireAuth: true,
     });
-    return response.data;
+    return response.data!;
+  },
+};
+
+// Consultant Profile data types
+export interface ConsultantProfile {
+  id: string;
+  email: string;
+  firstName: string;
+  lastName: string;
+  phoneCountryCode: string;
+  phoneNumber: string;
+  consultancySector?: string;
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  personalSessionTitle?: string;
+  webinarSessionTitle?: string;
+  description?: string;
+  experienceMonths: number;
+  personalSessionPrice?: number;
+  webinarSessionPrice?: number;
+  instagramUrl?: string;
+  linkedinUrl?: string;
+  xUrl?: string;
+  profilePhotoUrl?: string;
+  slug: string;
+  isActive: boolean;
+  isEmailVerified: boolean;
+  subscriptionPlan: string;
+  subscriptionExpiresAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  isProfileComplete: boolean;
+  stats?: {
+    totalSessions: number;
+    totalClients: number;
+    totalQuotations: number;
+  };
+}
+
+export interface PublicConsultantProfile {
+  consultant: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    consultancySector?: string;
+    personalSessionTitle?: string;
+    webinarSessionTitle?: string;
+    description?: string;
+    experienceMonths: number;
+    personalSessionPrice?: number;
+    webinarSessionPrice?: number;
+    instagramUrl?: string;
+    linkedinUrl?: string;
+    xUrl?: string;
+    profilePhotoUrl?: string;
+    slug: string;
+    createdAt: string;
+    experienceYears: number;
+    stats: {
+      completedSessions: number;
+    };
+  };
+  availableSlots: Array<{
+    id: string;
+    sessionType: string;
+    date: string;
+    startTime: string;
+    endTime: string;
+  }>;
+}
+
+export interface UpdateProfileData {
+  firstName?: string;
+  lastName?: string;
+  phoneCountryCode?: string;
+  phoneNumber?: string;
+  consultancySector?: string;
+  bankName?: string;
+  accountNumber?: string;
+  ifscCode?: string;
+  personalSessionTitle?: string;
+  webinarSessionTitle?: string;
+  description?: string;
+  experienceMonths?: number;
+  personalSessionPrice?: number;
+  webinarSessionPrice?: number;
+  instagramUrl?: string;
+  linkedinUrl?: string;
+  xUrl?: string;
+  slug?: string;
+}
+
+// Consultant API methods
+export const consultantApi = {
+  /**
+   * Get consultant's own profile
+   */
+  async getProfile(): Promise<ConsultantProfile> {
+    const response = await apiRequest<ApiResponse<{ consultant: ConsultantProfile }>>('/consultant/profile', {
+      requireAuth: true,
+    });
+    return response.data!.consultant;
+  },
+
+  /**
+   * Update consultant profile
+   */
+  async updateProfile(data: UpdateProfileData): Promise<ConsultantProfile> {
+    const response = await apiRequest<ApiResponse<{ consultant: ConsultantProfile }>>('/consultant/profile', {
+      method: 'PUT',
+      body: data,
+      requireAuth: true,
+    });
+    return response.data!.consultant;
+  },
+
+  /**
+   * Get public consultant profile by slug
+   */
+  async getPublicProfile(slug: string): Promise<PublicConsultantProfile> {
+    const response = await apiRequest<ApiResponse<PublicConsultantProfile>>(`/consultant/${slug}`);
+    return response.data!;
+  },
+
+  /**
+   * Upload profile photo
+   */
+  async uploadPhoto(file: File): Promise<{ profilePhotoUrl: string }> {
+    const formData = new FormData();
+    formData.append('photo', file);
+
+    const response = await fetch(`${API_URL}/consultant/upload-photo`, {
+      method: 'POST',
+      headers: {
+        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
+      },
+      credentials: 'include',
+      body: formData,
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json();
+      throw new ApiError(
+        response.status,
+        errorData.code || 'UPLOAD_ERROR',
+        errorData.message || 'Failed to upload photo'
+      );
+    }
+
+    const data = await response.json();
+    return data.data;
+  },
+
+  /**
+   * Check if slug is available
+   */
+  async checkSlugAvailability(slug: string): Promise<{ available: boolean; slug: string }> {
+    const response = await apiRequest<ApiResponse<{ available: boolean; slug: string }>>(`/consultant/slug-check/${slug}`, {
+      requireAuth: true,
+    });
+    return response.data!;
   },
 };
 
@@ -247,6 +488,7 @@ export const dashboardApi = {
 export const api = {
   auth: authApi,
   dashboard: dashboardApi,
+  consultant: consultantApi,
 };
 
 export default api;

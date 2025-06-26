@@ -35,10 +35,8 @@ export default function SignupPage() {
       await signup(formData.fullName.trim(), formData.email.trim(), formData.password);
       setSuccess(true);
       
-      // Redirect to login after 3 seconds
-      setTimeout(() => {
-        router.push('/login');
-      }, 3000);
+      // Show success message, user needs to verify email before accessing dashboard
+      // After email verification and login, they'll be redirected to /dashboard/settings
     } catch (err) {
       // Error is handled by the auth context
       console.error('Signup error:', err);

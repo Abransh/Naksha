@@ -23,6 +23,7 @@ import {
   Search,
   ShoppingBag,
 } from "lucide-react";
+import { DialogTitle } from "@radix-ui/react-dialog";
 
 interface CreateSessionModalProps {
   open: boolean;
@@ -37,6 +38,7 @@ export function CreateSessionModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
+      <DialogTitle className="sr-only">
       <DialogContent className="max-w-[850px] w-[850px] h-[739px] p-7 bg-white rounded-xl border-0 shadow-lg">
         {/* Custom header to match design */}
         <div className="flex items-center justify-between h-8 mb-7">
@@ -246,6 +248,7 @@ export function CreateSessionModal({
           </div>
         </div>
       </DialogContent>
+      </DialogTitle>
     </Dialog>
   );
 }

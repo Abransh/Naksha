@@ -197,20 +197,6 @@ router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.
             where: {
                 id,
                 consultantId
-            },
-            include: {
-                client: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        phoneNumber: true,
-                        city: true,
-                        state: true,
-                        totalSessions: true,
-                        totalAmountPaid: true
-                    }
-                }
             }
         });
         if (!quotation) {
@@ -219,13 +205,14 @@ router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.
         // Format the response
         const formattedQuotation = {
             ...quotation,
-            baseAmount: Number(quotation.amount),
-            discountPercentage: Number(0),
+            baseAmount: Number(quotation.baseAmount),
+            discountPercentage: Number(quotation.discountPercentage),
             finalAmount: Number(quotation.finalAmount),
-            client: quotation.client ? {
-                ...quotation.client,
-                totalAmountPaid: Number(quotation.client.totalAmountPaid)
-            } : null,
+            client: {
+                name: quotation.clientName,
+                email: quotation.clientEmail,
+                company: quotation.clientCompany
+            },
             isExpired: quotation.expiresAt ? new Date() > quotation.expiresAt : false,
             daysUntilExpiry: quotation.expiresAt
                 ? Math.ceil((quotation.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
