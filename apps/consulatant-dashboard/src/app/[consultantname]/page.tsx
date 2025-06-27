@@ -17,17 +17,26 @@ import {
   User,
 } from "lucide-react";
 import { useConsultantShowcase, usePriceFormatter } from "@/hooks/usePublicProfile";
+import { BookSessionModal } from "@/components/modals/book-session-modal";
 
 interface ConsultantProfileProps {
-  params: {
+  params: Promise<{
     consultantname: string;
-  };
+  }>;
 }
 
 export default function ConsultantProfile({ params }: ConsultantProfileProps) {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [consultantSlug, setConsultantSlug] = useState<string | null>(null);
   const { formatPrice } = usePriceFormatter();
   
+  // Resolve params asynchronously
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      setConsultantSlug(resolvedParams.consultantname);
+    });
+  }, [params]);
+
   const {
     profile,
     summary,
@@ -39,10 +48,10 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
     isLoading,
     error,
     refetch,
-  } = useConsultantShowcase(params.consultantname);
+  } = useConsultantShowcase(consultantSlug);
 
   // Show loading state
-  if (isLoading) {
+  if (!consultantSlug || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--primary-100)]">
         <div className="flex items-center gap-3 text-white">
@@ -187,12 +196,19 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                   </div>
 
                   {/* Price and Arrow */}
-                  <div className="flex items-center gap-1 px-3 py-2 bg-white rounded-full border border-[#141414]">
-                    <span className="text-base text-[#141414] font-inter">
-                      {formatPrice(services.find(s => s.type === 'Webinar')?.price || 0)}
-                    </span>
-                    <ArrowRight size={12} className="text-[#141414]" />
-                  </div>
+                  <BookSessionModal 
+                    consultantSlug={consultantSlug || ''}
+                    sessionType="WEBINAR"
+                    amount={services.find(s => s.type === 'Webinar')?.price || 0}
+                    title="Group Webinar Session"
+                  >
+                    <div className="flex items-center gap-1 px-3 py-2 bg-white rounded-full border border-[#141414] cursor-pointer hover:bg-gray-50 transition-colors">
+                      <span className="text-base text-[#141414] font-inter">
+                        {formatPrice(services.find(s => s.type === 'Webinar')?.price || 0)}
+                      </span>
+                      <ArrowRight size={12} className="text-[#141414]" />
+                    </div>
+                  </BookSessionModal>
                 </div>
               </CardContent>
             </Card>
@@ -244,15 +260,22 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                   </div>
 
                   {/* Price Button */}
-                  <div className="bg-white rounded-full px-8 py-2 flex items-center gap-2">
-                    <span className="text-base font-semibold text-[var(--primary-100)] font-inter">
-                      {formatPrice(services.find(s => s.type === 'Personal Session')?.price || 0)}+
-                    </span>
-                    <ArrowRight
-                      size={16}
-                      className="text-[var(--primary-100)]"
-                    />
-                  </div>
+                  <BookSessionModal 
+                    consultantSlug={consultantSlug || ''}
+                    sessionType="PERSONAL"
+                    amount={services.find(s => s.type === 'Personal Session')?.price || 0}
+                    title="1-on-1 Personal Session"
+                  >
+                    <div className="bg-white rounded-full px-8 py-2 flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors">
+                      <span className="text-base font-semibold text-[var(--primary-100)] font-inter">
+                        {formatPrice(services.find(s => s.type === 'Personal Session')?.price || 0)}+
+                      </span>
+                      <ArrowRight
+                        size={16}
+                        className="text-[var(--primary-100)]"
+                      />
+                    </div>
+                  </BookSessionModal>
                 </div>
               </CardContent>
             </Card>

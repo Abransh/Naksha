@@ -60,7 +60,7 @@ export class ApiError extends Error {
   }
 }
 
-// Generic API request function
+// Generic API request function with automatic token refresh
 async function apiRequest<T>(
   endpoint: string,
   options: {
@@ -68,13 +68,15 @@ async function apiRequest<T>(
     headers?: Record<string, string>;
     body?: unknown;
     requireAuth?: boolean;
+    isRetry?: boolean;
   } = {}
 ): Promise<T> {
   const {
     method = 'GET',
     headers = {},
     body,
-    requireAuth = false
+    requireAuth = false,
+    isRetry = false
   } = options;
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
@@ -104,9 +106,54 @@ async function apiRequest<T>(
 
   try {
     const response = await fetch(url, config);
+    
+    // Handle 401 unauthorized - try to refresh token
+    if (response.status === 401 && requireAuth && !isRetry && typeof window !== 'undefined') {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        try {
+          const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refreshToken }),
+            credentials: 'include',
+          });
+
+          if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json();
+            const newTokens = refreshData.data;
+            
+            // Update stored tokens
+            localStorage.setItem('accessToken', newTokens.accessToken);
+            localStorage.setItem('refreshToken', newTokens.refreshToken);
+            
+            // Retry the original request with new token
+            return apiRequest<T>(endpoint, { ...options, isRetry: true });
+          }
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          // Clear invalid tokens
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          // Redirect to login
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+        }
+      }
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
+      console.error('❌ API Error Response:', {
+        status: response.status,
+        url: response.url,
+        data: data
+      });
+      
       throw new ApiError(
         response.status,
         data.code || 'API_ERROR',
@@ -428,11 +475,15 @@ export const consultantApi = {
    * Update consultant profile
    */
   async updateProfile(data: UpdateProfileData): Promise<ConsultantProfile> {
+    console.log('🔍 API: Sending profile update data:', data);
+    
     const response = await apiRequest<ApiResponse<{ consultant: ConsultantProfile }>>('/consultant/profile', {
       method: 'PUT',
       body: data,
       requireAuth: true,
     });
+    
+    console.log('✅ API: Profile update response:', response);
     return response.data!.consultant;
   },
 
@@ -489,6 +540,150 @@ export const api = {
   auth: authApi,
   dashboard: dashboardApi,
   consultant: consultantApi,
+};
+
+// Profile completion calculation
+export const calculateProfileCompletion = (profile: ConsultantProfile): number => {
+  const requiredFields = [
+    'firstName',
+    'lastName', 
+    'phoneNumber',
+    'personalSessionTitle',
+    'personalSessionPrice',
+    'description'
+  ];
+  
+  const completedFields = requiredFields.filter(field => {
+    const value = profile[field as keyof ConsultantProfile];
+    return value !== null && value !== undefined && value !== '';
+  });
+  
+  return Math.round((completedFields.length / requiredFields.length) * 100);
+};
+
+// Session booking (public endpoint - no auth required)
+export const bookSession = async (bookingData: {
+  fullName: string;
+  email: string;
+  phone: string;
+  sessionType: 'PERSONAL' | 'WEBINAR';
+  selectedDate: string;
+  selectedTime: string;
+  duration: number;
+  amount: number;
+  clientNotes?: string;
+  consultantSlug: string;
+}) => {
+  const response = await fetch(`${API_URL}/sessions/book`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(bookingData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to book session');
+  }
+
+  return response.json();
+};
+
+// Client API methods
+export const clientApi = {
+  /**
+   * Get all clients for consultant
+   */
+  async getClients(filters: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    search?: string;
+    isActive?: boolean;
+  } = {}): Promise<{
+    clients: any[];
+    pagination: any;
+    summaryStats: any;
+  }> {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined) {
+        params.append(key, String(value));
+      }
+    });
+
+    const response = await apiRequest<ApiResponse<any>>(`/clients?${params}`, {
+      requireAuth: true,
+    });
+    return response.data!;
+  },
+
+  /**
+   * Create a new client
+   */
+  async createClient(clientData: {
+    name: string;
+    email: string;
+    phoneCountryCode?: string;
+    phoneNumber?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    notes?: string;
+  }): Promise<any> {
+    const response = await apiRequest<ApiResponse<{ client: any }>>('/clients', {
+      method: 'POST',
+      body: clientData,
+      requireAuth: true,
+    });
+    return response.data!.client;
+  },
+
+  /**
+   * Update a client
+   */
+  async updateClient(clientId: string, updates: {
+    name?: string;
+    email?: string;
+    phoneCountryCode?: string;
+    phoneNumber?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    notes?: string;
+    isActive?: boolean;
+  }): Promise<any> {
+    const response = await apiRequest<ApiResponse<{ client: any }>>(`/clients/${clientId}`, {
+      method: 'PUT',
+      body: updates,
+      requireAuth: true,
+    });
+    return response.data!.client;
+  },
+
+  /**
+   * Get a specific client
+   */
+  async getClient(clientId: string): Promise<any> {
+    const response = await apiRequest<ApiResponse<{ client: any }>>(`/clients/${clientId}`, {
+      requireAuth: true,
+    });
+    return response.data!.client;
+  },
+
+  /**
+   * Deactivate a client
+   */
+  async deactivateClient(clientId: string): Promise<void> {
+    await apiRequest(`/clients/${clientId}`, {
+      method: 'DELETE',
+      requireAuth: true,
+    });
+  },
 };
 
 export default api;

@@ -1,5 +1,5 @@
 
-
+// apps/consulatant-dashboard/src/app/dashboard/page.tsx
 "use client";
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
@@ -9,6 +9,8 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/app/providers";
 import { useDashboardMetrics, useRecentSessions } from "@/hooks/useDashboard";
+import { useClientSummary } from "@/hooks/useClients";
+import Navigator from "@/components/navigation/Navigator";
 import {
   BarChart3,
   ShoppingBag,
@@ -27,130 +29,7 @@ import {
   Menu,
 } from "lucide-react";
 
-const SidebarContent = () => {
-  const { logout } = useAuth();
-
-  const handleLogout = async () => {
-    try {
-      await logout();
-    } catch (error) {
-      console.error('Logout error:', error);
-    }
-  };
-
-  return (
-    <>
-      {/* Logo */}
-      <div className="p-8">
-        <div className="w-[179px] h-[74px] bg-gray-200 rounded-lg flex items-center justify-center">
-          <span className="text-sm text-gray-500">Company Logo</span>
-        </div>
-      </div>
-
-    {/* Navigation Menu */}
-    <div className="flex-1 px-8">
-      <nav className="space-y-6">
-        {/* Active Dashboard Item */}
-        <div className="bg-[var(--primary-100)] rounded-xl p-4">
-          <div className="flex items-center gap-4">
-            <div className="w-6 h-6 text-white">
-              <BarChart3 size={20} />
-            </div>
-            <span className="text-white font-inter text-sm">Dashboard</span>
-          </div>
-        </div>
-
-        {/* Sessions */}
-        <div className="flex items-center gap-4 pl-5 py-2">
-          <ShoppingBag size={20} className="text-[var(--black-50)]" />
-          <span className="text-[var(--black-50)] font-inter text-sm flex-1">
-            Sessions
-          </span>
-          <Badge className="bg-[var(--secondary-100)] text-[var(--black-100)] text-xs px-2 py-1 rounded-full">
-            3
-          </Badge>
-        </div>
-
-        {/* Clients */}
-        <div className="flex items-center gap-4 pl-5 py-2">
-          <Users size={20} className="text-[var(--black-50)]" />
-          <span className="text-[var(--black-50)] font-inter text-sm">
-            Clients
-          </span>
-        </div>
-
-        {/* Quotations */}
-        <div className="flex items-center gap-4 pl-5 py-2">
-          <FolderOpen size={20} className="text-[var(--black-50)]" />
-          <span className="text-[var(--black-50)] font-inter text-sm">
-            Quotations
-          </span>
-        </div>
-
-        {/* Conversations */}
-        <div className="flex items-center gap-4 pl-5 py-2">
-          <MessageCircle size={20} className="text-[var(--black-50)]" />
-          <span className="text-[var(--black-50)] font-inter text-sm flex-1">
-            Conversations
-          </span>
-          <Badge className="bg-[var(--secondary-100)] text-[var(--black-100)] text-xs px-2 py-1 rounded-full">
-            16
-          </Badge>
-        </div>
-
-        {/* Settings */}
-        <div className="flex items-center gap-4 pl-5 py-2">
-          <Settings size={20} className="text-[var(--black-50)]" />
-          <span className="text-[var(--black-50)] font-inter text-sm">
-            Settings
-          </span>
-        </div>
-      </nav>
-
-      {/* Contact Support */}
-      <div className="mt-8 bg-gray-100 rounded-2xl p-4">
-        <div className="flex items-center gap-3">
-          <Headphones size={20} className="text-[var(--black-100)]" />
-          <span className="text-[var(--black-100)] font-inter text-sm">
-            Contact Support
-          </span>
-        </div>
-      </div>
-
-      {/* Gift Banner */}
-      <div className="mt-5 bg-[var(--secondary-20)] rounded-2xl p-4">
-        <div className="flex items-start gap-3">
-          <Gift size={20} className="text-[var(--black-100)] mt-1" />
-          <div className="flex-1">
-            <p className="text-[var(--black-100)] font-inter text-sm font-medium">
-              Free Gift Awaits You!
-            </p>
-            <div className="flex items-center justify-between mt-2">
-              <p className="text-[var(--black-40)] font-inter text-xs">
-                Upgrade your account
-              </p>
-              <ChevronRight size={12} className="text-[var(--black-40)]" />
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-
-      {/* Logout */}
-      <div className="p-8">
-        <button 
-          onClick={handleLogout}
-          className="flex items-center gap-3 p-3 hover:bg-red-50 rounded-lg transition-colors w-full"
-        >
-          <LogOut size={20} className="text-[var(--action-red)]" />
-          <span className="text-[var(--action-red)] font-inter text-sm">
-            Logout
-          </span>
-        </button>
-      </div>
-    </>
-  );
-};
+// Removed SidebarContent - now using Navigator component
 
 export default function Dashboard() {
   const { user } = useAuth();
@@ -166,6 +45,13 @@ export default function Dashboard() {
   } = useDashboardMetrics();
   
   const { sessions: recentSessions, hasData: hasRecentSessions } = useRecentSessions();
+  
+  // Get more detailed client statistics
+  const { 
+    summaryStats: clientStats, 
+    isLoading: clientStatsLoading,
+    formatCurrency: formatClientCurrency 
+  } = useClientSummary();
 
   // Helper function to format currency
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
@@ -198,32 +84,20 @@ export default function Dashboard() {
             </div>
           </div>
         )}
-        {/* Desktop Sidebar */}
-        <div className="w-80 lg:w-72 xl:w-80 bg-white min-h-screen flex-shrink-0 flex flex-col hidden lg:flex">
-          <SidebarContent />
-        </div>
+        {/* Navigation Sidebar */}
+        <Navigator />
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col min-w-0">
+      <div className="flex-1 flex flex-col min-w-0 lg:ml-[88px]">
         {/* Top Navigation */}
         <div className="bg-white">
           <div className="px-4 lg:px-6 py-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                {/* Mobile menu button */}
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <button className="lg:hidden p-2 hover:bg-gray-100 rounded-lg">
-                      <Menu size={20} className="text-[var(--black-60)]" />
-                    </button>
-                  </SheetTrigger>
-             
-                  <SheetContent side="left" className="w-80 p-0 bg-white">
-                    <div className="flex flex-col h-full">
-                      <SidebarContent />
-                    </div>
-                  </SheetContent>
-                </Sheet>
+                {/* Mobile menu handled by Navigator */}
+                <div className="lg:hidden">
+                  <Navigator />
+                </div>
                 <h1 className="text-[var(--black-60)] font-poppins text-lg lg:text-xl font-medium">
                   Dashboard
                 </h1>
@@ -329,10 +203,10 @@ export default function Dashboard() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-8">
                   <div>
-                    <p className="text-[var(--black-30)] text-sm">Clients</p>
+                    <p className="text-[var(--black-30)] text-sm">Total Clients</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                        {clients.total}
+                        {clientStatsLoading ? '...' : clientStats.totalClients}
                       </span>
                       <span className={`text-xs ${clients.change >= 0 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
                         {formatChange(clients.change)}
@@ -340,13 +214,16 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-[var(--black-30)] text-sm">Quotations shared</p>
+                    <p className="text-[var(--black-30)] text-sm">Active Clients</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                        {clients.quotationsShared}
+                        {clientStatsLoading ? '...' : clientStats.activeClients}
                       </span>
-                      <span className={`text-xs ${clients.quotationChange >= 0 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
-                        {formatChange(clients.quotationChange)}
+                      <span className="text-[var(--black-10)] text-xs">
+                        {clientStats.totalClients > 0 ? 
+                          `${Math.round((clientStats.activeClients / clientStats.totalClients) * 100)}%` : 
+                          '0%'
+                        }
                       </span>
                     </div>
                   </div>
@@ -560,14 +437,17 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <p className="text-[var(--black-30)] text-sm">
-                            Total Clients
+                            Client Revenue
                           </p>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                              {clients.total}
+                              {clientStatsLoading ? '...' : formatClientCurrency(clientStats.totalRevenue)}
                             </span>
-                            <span className={`text-xs ${clients.change >= 0 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
-                              {formatChange(clients.change)}
+                            <span className="text-[var(--black-10)] text-xs">
+                              {clientStats.totalClients > 0 ? 
+                                `Avg: ${formatClientCurrency(clientStats.averageRevenuePerClient)}` : 
+                                'No revenue'
+                              }
                             </span>
                           </div>
                         </div>

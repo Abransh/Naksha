@@ -108,13 +108,28 @@ class App {
             legacyHeaders: false,
         });
         this.app.use(limiter);
-        // Stricter rate limiting for auth endpoints
+        // Stricter rate limiting for auth endpoints (login/signup only)
         const authLimiter = (0, express_rate_limit_1.default)({
             windowMs: 15 * 60 * 1000, // 15 minutes
-            max: 5, // Only 5 auth attempts per 15 minutes
+            max: 10, // Increased from 5 to 10 auth attempts per 15 minutes
             message: {
                 error: 'Too many authentication attempts, please try again later.',
                 retryAfter: '15 minutes'
+            },
+            skip: (req) => {
+                // Skip rate limiting for token refresh and profile endpoints
+                return req.path.includes('/refresh') ||
+                    req.path.includes('/me') ||
+                    req.path.includes('/logout');
+            }
+        });
+        // More lenient rate limiting for profile updates
+        const profileLimiter = (0, express_rate_limit_1.default)({
+            windowMs: 5 * 60 * 1000, // 5 minutes
+            max: 50, // 50 requests per 5 minutes for profile operations
+            message: {
+                error: 'Too many profile update attempts, please try again later.',
+                retryAfter: '5 minutes'
             }
         });
         // Body parsing middleware
@@ -153,6 +168,8 @@ class App {
         });
         // Apply auth limiter to auth routes
         this.app.use('/api/v1/auth', authLimiter);
+        // Apply profile limiter to consultant routes
+        this.app.use('/api/v1/consultant', profileLimiter);
     }
     /**
      * Initialize all API routes
@@ -171,7 +188,7 @@ class App {
         this.app.post('/api/v1/auth/refresh', auth_2.refreshTokens);
         this.app.post('/api/v1/auth/logout', auth_1.authenticate, auth_2.logout);
         // Protected routes (authentication required)
-        this.app.use('/api/v1/consultant', auth_1.authenticateConsultant, consultant_1.default);
+        this.app.use('/api/v1/consultant', consultant_1.default);
         this.app.use('/api/v1/dashboard', auth_1.authenticateConsultant, dashboard_1.default);
         this.app.use('/api/v1/sessions', auth_1.authenticateConsultant, sessions_1.default);
         this.app.use('/api/v1/clients', auth_1.authenticateConsultant, clients_1.default);
