@@ -207,7 +207,32 @@ export const useSettingsForm = () => {
   const handleSubmit = useCallback(async (): Promise<boolean> => {
     if (!hasChanges) return true;
 
-    const result = await updateProfile(formData);
+    // Clean the form data - remove empty strings and null values
+    const cleanedData: Partial<UpdateProfileData> = {};
+    
+    Object.entries(formData).forEach(([key, value]) => {
+      if (value !== '' && value !== null && value !== undefined) {
+        // Convert numeric fields from strings to numbers if needed
+        if (key === 'experienceMonths' && typeof value === 'string') {
+          const numValue = parseInt(value, 10);
+          if (!isNaN(numValue)) {
+            (cleanedData as any)[key] = numValue;
+          }
+        } else if ((key === 'personalSessionPrice' || key === 'webinarSessionPrice') && typeof value === 'string') {
+          const numValue = parseFloat(value);
+          if (!isNaN(numValue) && numValue > 0) {
+            (cleanedData as any)[key] = numValue;
+          }
+        } else {
+          (cleanedData as any)[key] = value;
+        }
+      }
+    });
+
+    console.log('🔍 Frontend: Submitting cleaned form data:', cleanedData);
+    console.log('🔍 Frontend: Original form data:', formData);
+
+    const result = await updateProfile(cleanedData);
     if (result) {
       setHasChanges(false);
       return true;

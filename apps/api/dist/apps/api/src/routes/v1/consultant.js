@@ -68,7 +68,7 @@ const updateAvailabilitySchema = zod_1.z.object({
  * GET /api/consultant/profile
  * Get consultant's own profile information
  */
-router.get('/profile', async (req, res) => {
+router.get('/profile', auth_1.authenticateConsultantBasic, async (req, res) => {
     try {
         const consultantId = req.user.id;
         // Check cache first
@@ -153,7 +153,7 @@ router.get('/profile', async (req, res) => {
  * PUT /api/consultant/profile
  * Update consultant profile information
  */
-router.put('/profile', (0, validation_1.validateRequest)(updateProfileSchema), async (req, res) => {
+router.put('/profile', auth_1.authenticateConsultantBasic, (0, validation_1.validateRequest)(updateProfileSchema), async (req, res) => {
     try {
         const consultantId = req.user.id;
         const updates = req.body;
@@ -185,6 +185,9 @@ router.put('/profile', (0, validation_1.validateRequest)(updateProfileSchema), a
                 phoneCountryCode: true,
                 phoneNumber: true,
                 consultancySector: true,
+                bankName: true,
+                accountNumber: true,
+                ifscCode: true,
                 personalSessionTitle: true,
                 webinarSessionTitle: true,
                 description: true,
@@ -196,6 +199,11 @@ router.put('/profile', (0, validation_1.validateRequest)(updateProfileSchema), a
                 xUrl: true,
                 profilePhotoUrl: true,
                 slug: true,
+                isActive: true,
+                isEmailVerified: true,
+                subscriptionPlan: true,
+                subscriptionExpiresAt: true,
+                createdAt: true,
                 updatedAt: true
             }
         });
@@ -209,7 +217,18 @@ router.put('/profile', (0, validation_1.validateRequest)(updateProfileSchema), a
                 consultant: {
                     ...updatedConsultant,
                     personalSessionPrice: updatedConsultant.personalSessionPrice ? Number(updatedConsultant.personalSessionPrice) : null,
-                    webinarSessionPrice: updatedConsultant.webinarSessionPrice ? Number(updatedConsultant.webinarSessionPrice) : null
+                    webinarSessionPrice: updatedConsultant.webinarSessionPrice ? Number(updatedConsultant.webinarSessionPrice) : null,
+                    stats: {
+                        totalSessions: 0, // Will be calculated separately if needed
+                        totalClients: 0,
+                        totalQuotations: 0
+                    },
+                    isProfileComplete: !!(updatedConsultant.firstName &&
+                        updatedConsultant.lastName &&
+                        updatedConsultant.phoneNumber &&
+                        updatedConsultant.personalSessionTitle &&
+                        updatedConsultant.personalSessionPrice &&
+                        updatedConsultant.description)
                 }
             }
         });
@@ -226,7 +245,7 @@ router.put('/profile', (0, validation_1.validateRequest)(updateProfileSchema), a
  * POST /api/consultant/upload-photo
  * Upload consultant profile photo
  */
-router.post('/upload-photo', async (req, res) => {
+router.post('/upload-photo', auth_1.authenticateConsultantBasic, async (req, res) => {
     try {
         const consultantId = req.user.id;
         const file = req.file;
@@ -636,7 +655,7 @@ router.delete('/availability/:id', (0, validation_1.validateRequest)(zod_1.z.obj
  * GET /api/consultant/slug-check/:slug
  * Check if slug is available
  */
-router.get('/slug-check/:slug', (0, validation_1.validateRequest)(zod_1.z.object({
+router.get('/slug-check/:slug', auth_1.authenticateConsultantBasic, (0, validation_1.validateRequest)(zod_1.z.object({
     slug: zod_1.z.string()
         .min(3, 'Slug must be at least 3 characters')
         .max(100, 'Slug must not exceed 100 characters')

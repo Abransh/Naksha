@@ -19,15 +19,23 @@ import {
 import { useConsultantShowcase, usePriceFormatter } from "@/hooks/usePublicProfile";
 
 interface ConsultantProfileProps {
-  params: {
+  params: Promise<{
     consultantname: string;
-  };
+  }>;
 }
 
 export default function ConsultantProfile({ params }: ConsultantProfileProps) {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
+  const [consultantSlug, setConsultantSlug] = useState<string | null>(null);
   const { formatPrice } = usePriceFormatter();
   
+  // Resolve params asynchronously
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      setConsultantSlug(resolvedParams.consultantname);
+    });
+  }, [params]);
+
   const {
     profile,
     summary,
@@ -39,10 +47,10 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
     isLoading,
     error,
     refetch,
-  } = useConsultantShowcase(params.consultantname);
+  } = useConsultantShowcase(consultantSlug);
 
   // Show loading state
-  if (isLoading) {
+  if (!consultantSlug || isLoading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-[var(--primary-100)]">
         <div className="flex items-center gap-3 text-white">

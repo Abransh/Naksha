@@ -4,7 +4,126 @@
 
 This document outlines the complete implementation of the dynamic dashboard system and consultant profile management for the Nakksha Consulting Platform. The system provides real-time analytics, metrics, insights, and comprehensive profile management for consultants.
 
-## Recent Major Updates (June 26, 2025)
+## Recent Critical Fixes (June 27, 2025)
+
+### 🚨 PRODUCTION FIXES: Settings Page 400 Error & Next.js Compilation Issues
+
+**Issues Fixed:**
+1. **Settings Page 400 Bad Request Error** - Profile updates failing with validation errors
+2. **Next.js Params Async Error** - Consultant showcase pages failing to compile/load
+3. **API Field Mapping Issues** - Missing fields in profile update responses
+4. **Validation Schema Problems** - Handling of empty strings, null values, and URLs
+
+**Technical Details:**
+
+#### 1. API Validation Schema Fix (`apps/api/src/routes/v1/consultant.ts`)
+
+**Problem:** The Zod validation schema was too strict with optional fields, causing 400 errors when frontend sent empty strings or null values.
+
+**Before:**
+```typescript
+instagramUrl: z.string().url().optional().or(z.literal('')),
+phoneNumber: z.string().regex(/^\d{6,15}$/, 'Invalid phone number').optional(),
+consultancySector: z.string().max(100).optional(),
+```
+
+**After:**
+```typescript
+instagramUrl: z.union([z.string().url(), z.literal(''), z.null()]).optional().transform(val => val === '' || val === null ? null : val),
+phoneNumber: z.union([z.string().regex(/^\d{6,15}$/, 'Invalid phone number'), z.literal(''), z.null()]).optional().transform(val => val === '' || val === null ? null : val),
+consultancySector: z.union([z.string().max(100), z.literal(''), z.null()]).optional().transform(val => val === '' || val === null ? null : val),
+```
+
+**Benefits:**
+- Handles empty strings from form inputs
+- Accepts null values from frontend state
+- Transforms empty strings to null for database consistency
+- Maintains URL validation for social media links
+
+#### 2. Next.js Async Params Fix (`apps/consultant-dashboard/src/app/[consultantname]/page.tsx`)
+
+**Problem:** Next.js 15+ requires params to be awaited before accessing properties, causing compilation errors.
+
+**Before:**
+```typescript
+export default function ConsultantProfile({ params }: ConsultantProfileProps) {
+  const { consultantname } = params; // ❌ Error: params should be awaited
+  const { profile, isLoading } = useConsultantShowcase(consultantname);
+}
+```
+
+**After:**
+```typescript
+interface ConsultantProfileProps {
+  params: Promise<{ consultantname: string }>; // ✅ Params is now a Promise
+}
+
+export default function ConsultantProfile({ params }: ConsultantProfileProps) {
+  const [consultantSlug, setConsultantSlug] = useState<string | null>(null);
+  
+  // Resolve params asynchronously
+  useEffect(() => {
+    params.then((resolvedParams) => {
+      setConsultantSlug(resolvedParams.consultantname);
+    });
+  }, [params]);
+
+  const { profile, isLoading } = useConsultantShowcase(consultantSlug);
+  
+  // Handle loading state while slug is being resolved
+  if (!consultantSlug || isLoading) {
+    return <LoadingComponent />;
+  }
+}
+```
+
+**Benefits:**
+- Complies with Next.js 15+ async params requirement
+- Maintains client-side component functionality
+- Proper loading state management
+- Compatible with React hooks
+
+#### 3. API Response Enhancement
+
+**Problem:** Profile update endpoint was missing banking and other important fields in the response.
+
+**Added Missing Fields:**
+```typescript
+select: {
+  // ... existing fields
+  bankName: true,
+  accountNumber: true,
+  ifscCode: true,
+  isActive: true,
+  isEmailVerified: true,
+  subscriptionPlan: true,
+  subscriptionExpiresAt: true,
+  createdAt: true,
+  // ... other fields
+}
+```
+
+**Enhanced Response Format:**
+```typescript
+res.json({
+  message: 'Profile updated successfully',
+  data: {
+    consultant: {
+      ...updatedConsultant,
+      personalSessionPrice: updatedConsultant.personalSessionPrice ? Number(updatedConsultant.personalSessionPrice) : null,
+      webinarSessionPrice: updatedConsultant.webinarSessionPrice ? Number(updatedConsultant.webinarSessionPrice) : null,
+      stats: {
+        totalSessions: 0,
+        totalClients: 0,
+        totalQuotations: 0
+      },
+      isProfileComplete: !!(/* completion logic */)
+    }
+  }
+});
+```
+
+## Previous Major Updates (June 26, 2025)
 
 ### ✅ Dynamic Consultant Profile System Implemented
 

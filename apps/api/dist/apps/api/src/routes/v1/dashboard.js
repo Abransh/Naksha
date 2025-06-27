@@ -15,6 +15,7 @@ const zod_1 = require("zod");
 const database_1 = require("../../config/database");
 const redis_1 = require("../../config/redis");
 const validation_1 = require("../../middleware/validation");
+const dashboard_controller_1 = require("../../controllers/dashboard.controller");
 const router = (0, express_1.Router)();
 /**
  * Validation schemas
@@ -449,6 +450,16 @@ router.get('/recent-activity', async (req, res) => {
         });
     }
 });
+/**
+ * GET /api/dashboard/overview
+ * Get comprehensive dashboard overview data (new simplified endpoint)
+ */
+router.get('/overview', dashboard_controller_1.getDashboardOverview);
+/**
+ * GET /api/dashboard/stats
+ * Get additional dashboard statistics (new endpoint)
+ */
+router.get('/stats', dashboard_controller_1.getDashboardStats);
 /**
  * GET /api/dashboard/summary
  * Get quick summary stats for dashboard header

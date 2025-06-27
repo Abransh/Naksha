@@ -60,7 +60,7 @@ export class ApiError extends Error {
   }
 }
 
-// Generic API request function
+// Generic API request function with automatic token refresh
 async function apiRequest<T>(
   endpoint: string,
   options: {
@@ -68,13 +68,15 @@ async function apiRequest<T>(
     headers?: Record<string, string>;
     body?: unknown;
     requireAuth?: boolean;
+    isRetry?: boolean;
   } = {}
 ): Promise<T> {
   const {
     method = 'GET',
     headers = {},
     body,
-    requireAuth = false
+    requireAuth = false,
+    isRetry = false
   } = options;
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
@@ -104,9 +106,54 @@ async function apiRequest<T>(
 
   try {
     const response = await fetch(url, config);
+    
+    // Handle 401 unauthorized - try to refresh token
+    if (response.status === 401 && requireAuth && !isRetry && typeof window !== 'undefined') {
+      const refreshToken = localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        try {
+          const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refreshToken }),
+            credentials: 'include',
+          });
+
+          if (refreshResponse.ok) {
+            const refreshData = await refreshResponse.json();
+            const newTokens = refreshData.data;
+            
+            // Update stored tokens
+            localStorage.setItem('accessToken', newTokens.accessToken);
+            localStorage.setItem('refreshToken', newTokens.refreshToken);
+            
+            // Retry the original request with new token
+            return apiRequest<T>(endpoint, { ...options, isRetry: true });
+          }
+        } catch (refreshError) {
+          console.error('Token refresh failed:', refreshError);
+          // Clear invalid tokens
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          // Redirect to login
+          if (typeof window !== 'undefined') {
+            window.location.href = '/login';
+          }
+        }
+      }
+    }
+
     const data = await response.json();
 
     if (!response.ok) {
+      console.error('❌ API Error Response:', {
+        status: response.status,
+        url: response.url,
+        data: data
+      });
+      
       throw new ApiError(
         response.status,
         data.code || 'API_ERROR',
@@ -428,11 +475,15 @@ export const consultantApi = {
    * Update consultant profile
    */
   async updateProfile(data: UpdateProfileData): Promise<ConsultantProfile> {
+    console.log('🔍 API: Sending profile update data:', data);
+    
     const response = await apiRequest<ApiResponse<{ consultant: ConsultantProfile }>>('/consultant/profile', {
       method: 'PUT',
       body: data,
       requireAuth: true,
     });
+    
+    console.log('✅ API: Profile update response:', response);
     return response.data!.consultant;
   },
 

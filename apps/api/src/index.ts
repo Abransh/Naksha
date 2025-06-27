@@ -129,13 +129,29 @@ class App {
     });
     this.app.use(limiter);
 
-    // Stricter rate limiting for auth endpoints
+    // Stricter rate limiting for auth endpoints (login/signup only)
     const authLimiter = rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 5, // Only 5 auth attempts per 15 minutes
+      max: 10, // Increased from 5 to 10 auth attempts per 15 minutes
       message: {
         error: 'Too many authentication attempts, please try again later.',
         retryAfter: '15 minutes'
+      },
+      skip: (req) => {
+        // Skip rate limiting for token refresh and profile endpoints
+        return req.path.includes('/refresh') || 
+               req.path.includes('/me') || 
+               req.path.includes('/logout');
+      }
+    });
+
+    // More lenient rate limiting for profile updates
+    const profileLimiter = rateLimit({
+      windowMs: 5 * 60 * 1000, // 5 minutes
+      max: 50, // 50 requests per 5 minutes for profile operations
+      message: {
+        error: 'Too many profile update attempts, please try again later.',
+        retryAfter: '5 minutes'
       }
     });
 
@@ -179,6 +195,9 @@ class App {
 
     // Apply auth limiter to auth routes
     this.app.use('/api/v1/auth', authLimiter);
+    
+    // Apply profile limiter to consultant routes
+    this.app.use('/api/v1/consultant', profileLimiter);
   }
 
   /**
@@ -200,7 +219,7 @@ class App {
     this.app.post('/api/v1/auth/logout', authenticate, logout);
     
     // Protected routes (authentication required)
-    this.app.use('/api/v1/consultant', authenticateConsultant, consultantRoutes);
+    this.app.use('/api/v1/consultant', consultantRoutes);
     this.app.use('/api/v1/dashboard', authenticateConsultant, dashboardRoutes);
     this.app.use('/api/v1/sessions', authenticateConsultant, sessionRoutes);
     this.app.use('/api/v1/clients', authenticateConsultant, clientRoutes);

@@ -42,81 +42,9 @@ import {
 } from "lucide-react";
 import { useSettingsForm, useProfileCompletion } from "@/hooks/useConsultantProfile";
 import { toast } from "react-hot-toast";
+import Navigator from "@/components/navigation/Navigator";
 
-const SidebarContent = () => (
-  <>
-    {/* Logo */}
-    <div className="p-4">
-      <img
-        src="https://cdn.builder.io/api/v1/image/assets%2Ff8a06de2181a491da294e9d2e5f35408%2F9cb11a3e7881422da58cb120ef3645b2?format=webp&width=800"
-        alt="Logo"
-        className="w-14 h-14 rounded-lg"
-      />
-    </div>
-
-    {/* Navigation Menu */}
-    <div className="flex-1 px-4">
-      <nav className="space-y-3">
-        {/* Dashboard */}
-        <div className="flex items-center justify-center w-14 h-14 rounded-xl hover:bg-gray-100">
-          <BarChart3 size={24} className="text-[var(--black-50)]" />
-        </div>
-
-        {/* Sessions */}
-        <div className="relative flex items-center justify-center w-14 h-14 rounded-xl hover:bg-gray-100">
-          <ShoppingBag size={24} className="text-[var(--black-50)]" />
-          <Badge className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[var(--secondary-100)] text-[var(--black-100)] text-xs flex items-center justify-center p-0">
-            3
-          </Badge>
-        </div>
-
-        {/* Clients */}
-        <div className="flex items-center justify-center w-14 h-14 rounded-xl hover:bg-gray-100">
-          <Users size={24} className="text-[var(--black-50)]" />
-        </div>
-
-        {/* Quotations */}
-        <div className="flex items-center justify-center w-14 h-14 rounded-xl hover:bg-gray-100">
-          <FolderOpen size={24} className="text-[var(--black-50)]" />
-        </div>
-
-        {/* Conversations */}
-        <div className="relative flex items-center justify-center w-14 h-14 rounded-xl hover:bg-gray-100">
-          <MessageCircle size={24} className="text-[var(--black-50)]" />
-          <Badge className="absolute -top-1 -right-1 w-6 h-6 rounded-full bg-[var(--secondary-100)] text-[var(--black-100)] text-xs flex items-center justify-center p-0">
-            16
-          </Badge>
-        </div>
-
-        {/* Settings - Active */}
-        <div className="flex items-center justify-center w-14 h-14 rounded-xl bg-[var(--primary-100)]">
-          <Settings size={24} className="text-white" />
-        </div>
-      </nav>
-
-      {/* Contact Support */}
-      <div className="mt-12">
-        <div className="flex items-center justify-center w-14 h-12 rounded-2xl bg-[rgba(94,99,102,0.1)] hover:bg-gray-200">
-          <Headphones size={24} className="text-black" />
-        </div>
-      </div>
-
-      {/* Gift Banner */}
-      <div className="mt-3">
-        <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-[rgba(255,204,145,0.2)] hover:bg-[rgba(255,204,145,0.3)]">
-          <Gift size={24} className="text-black" />
-        </div>
-      </div>
-    </div>
-
-    {/* Logout */}
-    <div className="p-4">
-      <div className="flex items-center justify-center w-12 h-12 rounded-2xl hover:bg-gray-100">
-        <LogOut size={24} className="text-[var(--action-red)]" />
-      </div>
-    </div>
-  </>
-);
+// Removed SidebarContent - now using Navigator component
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("account");
@@ -201,32 +129,21 @@ export default function SettingsPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[var(--main-background)]">
-      {/* Sidebar */}
-      <div className="fixed left-0 top-0 w-[88px] h-full bg-white z-10 hidden lg:flex flex-col">
-        <SidebarContent />
-      </div>
+    <div className="min-h-screen bg-[var(--main-background)] flex">
+      {/* Navigation Sidebar */}
+      <Navigator />
 
       {/* Main Content */}
-      <div className="lg:ml-[88px]">
+      <div className="flex-1 lg:ml-[88px]">
         {/* Top Navigation */}
         <div className="bg-white border-b border-[var(--stroke)]">
           <div className="px-5 py-3.5">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-4">
-                {/* Mobile menu button */}
-                <Sheet>
-                  <SheetTrigger asChild>
-                    <button className="lg:hidden p-2 hover:bg-gray-100 rounded-lg">
-                      <Menu size={20} className="text-[var(--black-60)]" />
-                    </button>
-                  </SheetTrigger>
-                  <SheetContent side="left" className="w-[88px] p-0 bg-white">
-                    <div className="flex flex-col h-full">
-                      <SidebarContent />
-                    </div>
-                  </SheetContent>
-                </Sheet>
+                {/* Mobile menu handled by Navigator */}
+                <div className="lg:hidden">
+                  <Navigator />
+                </div>
                 <h1 className="text-xl font-medium text-[var(--black-60)] font-poppins">
                   Settings
                 </h1>
