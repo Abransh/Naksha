@@ -9,6 +9,7 @@ import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/app/providers";
 import { useDashboardMetrics, useRecentSessions } from "@/hooks/useDashboard";
+import { useClientSummary } from "@/hooks/useClients";
 import Navigator from "@/components/navigation/Navigator";
 import {
   BarChart3,
@@ -44,6 +45,13 @@ export default function Dashboard() {
   } = useDashboardMetrics();
   
   const { sessions: recentSessions, hasData: hasRecentSessions } = useRecentSessions();
+  
+  // Get more detailed client statistics
+  const { 
+    summaryStats: clientStats, 
+    isLoading: clientStatsLoading,
+    formatCurrency: formatClientCurrency 
+  } = useClientSummary();
 
   // Helper function to format currency
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
@@ -195,10 +203,10 @@ export default function Dashboard() {
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-2 gap-8">
                   <div>
-                    <p className="text-[var(--black-30)] text-sm">Clients</p>
+                    <p className="text-[var(--black-30)] text-sm">Total Clients</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                        {clients.total}
+                        {clientStatsLoading ? '...' : clientStats.totalClients}
                       </span>
                       <span className={`text-xs ${clients.change >= 0 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
                         {formatChange(clients.change)}
@@ -206,13 +214,16 @@ export default function Dashboard() {
                     </div>
                   </div>
                   <div>
-                    <p className="text-[var(--black-30)] text-sm">Quotations shared</p>
+                    <p className="text-[var(--black-30)] text-sm">Active Clients</p>
                     <div className="flex items-center gap-2 mt-2">
                       <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                        {clients.quotationsShared}
+                        {clientStatsLoading ? '...' : clientStats.activeClients}
                       </span>
-                      <span className={`text-xs ${clients.quotationChange >= 0 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
-                        {formatChange(clients.quotationChange)}
+                      <span className="text-[var(--black-10)] text-xs">
+                        {clientStats.totalClients > 0 ? 
+                          `${Math.round((clientStats.activeClients / clientStats.totalClients) * 100)}%` : 
+                          '0%'
+                        }
                       </span>
                     </div>
                   </div>
@@ -426,14 +437,17 @@ export default function Dashboard() {
                         </div>
                         <div>
                           <p className="text-[var(--black-30)] text-sm">
-                            Total Clients
+                            Client Revenue
                           </p>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-[var(--black-60)] font-poppins text-xl font-medium">
-                              {clients.total}
+                              {clientStatsLoading ? '...' : formatClientCurrency(clientStats.totalRevenue)}
                             </span>
-                            <span className={`text-xs ${clients.change >= 0 ? 'text-[var(--action-green)]' : 'text-[var(--action-red)]'}`}>
-                              {formatChange(clients.change)}
+                            <span className="text-[var(--black-10)] text-xs">
+                              {clientStats.totalClients > 0 ? 
+                                `Avg: ${formatClientCurrency(clientStats.averageRevenuePerClient)}` : 
+                                'No revenue'
+                              }
                             </span>
                           </div>
                         </div>

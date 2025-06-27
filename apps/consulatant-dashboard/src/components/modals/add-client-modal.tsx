@@ -1,3 +1,5 @@
+// apps/consulatant-dashboard/src/components/modals/add-client-modal.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -9,12 +11,16 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { clientApi } from "@/lib/api";
+import { toast } from "sonner";
+import { Loader2 } from "lucide-react";
 
 interface AddClientModalProps {
   children: React.ReactNode;
+  onClientAdded?: () => void; // Callback to refresh client list
 }
 
-export function AddClientModal({ children }: AddClientModalProps) {
+export function AddClientModal({ children, onClientAdded }: AddClientModalProps) {
   const [formData, setFormData] = useState({
     clientName: "",
     clientEmail: "",
@@ -29,6 +35,8 @@ export function AddClientModal({ children }: AddClientModalProps) {
   });
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({
@@ -37,11 +45,77 @@ export function AddClientModal({ children }: AddClientModalProps) {
     }));
   };
 
-  const handleSubmit = () => {
-    // Handle form submission here
-    console.log("Form data:", formData);
-    setIsOpen(false);
-    // Reset form
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+    
+    if (!formData.clientName.trim()) {
+      newErrors.clientName = "Client name is required";
+    }
+    
+    if (!formData.clientEmail.trim()) {
+      newErrors.clientEmail = "Client email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.clientEmail)) {
+      newErrors.clientEmail = "Please enter a valid email address";
+    }
+    
+    if (!formData.phoneNumber.trim()) {
+      newErrors.phoneNumber = "Phone number is required";
+    }
+    
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async () => {
+    if (!validateForm()) {
+      toast.error("Please fix the errors in the form");
+      return;
+    }
+
+    setIsSubmitting(true);
+    
+    try {
+      const clientData = {
+        name: formData.clientName.trim(),
+        email: formData.clientEmail.trim(),
+        phoneCountryCode: formData.countryCode,
+        phoneNumber: formData.phoneNumber.trim(),
+        address: formData.addAddress ? formData.streetAddress.trim() : undefined,
+        city: formData.addAddress ? formData.city.trim() : undefined,
+        state: formData.addAddress ? formData.state.trim() : undefined,
+        country: formData.addAddress ? formData.country.trim() : undefined,
+      };
+
+      console.log('🔄 Creating client with data:', clientData);
+      
+      const newClient = await clientApi.createClient(clientData);
+      
+      console.log('✅ Client created successfully:', newClient);
+      
+      toast.success("Client added successfully!");
+      
+      // Close modal and reset form
+      setIsOpen(false);
+      resetForm();
+      
+      // Trigger refresh callback
+      if (onClientAdded) {
+        onClientAdded();
+      }
+    } catch (error) {
+      console.error('❌ Error creating client:', error);
+      
+      const errorMessage = error instanceof Error 
+        ? error.message 
+        : 'Failed to create client. Please try again.';
+      
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+  
+  const resetForm = () => {
     setFormData({
       clientName: "",
       clientEmail: "",
@@ -54,23 +128,12 @@ export function AddClientModal({ children }: AddClientModalProps) {
       state: "",
       sameAsBillingAddress: false,
     });
+    setErrors({});
   };
 
   const handleCancel = () => {
     setIsOpen(false);
-    // Reset form
-    setFormData({
-      clientName: "",
-      clientEmail: "",
-      phoneNumber: "",
-      countryCode: "+234",
-      addAddress: true,
-      streetAddress: "",
-      city: "",
-      country: "",
-      state: "",
-      sameAsBillingAddress: false,
-    });
+    resetForm();
   };
 
   return (
@@ -126,9 +189,14 @@ export function AddClientModal({ children }: AddClientModalProps) {
                   onChange={(e) =>
                     handleInputChange("clientName", e.target.value)
                   }
-                  className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
+                  className={`h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)] ${
+                    errors.clientName ? 'border border-red-500' : ''
+                  }`}
                   style={{ fontFamily: "Inter, sans-serif" }}
                 />
+                {errors.clientName && (
+                  <p className="text-red-500 text-sm mt-1">{errors.clientName}</p>
+                )}
               </div>
 
               {/* Client Email */}
@@ -140,9 +208,14 @@ export function AddClientModal({ children }: AddClientModalProps) {
                   onChange={(e) =>
                     handleInputChange("clientEmail", e.target.value)
                   }
-                  className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
+                  className={`h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)] ${
+                    errors.clientEmail ? 'border border-red-500' : ''
+                  }`}
                   style={{ fontFamily: "Inter, sans-serif" }}
                 />
+                {errors.clientEmail && (
+                  <p className="text-red-500 text-sm mt-1">{errors.clientEmail}</p>
+                )}
               </div>
 
               {/* Phone Number */}
@@ -181,10 +254,15 @@ export function AddClientModal({ children }: AddClientModalProps) {
                     onChange={(e) =>
                       handleInputChange("phoneNumber", e.target.value)
                     }
-                    className="flex-1 h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
+                    className={`flex-1 h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)] ${
+                      errors.phoneNumber ? 'border border-red-500' : ''
+                    }`}
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
                 </div>
+                {errors.phoneNumber && (
+                  <p className="text-red-500 text-sm mt-1">{errors.phoneNumber}</p>
+                )}
               </div>
 
               {/* Add Address Toggle */}
@@ -369,10 +447,18 @@ export function AddClientModal({ children }: AddClientModalProps) {
             </Button>
             <Button
               onClick={handleSubmit}
-              className="flex-1 h-14 bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white rounded-xl text-xl font-normal"
+              disabled={isSubmitting}
+              className="flex-1 h-14 bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white rounded-xl text-xl font-normal disabled:opacity-50"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              Add
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Add"
+              )}
             </Button>
           </div>
         </div>

@@ -1,3 +1,5 @@
+// apps/consultant/src/app/dashboard/clients/page.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -5,143 +7,61 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AddClientModal } from "@/components/modals/add-client-modal";
+import { useClients } from "@/hooks/useClients";
+import { useAuth } from "@/app/providers";
+import { Loader2, AlertCircle } from "lucide-react";
 
-// Sample client data - in a real app this would come from an API
-const sampleClients = [
-  {
-    id: 1,
-    name: "Sarah Johnson",
-    email: "sarah.johnson@email.com",
-    phone: "+1 (555) 123-4567",
-    sessions: 15,
-    sessionCharges: "₹2500",
-    clientSince: "2023-01-15",
-    status: "Active",
-  },
-  {
-    id: 2,
-    name: "Michael Chen",
-    email: "michael.chen@email.com",
-    phone: "+1 (555) 234-5678",
-    sessions: 8,
-    sessionCharges: "₹2000",
-    clientSince: "2023-03-22",
-    status: "Active",
-  },
-  {
-    id: 3,
-    name: "Emily Rodriguez",
-    email: "emily.rodriguez@email.com",
-    phone: "+1 (555) 345-6789",
-    sessions: 12,
-    sessionCharges: "₹3000",
-    clientSince: "2023-02-10",
-    status: "Active",
-  },
-  {
-    id: 4,
-    name: "David Kim",
-    email: "david.kim@email.com",
-    phone: "+1 (555) 456-7890",
-    sessions: 6,
-    sessionCharges: "₹1500",
-    clientSince: "2023-04-05",
-    status: "Active",
-  },
-  {
-    id: 5,
-    name: "Lisa Thompson",
-    email: "lisa.thompson@email.com",
-    phone: "+1 (555) 567-8901",
-    sessions: 20,
-    sessionCharges: "₹4000",
-    clientSince: "2022-12-08",
-    status: "Active",
-  },
-  {
-    id: 6,
-    name: "James Wilson",
-    email: "james.wilson@email.com",
-    phone: "+1 (555) 678-9012",
-    sessions: 3,
-    sessionCharges: "₹800",
-    clientSince: "2023-05-18",
-    status: "Active",
-  },
-  {
-    id: 7,
-    name: "Maria Garcia",
-    email: "maria.garcia@email.com",
-    phone: "+1 (555) 789-0123",
-    sessions: 18,
-    sessionCharges: "₹3500",
-    clientSince: "2023-01-28",
-    status: "Active",
-  },
-  {
-    id: 8,
-    name: "Robert Brown",
-    email: "robert.brown@email.com",
-    phone: "+1 (555) 890-1234",
-    sessions: 11,
-    sessionCharges: "₹2200",
-    clientSince: "2023-03-10",
-    status: "Active",
-  },
-  {
-    id: 9,
-    name: "Jennifer Lee",
-    email: "jennifer.lee@email.com",
-    phone: "+1 (555) 901-2345",
-    sessions: 7,
-    sessionCharges: "₹1750",
-    clientSince: "2023-04-22",
-    status: "Active",
-  },
-  {
-    id: 10,
-    name: "Daniel Martinez",
-    email: "daniel.martinez@email.com",
-    phone: "+1 (555) 012-3456",
-    sessions: 14,
-    sessionCharges: "₹2800",
-    clientSince: "2023-02-14",
-    status: "Active",
-  },
-];
+// Now using dynamic data from useClients hook
 
 export default function ClientsPage() {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedClients, setSelectedClients] = useState<number[]>([]);
+  const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const itemsPerPage = 10;
 
-  const filteredClients = sampleClients.filter(
-    (client) =>
-      client.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      client.phone.includes(searchTerm),
-  );
-
-  const totalPages = Math.ceil(filteredClients.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentClients = filteredClients.slice(startIndex, endIndex);
+  const {
+    clients,
+    summaryStats,
+    pagination,
+    isLoading,
+    error,
+    refetch,
+    formatCurrency,
+    formatDate
+  } = useClients({
+    page: currentPage,
+    limit: itemsPerPage,
+    search: searchTerm || undefined,
+    sortBy: 'createdAt',
+    sortOrder: 'desc'
+  });
 
   const handleSelectAll = () => {
-    if (selectedClients.length === currentClients.length) {
+    if (selectedClients.length === clients.length) {
       setSelectedClients([]);
     } else {
-      setSelectedClients(currentClients.map((client) => client.id));
+      setSelectedClients(clients.map((client) => client.id));
     }
   };
 
-  const handleSelectClient = (clientId: number) => {
+  const handleSelectClient = (clientId: string) => {
     setSelectedClients((prev) =>
       prev.includes(clientId)
         ? prev.filter((id) => id !== clientId)
         : [...prev, clientId],
     );
+  };
+
+  const handlePageChange = (newPage: number) => {
+    setCurrentPage(newPage);
+    setSelectedClients([]); // Clear selections when changing pages
+  };
+
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setCurrentPage(1); // Reset to first page when searching
+    setSelectedClients([]); // Clear selections when searching
   };
 
   const copyToClipboard = (text: string) => {
@@ -169,7 +89,7 @@ export default function ClientsPage() {
                   className="text-sm text-[var(--black-100)]"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
-                  {"{Consultant's Name}"}
+                  {user ? `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Consultant' : "Consultant"}
                 </span>
                 <svg width="20" height="20" viewBox="0 0 20 20" fill="none">
                   <path
@@ -244,7 +164,7 @@ export default function ClientsPage() {
           >
             Clients Summary
           </h2>
-          <AddClientModal>
+          <AddClientModal onClientAdded={refetch}>
             <Button
               className="bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white font-normal px-4 py-2 h-9 rounded-xl flex items-center gap-2"
               style={{ fontFamily: "Inter, sans-serif" }}
@@ -341,7 +261,7 @@ export default function ClientsPage() {
                   className="text-xl font-medium text-[var(--black-60)]"
                   style={{ fontFamily: "Poppins, sans-serif" }}
                 >
-                  30
+                  {isLoading ? '...' : summaryStats.totalClients}
                 </div>
               </div>
               <div>
@@ -355,7 +275,7 @@ export default function ClientsPage() {
                   className="text-xl font-medium text-[var(--black-60)]"
                   style={{ fontFamily: "Poppins, sans-serif" }}
                 >
-                  25
+                  {isLoading ? '...' : summaryStats.activeClients}
                 </div>
               </div>
               <div>
@@ -369,7 +289,7 @@ export default function ClientsPage() {
                   className="text-xl font-medium text-[var(--black-60)]"
                   style={{ fontFamily: "Poppins, sans-serif" }}
                 >
-                  5
+                  {isLoading ? '...' : summaryStats.clientsWithActiveSessions}
                 </div>
               </div>
             </div>
@@ -436,13 +356,13 @@ export default function ClientsPage() {
                   className="text-sm text-[var(--black-30)] mb-2"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
-                  New Client Today
+                  Active Clients
                 </div>
                 <div
                   className="text-xl font-medium text-[var(--black-60)]"
                   style={{ fontFamily: "Poppins, sans-serif" }}
                 >
-                  2
+                  {isLoading ? '...' : summaryStats.activeClients}
                 </div>
               </div>
               <div>
@@ -450,21 +370,15 @@ export default function ClientsPage() {
                   className="text-sm text-[var(--black-30)] mb-2"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
-                  Revenue Today
+                  Total Revenue
                 </div>
                 <div className="flex items-center gap-2">
                   <div
                     className="text-xl font-medium text-[var(--black-60)]"
                     style={{ fontFamily: "Poppins, sans-serif" }}
                   >
-                    ₹4000
+                    {isLoading ? '...' : formatCurrency(summaryStats.totalRevenue)}
                   </div>
-                  <span
-                    className="text-xs text-[var(--action-green)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    +0.00%
-                  </span>
                 </div>
               </div>
               <div>
@@ -472,21 +386,15 @@ export default function ClientsPage() {
                   className="text-sm text-[var(--black-30)] mb-2"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
-                  Abandoned Sessions
+                  Average Revenue
                 </div>
                 <div className="flex items-center gap-2">
                   <div
                     className="text-xl font-medium text-[var(--black-60)]"
                     style={{ fontFamily: "Poppins, sans-serif" }}
                   >
-                    5
+                    {isLoading ? '...' : formatCurrency(summaryStats.averageRevenuePerClient)}
                   </div>
-                  <span
-                    className="text-xs text-[var(--action-green)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    +0.00%
-                  </span>
                 </div>
               </div>
             </div>
@@ -531,7 +439,7 @@ export default function ClientsPage() {
                     type="text"
                     placeholder="Search"
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10 w-44 h-7 text-xs border-[var(--black-1)] text-[var(--black-2)] placeholder:text-[var(--black-2)]"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
@@ -706,8 +614,8 @@ export default function ClientsPage() {
                       <input
                         type="checkbox"
                         checked={
-                          selectedClients.length === currentClients.length &&
-                          currentClients.length > 0
+                          selectedClients.length === clients.length &&
+                          clients.length > 0
                         }
                         onChange={handleSelectAll}
                         className="w-6 h-6 rounded-lg border border-[var(--black-1)]"
@@ -906,7 +814,7 @@ export default function ClientsPage() {
                             fill="#00092E"
                           />
                           <path
-                            d="M12 8.5H4C3.72667 8.5 3.5 8.27333 3.5 8C3.5 7.72667 3.72667 7.5 4 7.5H12C12.2733 7.5 12.5 7-72667 12.5 8C12.5 8.27333 12.2733 8.5 12 8.5Z"
+                            d="M12 8.5H4C3.72667 8.5 3.5 8.27333 3.5 8C3.5 7.72667 3.72667 7.5 4 7.5H12C12.2733 7.5 12.5 7.72667 12.5 8C12.5 8.27333 12.2733 8.5 12 8.5Z"
                             fill="#00092E"
                           />
                           <path
@@ -919,110 +827,198 @@ export default function ClientsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {currentClients.map((client) => (
-                    <tr
-                      key={client.id}
-                      className="border-b border-[var(--grey)] last:border-b-0"
-                    >
-                      <td className="py-3 pl-0 pr-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedClients.includes(client.id)}
-                          onChange={() => handleSelectClient(client.id)}
-                          className="w-6 h-6 rounded-lg border border-[var(--black-1)]"
-                        />
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="text-sm text-[var(--black-40)]"
-                          style={{ fontFamily: "Inter, sans-serif" }}
-                        >
-                          {client.name}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="text-sm text-[var(--black-40)]"
-                            style={{ fontFamily: "Inter, sans-serif" }}
+                  {isLoading ? (
+                    // Loading skeleton
+                    Array.from({ length: 5 }).map((_, index) => (
+                      <tr key={index} className="border-b border-[var(--grey)] animate-pulse">
+                        <td className="py-3 pl-0 pr-4">
+                          <div className="w-6 h-6 bg-gray-200 rounded"></div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="h-4 bg-gray-200 rounded w-32"></div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="h-4 bg-gray-200 rounded w-40"></div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="h-4 bg-gray-200 rounded w-28"></div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="h-4 bg-gray-200 rounded w-16"></div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="h-4 bg-gray-200 rounded w-20"></div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="h-4 bg-gray-200 rounded w-24"></div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="h-6 bg-gray-200 rounded w-16"></div>
+                        </td>
+                      </tr>
+                    ))
+                  ) : error ? (
+                    // Error state
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <AlertCircle className="h-12 w-12 text-red-500" />
+                          <div className="text-red-800 font-medium">Error loading clients</div>
+                          <div className="text-red-600 text-sm">{error}</div>
+                          <Button 
+                            onClick={refetch}
+                            variant="outline"
+                            className="text-red-600 border-red-600 hover:bg-red-50"
                           >
-                            {client.email}
-                          </span>
-                          <button
-                            onClick={() => copyToClipboard(client.email)}
-                            className="text-[var(--black-30)] hover:text-[var(--black-40)]"
-                          >
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 16 16"
-                              fill="none"
-                            >
-                              <path
-                                d="M10.6667 13.3335H5.33333C4.8029 13.3335 4.29419 13.1228 3.91912 12.7477C3.54405 12.3726 3.33333 11.8639 3.33333 11.3335V4.66683C3.33333 4.49002 3.2631 4.32045 3.13807 4.19542C3.01305 4.0704 2.84348 4.00016 2.66667 4.00016C2.48986 4.00016 2.32029 4.0704 2.19526 4.19542C2.07024 4.32045 2 4.49002 2 4.66683V11.3335C2 12.2176 2.35119 13.0654 2.97631 13.6905C3.60143 14.3156 4.44928 14.6668 5.33333 14.6668H10.6667C10.8435 14.6668 11.013 14.5966 11.1381 14.4716C11.2631 14.3465 11.3333 14.177 11.3333 14.0002C11.3333 13.8234 11.2631 13.6538 11.1381 13.5288C11.013 13.4037 10.8435 13.3335 10.6667 13.3335ZM14 5.96016C13.9931 5.89892 13.9796 5.83858 13.96 5.78016V5.72016C13.9279 5.65162 13.8852 5.58861 13.8333 5.5335L9.83333 1.5335C9.77822 1.48164 9.71521 1.43888 9.64667 1.40683H9.58667L9.37333 1.3335H6.66667C6.13623 1.3335 5.62753 1.54421 5.25245 1.91928C4.87738 2.29436 4.66667 2.80306 4.66667 3.3335V10.0002C4.66667 10.5306 4.87738 11.0393 5.25245 11.4144C5.62753 11.7894 6.13623 12.0002 6.66667 12.0002H12C12.5304 12.0002 13.0391 11.7894 13.4142 11.4144C13.7893 11.0393 14 10.5306 14 10.0002V6.00016C14 6.00016 14 6.00016 14 5.96016ZM10 3.60683L11.7267 5.3335H10.6667C10.4899 5.3335 10.3203 5.26326 10.1953 5.13823C10.0702 5.01321 10 4.84364 10 4.66683V3.60683ZM12.6667 10.0002C12.6667 10.177 12.5964 10.3465 12.4714 10.4716C12.3464 10.5966 12.1768 10.6668 12 10.6668H6.66667C6.48986 10.6668 6.32029 10.5966 6.19526 10.4716C6.07024 10.3465 6 10.177 6 10.0002V3.3335C6 3.15668 6.07024 2.98712 6.19526 2.86209C6.32029 2.73707 6.48986 2.66683 6.66667 2.66683H8.66667V4.66683C8.66667 5.19726 8.87738 5.70597 9.25245 6.08104C9.62753 6.45612 10.1362 6.66683 10.6667 6.66683H12.6667V10.0002Z"
-                                fill="#8B8D97"
-                              />
-                            </svg>
-                          </button>
+                            Try Again
+                          </Button>
                         </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2">
-                          <span
-                            className="text-sm text-[var(--black-40)]"
-                            style={{ fontFamily: "Inter, sans-serif" }}
-                          >
-                            {client.phone}
-                          </span>
-                          <button
-                            onClick={() => copyToClipboard(client.phone)}
-                            className="text-[var(--black-30)] hover:text-[var(--black-40)]"
-                          >
-                            <svg
-                              width="16"
-                              height="16"
-                              viewBox="0 0 16 16"
-                              fill="none"
-                            >
-                              <path
-                                d="M10.6667 13.3335H5.33333C4.8029 13.3335 4.29419 13.1228 3.91912 12.7477C3.54405 12.3726 3.33333 11.8639 3.33333 11.3335V4.66683C3.33333 4.49002 3.2631 4.32045 3.13807 4.19542C3.01305 4.0704 2.84348 4.00016 2.66667 4.00016C2.48986 4.00016 2.32029 4.0704 2.19526 4.19542C2.07024 4.32045 2 4.49002 2 4.66683V11.3335C2 12.2176 2.35119 13.0654 2.97631 13.6905C3.60143 14.3156 4.44928 14.6668 5.33333 14.6668H10.6667C10.8435 14.6668 11.013 14.5966 11.1381 14.4716C11.2631 14.3465 11.3333 14.177 11.3333 14.0002C11.3333 13.8234 11.2631 13.6538 11.1381 13.5288C11.013 13.4037 10.8435 13.3335 10.6667 13.3335ZM14 5.96016C13.9931 5.89892 13.9796 5.83858 13.96 5.78016V5.72016C13.9279 5.65162 13.8852 5.58861 13.8333 5.5335L9.83333 1.5335C9.77822 1.48164 9.71521 1.43888 9.64667 1.40683H9.58667L9.37333 1.3335H6.66667C6.13623 1.3335 5.62753 1.54421 5.25245 1.91928C4.87738 2.29436 4.66667 2.80306 4.66667 3.3335V10.0002C4.66667 10.5306 4.87738 11.0393 5.25245 11.4144C5.62753 11.7894 6.13623 12.0002 6.66667 12.0002H12C12.5304 12.0002 13.0391 11.7894 13.4142 11.4144C13.7893 11.0393 14 10.5306 14 10.0002V6.00016C14 6.00016 14 6.00016 14 5.96016ZM10 3.60683L11.7267 5.3335H10.6667C10.4899 5.3335 10.3203 5.26326 10.1953 5.13823C10.0702 5.01321 10 4.84364 10 4.66683V3.60683ZM12.6667 10.0002C12.6667 10.177 12.5964 10.3465 12.4714 10.4716C12.3464 10.5966 12.1768 10.6668 12 10.6668H6.66667C6.48986 10.6668 6.32029 10.5966 6.19526 10.4716C6.07024 10.3465 6 10.177 6 10.0002V3.3335C6 3.15668 6.07024 2.98712 6.19526 2.86209C6.32029 2.73707 6.48986 2.66683 6.66667 2.66683H8.66667V4.66683C8.66667 5.19726 8.87738 5.70597 9.25245 6.08104C9.62753 6.45612 10.1362 6.66683 10.6667 6.66683H12.6667V10.0002Z"
-                                fill="#8B8D97"
-                              />
-                            </svg>
-                          </button>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="text-sm text-[var(--black-40)]"
-                          style={{ fontFamily: "Inter, sans-serif" }}
-                        >
-                          {client.sessions}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="text-sm text-[var(--black-40)]"
-                          style={{ fontFamily: "Inter, sans-serif" }}
-                        >
-                          {client.sessionCharges}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="text-sm text-[var(--black-40)]"
-                          style={{ fontFamily: "Inter, sans-serif" }}
-                        >
-                          {new Date(client.clientSince).toLocaleDateString()}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge className="bg-[rgba(81,156,102,0.16)] text-[var(--action-green)] hover:bg-[rgba(81,156,102,0.16)] border-0 text-xs font-normal px-3 py-1">
-                          {client.status}
-                        </Badge>
                       </td>
                     </tr>
-                  ))}
+                  ) : clients.length === 0 ? (
+                    // Empty state
+                    <tr>
+                      <td colSpan={8} className="py-12 text-center">
+                        <div className="flex flex-col items-center gap-3">
+                          <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" className="text-gray-400">
+                              <path
+                                fillRule="evenodd"
+                                clipRule="evenodd"
+                                d="M12 16C15.866 16 19 13.31 19 9.5C19 5.69 15.866 3 12 3C8.134 3 5 5.69 5 9.5C5 13.31 8.134 16 12 16Z"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                              <path
+                                d="M8.21 13.89L7 23L12 20L17 23L15.79 13.88"
+                                stroke="currentColor"
+                                strokeWidth="2"
+                                strokeLinecap="round"
+                                strokeLinejoin="round"
+                              />
+                            </svg>
+                          </div>
+                          <div className="text-gray-800 font-medium">No clients found</div>
+                          <div className="text-gray-600 text-sm">
+                            {searchTerm ? 'Try adjusting your search terms' : 'Add your first client to get started'}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  ) : (
+                    clients.map((client) => (
+                      <tr
+                        key={client.id}
+                        className="border-b border-[var(--grey)] last:border-b-0"
+                      >
+                        <td className="py-3 pl-0 pr-4">
+                          <input
+                            type="checkbox"
+                            checked={selectedClients.includes(client.id)}
+                            onChange={() => handleSelectClient(client.id)}
+                            className="w-6 h-6 rounded-lg border border-[var(--black-1)]"
+                          />
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className="text-sm text-[var(--black-40)]"
+                            style={{ fontFamily: "Inter, sans-serif" }}
+                          >
+                            {client.name}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="text-sm text-[var(--black-40)]"
+                              style={{ fontFamily: "Inter, sans-serif" }}
+                            >
+                              {client.email}
+                            </span>
+                            <button
+                              onClick={() => copyToClipboard(client.email)}
+                              className="text-[var(--black-30)] hover:text-[var(--black-40)]"
+                            >
+                              <svg
+                                width="16"
+                                height="16"
+                                viewBox="0 0 16 16"
+                                fill="none"
+                              >
+                                <path
+                                  d="M10.6667 13.3335H5.33333C4.8029 13.3335 4.29419 13.1228 3.91912 12.7477C3.54405 12.3726 3.33333 11.8639 3.33333 11.3335V4.66683C3.33333 4.49002 3.2631 4.32045 3.13807 4.19542C3.01305 4.0704 2.84348 4.00016 2.66667 4.00016C2.48986 4.00016 2.32029 4.0704 2.19526 4.19542C2.07024 4.32045 2 4.49002 2 4.66683V11.3335C2 12.2176 2.35119 13.0654 2.97631 13.6905C3.60143 14.3156 4.44928 14.6668 5.33333 14.6668H10.6667C10.8435 14.6668 11.013 14.5966 11.1381 14.4716C11.2631 14.3465 11.3333 14.177 11.3333 14.0002C11.3333 13.8234 11.2631 13.6538 11.1381 13.5288C11.013 13.4037 10.8435 13.3335 10.6667 13.3335ZM14 5.96016C13.9931 5.89892 13.9796 5.83858 13.96 5.78016V5.72016C13.9279 5.65162 13.8852 5.58861 13.8333 5.5335L9.83333 1.5335C9.77822 1.48164 9.71521 1.43888 9.64667 1.40683H9.58667L9.37333 1.3335H6.66667C6.13623 1.3335 5.62753 1.54421 5.25245 1.91928C4.87738 2.29436 4.66667 2.80306 4.66667 3.3335V10.0002C4.66667 10.5306 4.87738 11.0393 5.25245 11.4144C5.62753 11.7894 6.13623 12.0002 6.66667 12.0002H12C12.5304 12.0002 13.0391 11.7894 13.4142 11.4144C13.7893 11.0393 14 10.5306 14 10.0002V6.00016C14 6.00016 14 6.00016 14 5.96016ZM10 3.60683L11.7267 5.3335H10.6667C10.4899 5.3335 10.3203 5.26326 10.1953 5.13823C10.0702 5.01321 10 4.84364 10 4.66683V3.60683ZM12.6667 10.0002C12.6667 10.177 12.5964 10.3465 12.4714 10.4716C12.3464 10.5966 12.1768 10.6668 12 10.6668H6.66667C6.48986 10.6668 6.32029 10.5966 6.19526 10.4716C6.07024 10.3465 6 10.177 6 10.0002V3.3335C6 3.15668 6.07024 2.98712 6.19526 2.86209C6.32029 2.73707 6.48986 2.66683 6.66667 2.66683H8.66667V4.66683C8.66667 5.19726 8.87738 5.70597 9.25245 6.08104C9.62753 6.45612 10.1362 6.66683 10.6667 6.66683H12.6667V10.0002Z"
+                                  fill="#8B8D97"
+                                />
+                              </svg>
+                            </button>
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <div className="flex items-center gap-2">
+                            <span
+                              className="text-sm text-[var(--black-40)]"
+                              style={{ fontFamily: "Inter, sans-serif" }}
+                            >
+                              {client.phoneNumber ? `${client.phoneCountryCode || '+91'} ${client.phoneNumber}` : 'N/A'}
+                            </span>
+                            {client.phoneNumber && (
+                              <button
+                                onClick={() => copyToClipboard(`${client.phoneCountryCode || '+91'} ${client.phoneNumber}`)}
+                                className="text-[var(--black-30)] hover:text-[var(--black-40)]"
+                              >
+                                <svg
+                                  width="16"
+                                  height="16"
+                                  viewBox="0 0 16 16"
+                                  fill="none"
+                                >
+                                  <path
+                                    d="M10.6667 13.3335H5.33333C4.8029 13.3335 4.29419 13.1228 3.91912 12.7477C3.54405 12.3726 3.33333 11.8639 3.33333 11.3335V4.66683C3.33333 4.49002 3.2631 4.32045 3.13807 4.19542C3.01305 4.0704 2.84348 4.00016 2.66667 4.00016C2.48986 4.00016 2.32029 4.0704 2.19526 4.19542C2.07024 4.32045 2 4.49002 2 4.66683V11.3335C2 12.2176 2.35119 13.0654 2.97631 13.6905C3.60143 14.3156 4.44928 14.6668 5.33333 14.6668H10.6667C10.8435 14.6668 11.013 14.5966 11.1381 14.4716C11.2631 14.3465 11.3333 14.177 11.3333 14.0002C11.3333 13.8234 11.2631 13.6538 11.1381 13.5288C11.013 13.4037 10.8435 13.3335 10.6667 13.3335ZM14 5.96016C13.9931 5.89892 13.9796 5.83858 13.96 5.78016V5.72016C13.9279 5.65162 13.8852 5.58861 13.8333 5.5335L9.83333 1.5335C9.77822 1.48164 9.71521 1.43888 9.64667 1.40683H9.58667L9.37333 1.3335H6.66667C6.13623 1.3335 5.62753 1.54421 5.25245 1.91928C4.87738 2.29436 4.66667 2.80306 4.66667 3.3335V10.0002C4.66667 10.5306 4.87738 11.0393 5.25245 11.4144C5.62753 11.7894 6.13623 12.0002 6.66667 12.0002H12C12.5304 12.0002 13.0391 11.7894 13.4142 11.4144C13.7893 11.0393 14 10.5306 14 10.0002V6.00016C14 6.00016 14 6.00016 14 5.96016ZM10 3.60683L11.7267 5.3335H10.6667C10.4899 5.3335 10.3203 5.26326 10.1953 5.13823C10.0702 5.01321 10 4.84364 10 4.66683V3.60683ZM12.6667 10.0002C12.6667 10.177 12.5964 10.3465 12.4714 10.4716C12.3464 10.5966 12.1768 10.6668 12 10.6668H6.66667C6.48986 10.6668 6.32029 10.5966 6.19526 10.4716C6.07024 10.3465 6 10.177 6 10.0002V3.3335C6 3.15668 6.07024 2.98712 6.19526 2.86209C6.32029 2.73707 6.48986 2.66683 6.66667 2.66683H8.66667V4.66683C8.66667 5.19726 8.87738 5.70597 9.25245 6.08104C9.62753 6.45612 10.1362 6.66683 10.6667 6.66683H12.6667V10.0002Z"
+                                    fill="#8B8D97"
+                                  />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className="text-sm text-[var(--black-40)]"
+                            style={{ fontFamily: "Inter, sans-serif" }}
+                          >
+                            {client.totalSessions}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className="text-sm text-[var(--black-40)]"
+                            style={{ fontFamily: "Inter, sans-serif" }}
+                          >
+                            {formatCurrency(client.totalAmountPaid)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <span
+                            className="text-sm text-[var(--black-40)]"
+                            style={{ fontFamily: "Inter, sans-serif" }}
+                          >
+                            {formatDate(client.createdAt)}
+                          </span>
+                        </td>
+                        <td className="py-3 px-4">
+                          <Badge className={`${
+                            client.isActive 
+                              ? 'bg-[rgba(81,156,102,0.16)] text-[var(--action-green)]'
+                              : 'bg-[rgba(156,163,175,0.16)] text-gray-600'
+                          } hover:bg-[rgba(81,156,102,0.16)] border-0 text-xs font-normal px-3 py-1`}>
+                            {client.isActive ? 'Active' : 'Inactive'}
+                          </Badge>
+                        </td>
+                      </tr>
+                    ))
+                  )}
                 </tbody>
               </table>
             </div>
@@ -1059,8 +1055,11 @@ export default function ClientsPage() {
                   className="text-sm text-[#666]"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
-                  {startIndex + 1}-{Math.min(endIndex, filteredClients.length)}{" "}
-                  of {filteredClients.length} items
+                  {pagination.totalCount > 0 ? (
+                    `${((pagination.page - 1) * pagination.limit) + 1}-${Math.min(pagination.page * pagination.limit, pagination.totalCount)} of ${pagination.totalCount} items`
+                  ) : (
+                    '0-0 of 0 items'
+                  )}
                 </span>
               </div>
 
@@ -1071,7 +1070,7 @@ export default function ClientsPage() {
                       className="text-xs text-[var(--black-30)]"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     >
-                      {currentPage}
+                      {pagination.page}
                     </span>
                     <svg width="16" height="16" viewBox="0 0 16 17" fill="none">
                       <path
@@ -1087,14 +1086,14 @@ export default function ClientsPage() {
                     className="text-sm text-[#666]"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
-                    of {totalPages} pages
+                    of {pagination.totalPages} pages
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
+                    onClick={() => handlePageChange(Math.max(1, pagination.page - 1))}
+                    disabled={!pagination.hasPrevPage || isLoading}
                     className="p-1 disabled:opacity-50"
                   >
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
@@ -1105,10 +1104,8 @@ export default function ClientsPage() {
                     </svg>
                   </button>
                   <button
-                    onClick={() =>
-                      setCurrentPage(Math.min(totalPages, currentPage + 1))
-                    }
-                    disabled={currentPage === totalPages}
+                    onClick={() => handlePageChange(Math.min(pagination.totalPages, pagination.page + 1))}
+                    disabled={!pagination.hasNextPage || isLoading}
                     className="p-1 disabled:opacity-50"
                   >
                     <svg width="16" height="16" viewBox="0 0 16 16" fill="none">

@@ -542,4 +542,148 @@ export const api = {
   consultant: consultantApi,
 };
 
+// Profile completion calculation
+export const calculateProfileCompletion = (profile: ConsultantProfile): number => {
+  const requiredFields = [
+    'firstName',
+    'lastName', 
+    'phoneNumber',
+    'personalSessionTitle',
+    'personalSessionPrice',
+    'description'
+  ];
+  
+  const completedFields = requiredFields.filter(field => {
+    const value = profile[field as keyof ConsultantProfile];
+    return value !== null && value !== undefined && value !== '';
+  });
+  
+  return Math.round((completedFields.length / requiredFields.length) * 100);
+};
+
+// Session booking (public endpoint - no auth required)
+export const bookSession = async (bookingData: {
+  fullName: string;
+  email: string;
+  phone: string;
+  sessionType: 'PERSONAL' | 'WEBINAR';
+  selectedDate: string;
+  selectedTime: string;
+  duration: number;
+  amount: number;
+  clientNotes?: string;
+  consultantSlug: string;
+}) => {
+  const response = await fetch(`${API_URL}/sessions/book`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify(bookingData),
+  });
+
+  if (!response.ok) {
+    const error = await response.json();
+    throw new Error(error.message || 'Failed to book session');
+  }
+
+  return response.json();
+};
+
+// Client API methods
+export const clientApi = {
+  /**
+   * Get all clients for consultant
+   */
+  async getClients(filters: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    search?: string;
+    isActive?: boolean;
+  } = {}): Promise<{
+    clients: any[];
+    pagination: any;
+    summaryStats: any;
+  }> {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined) {
+        params.append(key, String(value));
+      }
+    });
+
+    const response = await apiRequest<ApiResponse<any>>(`/clients?${params}`, {
+      requireAuth: true,
+    });
+    return response.data!;
+  },
+
+  /**
+   * Create a new client
+   */
+  async createClient(clientData: {
+    name: string;
+    email: string;
+    phoneCountryCode?: string;
+    phoneNumber?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    notes?: string;
+  }): Promise<any> {
+    const response = await apiRequest<ApiResponse<{ client: any }>>('/clients', {
+      method: 'POST',
+      body: clientData,
+      requireAuth: true,
+    });
+    return response.data!.client;
+  },
+
+  /**
+   * Update a client
+   */
+  async updateClient(clientId: string, updates: {
+    name?: string;
+    email?: string;
+    phoneCountryCode?: string;
+    phoneNumber?: string;
+    address?: string;
+    city?: string;
+    state?: string;
+    country?: string;
+    notes?: string;
+    isActive?: boolean;
+  }): Promise<any> {
+    const response = await apiRequest<ApiResponse<{ client: any }>>(`/clients/${clientId}`, {
+      method: 'PUT',
+      body: updates,
+      requireAuth: true,
+    });
+    return response.data!.client;
+  },
+
+  /**
+   * Get a specific client
+   */
+  async getClient(clientId: string): Promise<any> {
+    const response = await apiRequest<ApiResponse<{ client: any }>>(`/clients/${clientId}`, {
+      requireAuth: true,
+    });
+    return response.data!.client;
+  },
+
+  /**
+   * Deactivate a client
+   */
+  async deactivateClient(clientId: string): Promise<void> {
+    await apiRequest(`/clients/${clientId}`, {
+      method: 'DELETE',
+      requireAuth: true,
+    });
+  },
+};
+
 export default api;

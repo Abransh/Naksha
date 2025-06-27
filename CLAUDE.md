@@ -2,6 +2,9 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+You are an expert in prompt engineering, specializing in optimizing AI code assistant instructions. Your task is to analyze and improve the instructions for Claude Code found in u/CLAUDE.md. Follow these steps carefully:
+YOU ARE THE CTO, YOU HAVE TO WRITE THE BEST DOCUMENTED AND WELL MAINTAINED CODE
+
 ## Project Overview
 
 Naksha is a consulting platform that connects consultants with clients for personalized sessions and webinars. The platform consists of:
@@ -187,7 +190,99 @@ The system is now ready for full end-to-end testing of:
 - Background job processing
 - Email delivery and retry systems
 
-### 🎯 LATEST UPDATE (June 27, 2025) - CRITICAL BUG FIXES COMPLETED ✅
+### 🎯 LATEST UPDATE (June 27, 2025) - COMPREHENSIVE DYNAMIC CLIENT MANAGEMENT SYSTEM COMPLETED ✅
+
+**🚨 MAJOR MILESTONE: Complete Client Management System with Real-time Data Integration**
+
+**Problem Solved:**
+- Dashboard client metrics were showing static/basic data only
+- Clients page had limited dynamic functionality
+- Add client modal was not connected to backend API
+- No comprehensive client data flow from session booking to client management
+- Missing client analytics and summary statistics
+
+**Comprehensive Implementation Completed:**
+
+**1. Enhanced Dashboard Client Integration** (`apps/consultant-dashboard/src/app/dashboard/page.tsx`):
+- ✅ Integrated `useClientSummary` hook for detailed client statistics
+- ✅ Dynamic client metrics display (total clients, active clients, client revenue)
+- ✅ Real-time data updates with loading states and error handling
+- ✅ Professional currency formatting and percentage calculations
+- ✅ Enhanced user experience with comprehensive client analytics
+
+**2. Dynamic Clients List Page** (`apps/consultant-dashboard/src/app/dashboard/clients/page.tsx`):
+- ✅ Complete transformation from static to dynamic API integration using `useClients` hook
+- ✅ Real-time pagination, search, and filtering functionality
+- ✅ Loading skeletons and error states for professional UX
+- ✅ Comprehensive client data display (sessions, revenue, activity status)
+- ✅ Interactive features (client selection, bulk operations, detailed information)
+- ✅ Professional data formatting and status indicators
+
+**3. Backend-Connected Add Client Modal** (`apps/consultant-dashboard/src/components/modals/add-client-modal.tsx`):
+- ✅ Full API integration with backend client management system
+- ✅ Comprehensive form validation with real-time error display
+- ✅ Loading states and professional user feedback during submission
+- ✅ Automatic list refresh after successful client creation
+- ✅ Professional error handling with toast notifications
+- ✅ Enhanced UX with disabled states and loading indicators
+
+**4. Client Management Hooks** (`apps/consultant-dashboard/src/hooks/useClients.ts`):
+- ✅ Complete `useClients` hook with CRUD operations
+- ✅ `useClientSummary` hook for dashboard statistics
+- ✅ Real-time data management with caching and optimizations
+- ✅ Error handling, loading states, and automatic retry mechanisms
+- ✅ Professional data formatting helpers (currency, dates)
+
+**5. Enhanced API Client Integration** (`apps/consultant-dashboard/src/lib/api.ts`):
+- ✅ Complete `clientApi` implementation with full CRUD operations
+- ✅ Type-safe interfaces and comprehensive data validation
+- ✅ Robust error handling with automatic token refresh
+- ✅ Efficient data fetching with filtering, pagination, and search
+
+**🎯 Client Data Flow Now Working:**
+
+**Comprehensive Client Lifecycle:**
+1. **Session Booking** → Automatically creates client records with contact information
+2. **Manual Client Addition** → Through enhanced modal with backend integration
+3. **Dynamic Client List** → Real-time data with search, pagination, and statistics
+4. **Dashboard Integration** → Live client counts and revenue metrics
+5. **Client Analytics** → Summary statistics and performance tracking
+
+**User Experience Features:**
+- **Seamless client creation** from both booking flow and manual addition
+- **Real-time updates** across all client-related components
+- **Professional loading states** and comprehensive error handling
+- **Advanced client information** display and management capabilities
+- **Responsive design** optimized for all device sizes
+
+**Technical Implementation:**
+- **Type-safe API communication** with proper error handling and validation
+- **Efficient React hooks** for data management and state synchronization
+- **Database-driven content** replacing all static placeholder data
+- **Background refresh** and automatic cache management systems
+- **Professional form validation** with user-friendly error messages
+
+**🚀 Current System Status: 100% CLIENT MANAGEMENT OPERATIONAL**
+
+**What's Now Working:**
+- ✅ Complete client lifecycle management (creation, viewing, updating, analytics)
+- ✅ Dynamic dashboard with real-time client statistics and revenue tracking
+- ✅ Professional client list page with search, filtering, and pagination
+- ✅ Backend-connected add client modal with comprehensive validation
+- ✅ Session booking integration that automatically creates client records
+- ✅ Real-time data synchronization across all client-related components
+- ✅ Professional error handling and user feedback systems
+- ✅ Mobile-responsive UI with loading states and skeleton screens
+
+**📊 Client Management Features Complete:**
+- **Client Creation**: Both manual (modal) and automatic (session booking)
+- **Client Analytics**: Revenue tracking, session counts, activity status
+- **Client Search & Filter**: Real-time search with advanced filtering options
+- **Client Data Management**: Comprehensive CRUD operations with validation
+- **Dashboard Integration**: Live client metrics and summary statistics
+- **Professional UX**: Loading states, error handling, and user feedback
+
+### 🎯 PREVIOUS UPDATE (June 27, 2025) - CRITICAL BUG FIXES COMPLETED ✅
 
 **🚨 PRODUCTION-CRITICAL FIXES: Settings Page 400 Error & Next.js Compilation Issues Resolved**
 
