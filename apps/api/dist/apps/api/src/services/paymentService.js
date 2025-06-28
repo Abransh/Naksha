@@ -104,6 +104,7 @@ const createPaymentOrder = async (orderData) => {
                 currency: orderData.currency || paymentConfig.defaultCurrency,
                 gatewayOrderId: razorpayOrder.id,
                 status: 'PENDING',
+                transactionType: 'payment',
                 gatewayResponse: razorpayOrder
             }
         });

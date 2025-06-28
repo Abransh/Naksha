@@ -3,7 +3,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { Button } from "@/components/ui/button";
+
 import { Card, CardContent } from "@/components/ui/card";
 import {
   ArrowLeft,
@@ -38,13 +38,12 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
   }, [params]);
 
   const {
-    profile,
+
     summary,
     services,
     testimonials,
     ratings,
     socialLinks,
-    availableSlots,
     isLoading,
     error,
     refetch,

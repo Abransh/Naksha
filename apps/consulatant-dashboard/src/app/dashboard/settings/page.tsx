@@ -6,38 +6,22 @@ import { useState, useEffect } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Textarea } from "@/components/ui/textarea";
-import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
+
 import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import {
-  BarChart3,
-  ShoppingBag,
-  Users,
-  FolderOpen,
-  MessageCircle,
-  Settings,
-  LogOut,
-  Headphones,
-  Gift,
+
   ChevronDown,
-  ChevronRight,
+
   Home,
   Bell,
-  Menu,
+
   User,
   Mail,
   MapPin,
   Upload,
   Trash2,
   Loader2,
-  AlertCircle,
+
   CheckCircle,
 } from "lucide-react";
 import { useSettingsForm, useProfileCompletion } from "@/hooks/useConsultantProfile";
@@ -48,7 +32,7 @@ import Navigator from "@/components/navigation/Navigator";
 
 export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("account");
-  const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+ // const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   
   const {
@@ -60,17 +44,13 @@ export default function SettingsPage() {
     error,
     updateFormData,
     handleSubmit,
-    resetForm,
+
     uploadPhoto,
     clearError,
   } = useSettingsForm();
 
   const {
-    basicInfo,
-    bankingInfo,
-    sessionConfig,
-    socialLinks,
-    profilePhoto,
+
     completionPercentage,
     isComplete,
   } = useProfileCompletion();
@@ -104,7 +84,7 @@ export default function SettingsPage() {
       if (photoUrl) {
         toast.success("Profile photo updated successfully!");
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to upload photo");
     } finally {
       setIsUploading(false);

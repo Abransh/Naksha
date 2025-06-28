@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge";
 import { AddClientModal } from "@/components/modals/add-client-modal";
 import { useClients } from "@/hooks/useClients";
 import { useAuth } from "@/app/providers";
-import { Loader2, AlertCircle } from "lucide-react";
+import { AlertCircle } from "lucide-react";
 
 // Now using dynamic data from useClients hook
 

@@ -152,7 +152,8 @@ export const createPaymentOrder = async (orderData: PaymentOrderData): Promise<a
         currency: orderData.currency || paymentConfig.defaultCurrency,
         gatewayOrderId: razorpayOrder.id,
         status: 'PENDING',
-        gatewayResponse: razorpayOrder
+        transactionType: 'payment',
+        gatewayResponse: razorpayOrder as any
       }
     });
 
@@ -264,7 +265,7 @@ export const processSuccessfulPayment = async (
         gatewayPaymentId: razorpayPaymentId,
         status: 'COMPLETED',
         paymentMethod: razorpayPayment.method,
-        gatewayResponse: razorpayPayment,
+        gatewayResponse: razorpayPayment as any,
         processedAt: new Date()
       }
     });
