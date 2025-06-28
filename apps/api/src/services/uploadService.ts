@@ -235,18 +235,12 @@ const storeFileMetadata = async (
     await prisma.emailLog.create({
       data: {
         consultantId: userId,
+        to: 'system',
         recipientEmail: 'system',
+        subject: `File Upload: ${file.originalname}`,
         emailType: 'FILE_UPLOAD',
         status: 'SENT',
-        metadata: {
-          originalName: file.originalname,
-          mimeType: file.mimetype,
-          size: file.size,
-          cloudinaryPublicId: uploadResult.public_id,
-          secureUrl: uploadResult.secure_url,
-          purpose,
-          uploadedAt: new Date()
-        }
+        sentAt: new Date()
       }
     });
   } catch (error) {

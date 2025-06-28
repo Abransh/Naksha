@@ -4,8 +4,7 @@
 
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/app/providers";
 import { useDashboardMetrics, useRecentSessions } from "@/hooks/useDashboard";
@@ -16,17 +15,10 @@ import {
   ShoppingBag,
   Users,
   FolderOpen,
-  MessageCircle,
-  Settings,
-  LogOut,
-  Headphones,
-  Gift,
   ChevronDown,
-  ChevronRight,
   Home,
   Bell,
   Plus,
-  Menu,
 } from "lucide-react";
 
 // Removed SidebarContent - now using Navigator component

@@ -686,4 +686,133 @@ export const clientApi = {
   },
 };
 
+// Session API methods
+export const sessionApi = {
+  /**
+   * Get all sessions for consultant
+   */
+  async getSessions(filters: {
+    page?: number;
+    limit?: number;
+    sortBy?: string;
+    sortOrder?: 'asc' | 'desc';
+    status?: string;
+    paymentStatus?: string;
+    sessionType?: string;
+    platform?: string;
+    clientId?: string;
+    startDate?: string;
+    endDate?: string;
+    search?: string;
+  } = {}): Promise<any> {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined) {
+        params.append(key, String(value));
+      }
+    });
+
+    const response = await apiRequest<ApiResponse<any>>(`/sessions?${params}`, {
+      requireAuth: true,
+    });
+    return response.data!;
+  },
+
+  /**
+   * Get a specific session
+   */
+  async getSession(sessionId: string): Promise<any> {
+    const response = await apiRequest<ApiResponse<{ session: any }>>(`/sessions/${sessionId}`, {
+      requireAuth: true,
+    });
+    return response.data!.session;
+  },
+
+  /**
+   * Create a new session
+   */
+  async createSession(sessionData: {
+    clientId: string;
+    title: string;
+    sessionType: 'PERSONAL' | 'WEBINAR';
+    scheduledDate: string;
+    scheduledTime: string;
+    durationMinutes: number;
+    amount: number;
+    platform: 'ZOOM' | 'MEET' | 'TEAMS';
+    notes?: string;
+    paymentMethod: 'online' | 'cash' | 'bank_transfer';
+  }): Promise<any> {
+    const response = await apiRequest<ApiResponse<{ session: any }>>('/sessions', {
+      method: 'POST',
+      body: sessionData,
+      requireAuth: true,
+    });
+    return response.data!.session;
+  },
+
+  /**
+   * Update a session
+   */
+  async updateSession(sessionId: string, updates: {
+    title?: string;
+    scheduledDate?: string;
+    scheduledTime?: string;
+    durationMinutes?: number;
+    amount?: number;
+    platform?: 'ZOOM' | 'MEET' | 'TEAMS';
+    status?: string;
+    paymentStatus?: string;
+    notes?: string;
+    consultantNotes?: string;
+  }): Promise<any> {
+    const response = await apiRequest<ApiResponse<{ session: any }>>(`/sessions/${sessionId}`, {
+      method: 'PUT',
+      body: updates,
+      requireAuth: true,
+    });
+    return response.data!.session;
+  },
+
+  /**
+   * Cancel a session
+   */
+  async cancelSession(sessionId: string): Promise<void> {
+    await apiRequest(`/sessions/${sessionId}`, {
+      method: 'DELETE',
+      requireAuth: true,
+    });
+  },
+
+  /**
+   * Bulk update sessions
+   */
+  async bulkUpdateSessions(sessionIds: string[], updates: {
+    status?: string;
+    paymentStatus?: string;
+    consultantNotes?: string;
+  }): Promise<{ updatedCount: number; sessionIds: string[] }> {
+    const response = await apiRequest<ApiResponse<{ updatedCount: number; sessionIds: string[] }>>('/sessions/bulk-update', {
+      method: 'POST',
+      body: { sessionIds, updates },
+      requireAuth: true,
+    });
+    return response.data!;
+  },
+
+  /**
+   * Get session analytics
+   */
+  async getAnalytics(startDate?: string, endDate?: string): Promise<any> {
+    const params = new URLSearchParams();
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
+
+    const response = await apiRequest<ApiResponse<any>>(`/sessions/analytics?${params}`, {
+      requireAuth: true,
+    });
+    return response.data!;
+  },
+};
+
 export default api;

@@ -61,6 +61,12 @@ const validateRequest = (schema, target = 'body', options = {}) => {
             const result = schema.safeParse(dataToValidate);
             if (!result.success) {
                 const formattedErrors = formatZodErrors(result.error);
+                console.error('❌ Validation Error:', {
+                    target,
+                    dataToValidate,
+                    zodError: result.error,
+                    formattedErrors
+                });
                 res.status(400).json({
                     error: 'Validation failed',
                     message: 'The request data is invalid. Please check the errors and try again.',

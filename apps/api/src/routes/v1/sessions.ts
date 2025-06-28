@@ -629,7 +629,6 @@ router.post('/',
           meetingId: meetingDetails.meetingId,
           meetingPassword: meetingDetails.password,
           notes: sessionData.notes,
-          isRepeatClient,
           paymentMethod: sessionData.paymentMethod,
           status: 'PENDING',
           paymentStatus: sessionData.paymentMethod === 'online' ? 'PENDING' : 'PAID'
