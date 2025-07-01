@@ -9,7 +9,7 @@ cd packages/database
 npm install
 
 echo "🔄 Generating Prisma client..."
-npx prisma generate
+npm run build
 
 echo "🏗️ Building database package..."
 npx tsc
