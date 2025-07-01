@@ -348,9 +348,9 @@ class App {
       console.log('✅ Database connected successfully');
 
       // Initialize Redis connection
-      console.log('🔗 Connecting to Redis...');
-      await connectRedis();
-      console.log('✅ Redis connected successfully');
+      // console.log('🔗 Connecting to Redis...');
+      // await connectRedis();
+      // console.log('✅ Redis connected successfully');
 
       // Setup email templates
       console.log('📧 Setting up email templates...');
