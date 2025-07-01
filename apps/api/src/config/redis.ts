@@ -24,16 +24,29 @@ const redisConfig = {
   // Connection settings
   url: process.env.REDIS_URL || 'redis://localhost:6379',
   
-  // Connection timeout settings
-  connectTimeout: 10000, // 10 seconds
-  commandTimeout: 5000,  // 5 seconds
+  // Socket configuration
+  socket: {
+    connectTimeout: 10000, // 10 seconds
+    lazyConnect: true,
+    reconnectStrategy: (retries: number) => {
+      if (retries > 3) {
+        console.error('❌ Redis max retries exceeded');
+        return false; // Stop retrying
+      }
+      const delay = Math.min(retries * 1000, 3000); // Max 3 seconds
+      console.log(`🔄 Redis reconnecting in ${delay}ms... (attempt ${retries + 1})`);
+      return delay;
+    },
+    // Add TLS support for DigitalOcean Redis
+    ...(process.env.REDIS_URL?.startsWith('rediss://') && {
+      tls: true,
+      rejectUnauthorized: false,
+    })
+  },
   
   // Retry settings
   maxRetries: 3,
   retryDelay: 1000, // 1 second
-  
-  // Connection pool settings
-  lazyConnect: true,
   
   // Key prefixes for different data types
   prefixes: {
@@ -67,29 +80,14 @@ export const initializeRedis = async (): Promise<RedisClientType> => {
       
       redisClient = createClient({
         url: redisConfig.url,
-        
-        // Connection options
-        socket: {
-          connectTimeout: redisConfig.connectTimeout,
-          reconnectStrategy: (retries) => {
-            if (retries >= redisConfig.maxRetries) {
-              console.error('❌ Redis max retries reached');
-              return false;
-            }
-            
-            const delay = Math.min(retries * redisConfig.retryDelay, 3000);
-            console.log(`🔄 Redis reconnecting in ${delay}ms... (attempt ${retries + 1})`);
-            return delay;
-          }
-        },
-        
-        // Disable offline queue to fail fast
-        disableOfflineQueue: false,
+        socket: redisConfig.socket
       });
 
       // Error handling
       redisClient.on('error', (error) => {
         console.error('❌ Redis client error:', error);
+        // Don't crash the app on Redis errors
+        console.log('⚠️ Redis error handled, continuing...');
       });
 
       redisClient.on('connect', () => {
