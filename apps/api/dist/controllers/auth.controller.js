@@ -10,26 +10,61 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.getCurrentUser = exports.resetPassword = exports.forgotPassword = exports.verifyEmail = exports.adminLogin = exports.consultantLogin = exports.consultantSignup = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
-const client_1 = require("@prisma/client");
+const database_1 = require("@nakksha/database");
 const zod_1 = require("zod");
 const logger_1 = require("../utils/logger");
+const appError_1 = require("../utils/appError");
 const auth_1 = require("../middleware/auth");
 const redis_1 = require("../config/redis");
 const emailService_1 = require("../services/emailService");
 const helpers_1 = require("../utils/helpers");
-const prisma = new client_1.PrismaClient();
+// Using shared prisma instance from @nakksha/database
+// ============================================================================
+// UTILITY FUNCTIONS
+// ============================================================================
+/**
+ * Smart name parsing function as per CEO specification:
+ * - 1 word: firstName = word, lastName = ""
+ * - 2 words: firstName = first word, lastName = second word
+ * - 3+ words: firstName = first word, lastName = remaining words joined
+ */
+function parseFullName(fullName) {
+    const nameParts = fullName.trim().split(/\s+/).filter(part => part.length > 0);
+    if (nameParts.length === 0) {
+        throw new appError_1.AppError('Name cannot be empty', 400);
+    }
+    else if (nameParts.length === 1) {
+        return {
+            firstName: nameParts[0],
+            lastName: ''
+        };
+    }
+    else if (nameParts.length === 2) {
+        return {
+            firstName: nameParts[0],
+            lastName: nameParts[1]
+        };
+    }
+    else {
+        // 3+ words: first word is firstName, rest are lastName
+        return {
+            firstName: nameParts[0],
+            lastName: nameParts.slice(1).join(' ')
+        };
+    }
+}
 // ============================================================================
 // VALIDATION SCHEMAS
 // ============================================================================
 const consultantSignupSchema = zod_1.z.object({
-    firstName: zod_1.z.string().min(2, 'First name must be at least 2 characters').max(50),
-    lastName: zod_1.z.string().min(2, 'Last name must be at least 2 characters').max(50),
+    name: zod_1.z.string()
+        .min(2, 'Name must be at least 2 characters')
+        .max(100, 'Name must not exceed 100 characters')
+        .regex(/^[a-zA-Z\s]+$/, 'Name must contain only letters and spaces'),
     email: zod_1.z.string().email('Invalid email address'),
     password: zod_1.z.string()
         .min(8, 'Password must be at least 8 characters')
-        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 'Password must contain uppercase, lowercase, number and special character'),
-    phoneCountryCode: zod_1.z.string().optional().default('+91'),
-    phoneNumber: zod_1.z.string().min(10, 'Phone number must be at least 10 digits').max(15)
+        .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 'Password must contain uppercase, lowercase, number and special character')
 });
 const consultantLoginSchema = zod_1.z.object({
     email: zod_1.z.string().email('Invalid email address'),
@@ -59,8 +94,10 @@ const consultantSignup = async (req, res) => {
     try {
         // Validate input
         const validatedData = consultantSignupSchema.parse(req.body);
+        // Parse full name into firstName and lastName using smart parsing
+        const { firstName, lastName } = parseFullName(validatedData.name);
         // Check if consultant already exists
-        const existingConsultant = await prisma.consultant.findUnique({
+        const existingConsultant = await database_1.prisma.consultant.findUnique({
             where: { email: validatedData.email.toLowerCase() }
         });
         if (existingConsultant) {
@@ -74,24 +111,24 @@ const consultantSignup = async (req, res) => {
         // Hash password
         const saltRounds = 12;
         const passwordHash = await bcryptjs_1.default.hash(validatedData.password, saltRounds);
-        // Generate unique slug
-        const baseSlug = (0, helpers_1.generateSlug)(`${validatedData.firstName} ${validatedData.lastName}`);
+        // Generate unique slug from parsed name
+        const baseSlug = (0, helpers_1.generateSlug)(`${firstName} ${lastName}`.trim());
         let slug = baseSlug;
         let counter = 1;
         // Ensure slug uniqueness
-        while (await prisma.consultant.findUnique({ where: { slug } })) {
+        while (await database_1.prisma.consultant.findUnique({ where: { slug } })) {
             slug = `${baseSlug}-${counter}`;
             counter++;
         }
         // Create consultant account
-        const consultant = await prisma.consultant.create({
+        const consultant = await database_1.prisma.consultant.create({
             data: {
                 email: validatedData.email.toLowerCase(),
                 passwordHash,
-                firstName: validatedData.firstName,
-                lastName: validatedData.lastName,
-                phoneCountryCode: validatedData.phoneCountryCode,
-                phoneNumber: validatedData.phoneNumber,
+                firstName,
+                lastName,
+                phoneCountryCode: '+91', // Default for MVP
+                phoneNumber: '', // Empty for MVP - to be filled in profile
                 slug,
                 isEmailVerified: false,
                 isApprovedByAdmin: false, // CRITICAL: Requires admin approval
@@ -189,7 +226,7 @@ const consultantLogin = async (req, res) => {
         // Validate input
         const { email, password } = consultantLoginSchema.parse(req.body);
         // Find consultant
-        const consultant = await prisma.consultant.findUnique({
+        const consultant = await database_1.prisma.consultant.findUnique({
             where: { email: email.toLowerCase() },
             select: {
                 id: true,
@@ -235,7 +272,7 @@ const consultantLogin = async (req, res) => {
         // Generate JWT tokens
         const tokens = await (0, auth_1.generateTokens)(consultant, 'consultant');
         // Update last login
-        await prisma.consultant.update({
+        await database_1.prisma.consultant.update({
             where: { id: consultant.id },
             data: { lastLoginAt: new Date() }
         });
@@ -309,7 +346,7 @@ const adminLogin = async (req, res) => {
         // Validate input
         const { email, password } = adminLoginSchema.parse(req.body);
         // Find admin
-        const admin = await prisma.admin.findUnique({
+        const admin = await database_1.prisma.admin.findUnique({
             where: { email: email.toLowerCase() },
             select: {
                 id: true,
@@ -352,7 +389,7 @@ const adminLogin = async (req, res) => {
         // Generate JWT tokens
         const tokens = await (0, auth_1.generateTokens)(admin, 'admin');
         // Update last login
-        await prisma.admin.update({
+        await database_1.prisma.admin.update({
             where: { id: admin.id },
             data: { lastLoginAt: new Date() }
         });
@@ -426,7 +463,7 @@ const verifyEmail = async (req, res) => {
             return;
         }
         // Update consultant email verification status
-        await prisma.consultant.update({
+        await database_1.prisma.consultant.update({
             where: { id: verificationData.consultantId },
             data: { isEmailVerified: true }
         });
@@ -461,7 +498,7 @@ const forgotPassword = async (req, res) => {
     try {
         const { email } = forgotPasswordSchema.parse(req.body);
         // Check if consultant exists
-        const consultant = await prisma.consultant.findUnique({
+        const consultant = await database_1.prisma.consultant.findUnique({
             where: { email: email.toLowerCase() },
             select: { id: true, email: true, firstName: true }
         });
@@ -534,7 +571,7 @@ const resetPassword = async (req, res) => {
         const saltRounds = 12;
         const passwordHash = await bcryptjs_1.default.hash(password, saltRounds);
         // Update consultant password
-        await prisma.consultant.update({
+        await database_1.prisma.consultant.update({
             where: { id: resetData.consultantId },
             data: {
                 passwordHash,
@@ -597,7 +634,7 @@ const getCurrentUser = async (req, res) => {
             return;
         }
         if (req.user.role === 'consultant') {
-            const consultant = await prisma.consultant.findUnique({
+            const consultant = await database_1.prisma.consultant.findUnique({
                 where: { id: req.user.id },
                 select: {
                     id: true,
@@ -626,7 +663,7 @@ const getCurrentUser = async (req, res) => {
             });
         }
         else {
-            const admin = await prisma.admin.findUnique({
+            const admin = await database_1.prisma.admin.findUnique({
                 where: { id: req.user.id },
                 select: {
                     id: true,

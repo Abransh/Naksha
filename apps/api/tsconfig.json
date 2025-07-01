@@ -4,6 +4,7 @@
     "module": "commonjs",
     "lib": ["ES2020"],
     "outDir": "./dist",
+    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -38,13 +39,12 @@
       "@/services/*": ["./src/services/*"],
       "@/utils/*": ["./src/utils/*"],
       "@/types/*": ["./src/types/*"],
-      "@nakksha/database": ["../../packages/database/src"]
+      "@nakksha/database": ["../../packages/database/dist"]
     }
   },
   "include": [
     "src/**/*",
-    "tests/**/*",
-    "../../packages/database/src/**/*"
+    "tests/**/*"
   ],
   "exclude": [
     "node_modules",
