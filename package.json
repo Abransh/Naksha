@@ -1,8 +1,18 @@
 {
-    "scripts": {
-      "build": "npm run build:packages && cd apps/api && npm run build",
-      "build:packages": "cd packages/database && npm run build",
-      "start": "cd apps/api && npm start",
-      "postinstall": "npm run build"
-    }
-  }
+  "name": "nakksha-platform",
+  "version": "1.0.0",
+  "private": true,
+  "engines": {
+    "node": ">=18.0.0",
+    "npm": ">=8.0.0"
+  },
+  "scripts": {
+    "build": "npm run build:packages && cd apps/api && npm run build",
+    "build:packages": "cd packages/database && npm run build",
+    "start": "cd apps/api && npm start"
+  },
+  "workspaces": [
+    "packages/*",
+    "apps/*"
+  ]
+}

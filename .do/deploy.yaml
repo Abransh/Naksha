@@ -5,10 +5,7 @@ services:
   github:
     repo: Abransh/Naksha
     branch: main
-  build_command: |
-    npm install
-    npm run build:packages
-    cd apps/api && npm install && npm run build
+  build_command: ./build.sh
   run_command: cd apps/api && npm start
   environment_slug: node-js
   instance_count: 1
