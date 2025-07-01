@@ -11,7 +11,7 @@
  */
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.dbTestUtils = exports.dbUtils = exports.getPrismaClient = exports.executeTransaction = exports.getDatabaseInfo = exports.checkDatabaseHealth = exports.disconnectDatabase = exports.connectDatabase = exports.initializePrisma = void 0;
-const client_1 = require("@prisma/client");
+const database_1 = require("@nakksha/database");
 /**
  * Global Prisma client instance
  * Using singleton pattern to ensure single connection across the app
@@ -42,7 +42,7 @@ const initializePrisma = async () => {
     try {
         if (!prisma) {
             console.log('🔧 Initializing Prisma client...');
-            prisma = new client_1.PrismaClient({
+            prisma = new database_1.PrismaClient({
                 log: databaseConfig.log,
                 errorFormat: 'pretty',
                 // Datasource configuration
@@ -223,7 +223,7 @@ exports.executeTransaction = executeTransaction;
 const getPrismaClient = () => {
     if (!prisma) {
         // Initialize synchronously if not already done
-        prisma = new client_1.PrismaClient({
+        prisma = new database_1.PrismaClient({
             log: ['error'],
             errorFormat: 'pretty'
         });
@@ -277,16 +277,8 @@ exports.dbUtils = {
         }
     }
 };
-// Export default instance
-// Initialize prisma client on import
-let defaultPrisma;
-try {
-    defaultPrisma = (0, exports.getPrismaClient)();
-}
-catch {
-    defaultPrisma = new client_1.PrismaClient();
-}
-exports.default = defaultPrisma;
+// Export shared instance from @nakksha/database
+exports.default = database_1.prisma;
 /**
  * Testing utilities for database operations
  * Only available in development/test environments

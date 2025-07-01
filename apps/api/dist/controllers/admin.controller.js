@@ -9,12 +9,12 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.getAdminDashboard = exports.getAllAdmins = exports.createAdmin = exports.updateConsultant = exports.approveConsultant = exports.getConsultantDetails = exports.getAllConsultants = void 0;
 const zod_1 = require("zod");
-const client_1 = require("@prisma/client");
+const database_1 = require("@nakksha/database");
 const logger_1 = require("../utils/logger");
 const appError_1 = require("../utils/appError");
 const emailService_1 = require("../services/emailService");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
-const prisma = new client_1.PrismaClient();
+// Using shared prisma instance from @nakksha/database
 // ============================================================================
 // VALIDATION SCHEMAS
 // ============================================================================
@@ -79,7 +79,7 @@ const getAllConsultants = async (req, res) => {
         }
         // Get consultants with stats
         const [consultants, totalCount] = await Promise.all([
-            prisma.consultant.findMany({
+            database_1.prisma.consultant.findMany({
                 where,
                 skip,
                 take: limit,
@@ -117,7 +117,7 @@ const getAllConsultants = async (req, res) => {
                     { createdAt: 'desc' }
                 ]
             }),
-            prisma.consultant.count({ where })
+            database_1.prisma.consultant.count({ where })
         ]);
         // Format the response
         const formattedConsultants = consultants.map((consultant) => ({
@@ -173,7 +173,7 @@ exports.getAllConsultants = getAllConsultants;
 const getConsultantDetails = async (req, res) => {
     try {
         const { consultantId } = req.params;
-        const consultant = await prisma.consultant.findUnique({
+        const consultant = await database_1.prisma.consultant.findUnique({
             where: { id: consultantId },
             include: {
                 sessions: {
@@ -220,7 +220,7 @@ const getConsultantDetails = async (req, res) => {
             throw new appError_1.NotFoundError('Consultant not found');
         }
         // Get revenue statistics
-        const revenueStats = await prisma.session.aggregate({
+        const revenueStats = await database_1.prisma.session.aggregate({
             where: {
                 consultantId,
                 paymentStatus: 'PAID'
@@ -282,7 +282,7 @@ const approveConsultant = async (req, res) => {
         const validatedData = approveConsultantSchema.parse(req.body);
         const { consultantId, approved, adminNotes } = validatedData;
         // Find the consultant
-        const consultant = await prisma.consultant.findUnique({
+        const consultant = await database_1.prisma.consultant.findUnique({
             where: { id: consultantId },
             select: {
                 id: true,
@@ -301,7 +301,7 @@ const approveConsultant = async (req, res) => {
             throw new appError_1.ConflictError(`Consultant is already ${approved ? 'approved' : 'pending approval'}`);
         }
         // Update consultant approval status
-        const updatedConsultant = await prisma.consultant.update({
+        const updatedConsultant = await database_1.prisma.consultant.update({
             where: { id: consultantId },
             data: {
                 isApprovedByAdmin: approved,
@@ -410,14 +410,14 @@ const updateConsultant = async (req, res) => {
     try {
         const { consultantId } = req.params;
         const validatedData = updateConsultantSchema.parse(req.body);
-        const consultant = await prisma.consultant.findUnique({
+        const consultant = await database_1.prisma.consultant.findUnique({
             where: { id: consultantId },
             select: { id: true, email: true, firstName: true, lastName: true }
         });
         if (!consultant) {
             throw new appError_1.NotFoundError('Consultant not found');
         }
-        const updatedConsultant = await prisma.consultant.update({
+        const updatedConsultant = await database_1.prisma.consultant.update({
             where: { id: consultantId },
             data: {
                 ...validatedData,
@@ -490,7 +490,7 @@ const createAdmin = async (req, res) => {
     try {
         const validatedData = createAdminSchema.parse(req.body);
         // Check if admin with this email already exists
-        const existingAdmin = await prisma.admin.findUnique({
+        const existingAdmin = await database_1.prisma.admin.findUnique({
             where: { email: validatedData.email.toLowerCase() }
         });
         if (existingAdmin) {
@@ -500,7 +500,7 @@ const createAdmin = async (req, res) => {
         const saltRounds = 12;
         const passwordHash = await bcryptjs_1.default.hash(validatedData.password, saltRounds);
         // Create admin
-        const admin = await prisma.admin.create({
+        const admin = await database_1.prisma.admin.create({
             data: {
                 email: validatedData.email.toLowerCase(),
                 passwordHash,
@@ -562,7 +562,7 @@ exports.createAdmin = createAdmin;
  */
 const getAllAdmins = async (req, res) => {
     try {
-        const admins = await prisma.admin.findMany({
+        const admins = await database_1.prisma.admin.findMany({
             select: {
                 id: true,
                 email: true,
@@ -604,30 +604,30 @@ const getAdminDashboard = async (req, res) => {
     try {
         const [totalConsultants, pendingApprovals, approvedConsultants, totalSessions, totalRevenue, recentSignups] = await Promise.all([
             // Total consultants
-            prisma.consultant.count(),
+            database_1.prisma.consultant.count(),
             // Pending approvals
-            prisma.consultant.count({
+            database_1.prisma.consultant.count({
                 where: {
                     isApprovedByAdmin: false,
                     isActive: true
                 }
             }),
             // Approved consultants
-            prisma.consultant.count({
+            database_1.prisma.consultant.count({
                 where: {
                     isApprovedByAdmin: true,
                     isActive: true
                 }
             }),
             // Total sessions
-            prisma.session.count(),
+            database_1.prisma.session.count(),
             // Total revenue
-            prisma.session.aggregate({
+            database_1.prisma.session.aggregate({
                 where: { paymentStatus: 'PAID' },
                 _sum: { amount: true }
             }),
             // Recent signups (last 7 days)
-            prisma.consultant.count({
+            database_1.prisma.consultant.count({
                 where: {
                     createdAt: {
                         gte: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000)
@@ -636,7 +636,7 @@ const getAdminDashboard = async (req, res) => {
             })
         ]);
         // Get recent consultant signups for review
-        const recentConsultants = await prisma.consultant.findMany({
+        const recentConsultants = await database_1.prisma.consultant.findMany({
             where: {
                 isApprovedByAdmin: false,
                 isActive: true

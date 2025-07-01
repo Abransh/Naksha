@@ -9,11 +9,10 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.logoutUser = exports.authRateLimit = exports.tokenUtils = exports.hasPermission = exports.logout = exports.refreshTokens = exports.optionalAuth = exports.authenticateSuperAdmin = exports.authenticateAdmin = exports.authenticateConsultantBasic = exports.authenticateConsultant = exports.authenticate = exports.generateTokens = void 0;
 const jsonwebtoken_1 = __importDefault(require("jsonwebtoken"));
-const client_1 = require("@prisma/client");
+const database_1 = require("@nakksha/database");
 const logger_1 = require("../utils/logger");
 const appError_1 = require("../utils/appError");
 const redis_1 = require("../config/redis");
-const prisma = new client_1.PrismaClient();
 /**
  * Generate JWT tokens for authentication
  */
@@ -50,7 +49,7 @@ const generateTokens = async (user, userType) => {
         // Store refresh token in database
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
-        await prisma.refreshToken.create({
+        await database_1.prisma.refreshToken.create({
             data: {
                 token: refreshToken,
                 expiresAt,
@@ -139,7 +138,7 @@ const authenticate = async (req, res, next) => {
         else {
             // Fallback to database lookup
             if (payload.role === 'consultant') {
-                const consultant = await prisma.consultant.findUnique({
+                const consultant = await database_1.prisma.consultant.findUnique({
                     where: { id: payload.sub },
                     select: {
                         id: true,
@@ -167,7 +166,7 @@ const authenticate = async (req, res, next) => {
             }
             else {
                 // Admin user
-                const admin = await prisma.admin.findUnique({
+                const admin = await database_1.prisma.admin.findUnique({
                     where: { id: payload.sub },
                     select: {
                         id: true,
@@ -193,13 +192,13 @@ const authenticate = async (req, res, next) => {
         }
         // Update last activity
         if (req.user?.role === 'consultant') {
-            await prisma.consultant.update({
+            await database_1.prisma.consultant.update({
                 where: { id: req.user.id },
                 data: { lastLoginAt: new Date() }
             });
         }
         else if (req.user?.role) {
-            await prisma.admin.update({
+            await database_1.prisma.admin.update({
                 where: { id: req.user.id },
                 data: { lastLoginAt: new Date() }
             });
@@ -360,7 +359,7 @@ const refreshTokens = async (req, res) => {
         }
         const payload = jsonwebtoken_1.default.verify(refreshToken, JWT_REFRESH_SECRET);
         // Check if refresh token exists and is not revoked
-        const storedToken = await prisma.refreshToken.findUnique({
+        const storedToken = await database_1.prisma.refreshToken.findUnique({
             where: { token: refreshToken },
             include: {
                 consultant: true,
@@ -376,7 +375,7 @@ const refreshTokens = async (req, res) => {
             return;
         }
         // Revoke old refresh token
-        await prisma.refreshToken.update({
+        await database_1.prisma.refreshToken.update({
             where: { id: storedToken.id },
             data: { isRevoked: true }
         });
@@ -408,14 +407,14 @@ const logout = async (req, res) => {
         const userId = req.user?.id;
         if (refreshToken) {
             // Revoke specific refresh token
-            await prisma.refreshToken.updateMany({
+            await database_1.prisma.refreshToken.updateMany({
                 where: { token: refreshToken },
                 data: { isRevoked: true }
             });
         }
         else if (userId) {
             // Revoke all refresh tokens for user
-            await prisma.refreshToken.updateMany({
+            await database_1.prisma.refreshToken.updateMany({
                 where: {
                     OR: [
                         { consultantId: userId },

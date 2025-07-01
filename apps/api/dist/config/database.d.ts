@@ -8,7 +8,7 @@
  * - Graceful disconnection
  * - Error handling and reconnection logic
  */
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, prisma as sharedPrisma } from '@nakksha/database';
 /**
  * Initialize Prisma client with proper configuration
  * @returns Promise<PrismaClient> - Configured Prisma client
@@ -34,8 +34,8 @@ export declare const checkDatabaseHealth: () => Promise<boolean>;
  * @returns Object with connection details
  */
 export declare const getDatabaseInfo: () => Promise<{
-    version: any;
-    activeConnections: any;
+    version: string;
+    activeConnections: number;
     isConnected: boolean;
     timestamp: string;
     error?: undefined;
@@ -74,8 +74,7 @@ export declare const dbUtils: {
      */
     softDelete: (model: string, id: string) => Promise<boolean>;
 };
-declare let defaultPrisma: PrismaClient;
-export default defaultPrisma;
+export default sharedPrisma;
 /**
  * Testing utilities for database operations
  * Only available in development/test environments

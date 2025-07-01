@@ -5,7 +5,8 @@
   "main": "dist/index.js",
   "scripts": {
     "dev": "tsx watch src/index.ts",
-    "build": "tsc",
+    "build": "npm run build:database && tsc",
+    "build:database": "cd ../../packages/database && npm run build",
     "start": "node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
@@ -24,6 +25,7 @@
     "performance:test": "autocannon http://localhost:8000/health"
   },
   "dependencies": {
+    "@nakksha/database": "file:../../packages/database",
     "@prisma/client": "^5.22.0",
     "axios": "^1.6.2",
     "bcryptjs": "^2.4.3",

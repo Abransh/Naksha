@@ -40,10 +40,6 @@ declare class App {
      */
     private initializeErrorHandling;
     /**
-     * Initialize Socket.IO for real-time features
-     */
-    private initializeSocketIO;
-    /**
      * Start the server and initialize all connections
      */
     start(): Promise<void>;

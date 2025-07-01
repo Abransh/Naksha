@@ -168,18 +168,12 @@ const storeFileMetadata = async (file, uploadResult, userId, purpose) => {
         await prisma.emailLog.create({
             data: {
                 consultantId: userId,
+                to: 'system',
                 recipientEmail: 'system',
+                subject: `File Upload: ${file.originalname}`,
                 emailType: 'FILE_UPLOAD',
                 status: 'SENT',
-                metadata: {
-                    originalName: file.originalname,
-                    mimeType: file.mimetype,
-                    size: file.size,
-                    cloudinaryPublicId: uploadResult.public_id,
-                    secureUrl: uploadResult.secure_url,
-                    purpose,
-                    uploadedAt: new Date()
-                }
+                sentAt: new Date()
             }
         });
     }
@@ -399,10 +393,10 @@ const getUploadStats = async (userId) => {
                 emailType: 'FILE_UPLOAD'
             },
             _count: true,
-            _sum: {
-            // This would need a proper file size field in a real file uploads table
-            // For now, using a placeholder
-            }
+            // _sum: {
+            //   // This would need a proper file size field in a real file uploads table
+            //   // For now, using a placeholder
+            // }
         });
         return {
             totalUploads: stats.reduce((sum, stat) => sum + stat._count, 0),

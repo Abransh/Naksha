@@ -84,7 +84,7 @@ router.get('/', (0, validation_1.validateRequest)(quotationFiltersSchema, 'query
         const where = {
             consultantId,
             ...(filters.status && { status: filters.status }),
-            ...(filters.clientId && { clientId: filters.clientId }),
+            ...(filters.clientId && { clientEmail: filters.clientId }), // Filter by client email since no direct clientId
             ...(filters.minAmount !== undefined && { finalAmount: { gte: filters.minAmount } }),
             ...(filters.maxAmount !== undefined && { finalAmount: { lte: filters.maxAmount } }),
             ...(filters.createdAfter && { createdAt: { gte: new Date(filters.createdAfter) } }),
@@ -197,20 +197,6 @@ router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.
             where: {
                 id,
                 consultantId
-            },
-            include: {
-                client: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true,
-                        phoneNumber: true,
-                        city: true,
-                        state: true,
-                        totalSessions: true,
-                        totalAmountPaid: true
-                    }
-                }
             }
         });
         if (!quotation) {
@@ -219,13 +205,14 @@ router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.
         // Format the response
         const formattedQuotation = {
             ...quotation,
-            baseAmount: Number(quotation.amount),
-            discountPercentage: Number(0),
+            baseAmount: Number(quotation.baseAmount),
+            discountPercentage: Number(quotation.discountPercentage),
             finalAmount: Number(quotation.finalAmount),
-            client: quotation.client ? {
-                ...quotation.client,
-                totalAmountPaid: Number(quotation.client.totalAmountPaid)
-            } : null,
+            client: {
+                name: quotation.clientName,
+                email: quotation.clientEmail,
+                company: quotation.clientCompany
+            },
             isExpired: quotation.expiresAt ? new Date() > quotation.expiresAt : false,
             daysUntilExpiry: quotation.expiresAt
                 ? Math.ceil((quotation.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
@@ -257,7 +244,7 @@ router.post('/', (0, validation_1.validateRequest)(createQuotationSchema), async
         // Calculate expiry date
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + quotationData.expiryDays);
-        // If clientId is provided, verify it belongs to consultant
+        // If clientId is provided, verify it belongs to consultant and get client info
         if (quotationData.clientId) {
             const client = await prisma.client.findFirst({
                 where: {
@@ -268,33 +255,33 @@ router.post('/', (0, validation_1.validateRequest)(createQuotationSchema), async
             if (!client) {
                 throw new errorHandler_1.NotFoundError('Client');
             }
+            // Use client's information if not provided in quotation data
+            if (!quotationData.clientName) {
+                quotationData.clientName = client.name;
+            }
+            if (!quotationData.clientEmail) {
+                quotationData.clientEmail = client.email;
+            }
         }
         // Create quotation
         const quotation = await prisma.quotation.create({
             data: {
                 consultantId,
-                clientId: quotationData.clientId || null,
                 clientEmail: quotationData.clientEmail,
                 clientName: quotationData.clientName,
                 quotationName: quotationData.quotationName,
-                description: quotationData.description,
+                title: quotationData.quotationName, // Required field
+                description: quotationData.description || '',
                 baseAmount: quotationData.baseAmount,
                 discountPercentage: quotationData.discountPercentage,
                 finalAmount,
+                amount: finalAmount, // Alias for finalAmount
                 currency: quotationData.currency,
-                durationText: quotationData.durationText,
+                validUntil: expiresAt, // Required field
                 expiresAt,
                 notes: quotationData.notes,
-                status: 'DRAFT'
-            },
-            include: {
-                client: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true
-                    }
-                }
+                status: 'DRAFT',
+                quotationNumber: `QT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}` // Generate unique quotation number
             }
         });
         // Generate quotation image/PDF if requested
@@ -394,15 +381,6 @@ router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.
                 ...(updates.expiresAt && { expiresAt: new Date(updates.expiresAt) }),
                 finalAmount,
                 updatedAt: new Date()
-            },
-            include: {
-                client: {
-                    select: {
-                        id: true,
-                        name: true,
-                        email: true
-                    }
-                }
             }
         });
         // Clear related caches
