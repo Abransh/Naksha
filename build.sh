@@ -4,10 +4,14 @@ set -e
 echo "🔧 Installing root dependencies..."
 npm install
 
-echo "📦 Building database package..."
+echo "📦 Installing database dependencies..."
 cd packages/database
 npm install
-npm run db:generate
+
+echo "🔄 Generating Prisma client..."
+npx prisma generate
+
+echo "🏗️ Building database package..."
 npx tsc
 cd ../..
 

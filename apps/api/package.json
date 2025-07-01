@@ -6,7 +6,7 @@
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "npm run build:database && tsc",
-    "build:database": "cd ../../packages/database && npm run build",
+    "build:database": "cd ../../packages/database && npm install && npm run db:generate && npm run build",
     "start": "node dist/index.js",
     "test": "jest",
     "test:watch": "jest --watch",
