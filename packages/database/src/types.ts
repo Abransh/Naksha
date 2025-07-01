@@ -5,37 +5,37 @@
  * for database operations and data modeling.
  */
 
-import type { consultants, admins, sessions, clients, quotations } from '@nakksha/database';
+import type { Consultant, Admin, Session, Client, Quotation } from '@prisma/client';
 
 // ============================================================================
 // USER TYPES
 // ============================================================================
 
-export type ConsultantWithRelations = consultants & {
-  sessionss?: sessions[];
-  clientss?: clients[];
-  quotationss?: quotations[];
+export type ConsultantWithRelations = Consultant & {
+  sessions?: Session[];
+  clients?: Client[];
+  quotations?: Quotation[];
 };
 
-export type adminsWithPermissions = admins & {
+export type AdminWithPermissions = Admin & {
   permissions?: string[];
 };
 
 // ============================================================================
-// sessions TYPES
+// SESSION TYPES
 // ============================================================================
 
-export type sessionsWithDetails = sessions & {
-  consultant: consultants;
-  clients: clients;
+export type SessionWithDetails = Session & {
+  consultant: Consultant;
+  client: Client;
 };
 
-export type sessionsAnalytics = {
-  totalsessionss: number;
-  completedsessionss: number;
-  cancelledsessionss: number;
+export type SessionAnalytics = {
+  totalSessions: number;
+  completedSessions: number;
+  cancelledSessions: number;
   revenue: number;
-  averagesessionsValue: number;
+  averageSessionValue: number;
 };
 
 // ============================================================================
@@ -54,14 +54,14 @@ export interface DateRangeFilter {
   endDate?: Date;
 }
 
-export interface sessionsFilters extends PaginationParams, DateRangeFilter {
+export interface SessionFilters extends PaginationParams, DateRangeFilter {
   status?: string[];
-  sessionsType?: string[];
+  sessionType?: string[];
   consultantId?: string;
-  clientsId?: string;
+  clientId?: string;
 }
 
-export interface clientsFilters extends PaginationParams {
+export interface ClientFilters extends PaginationParams {
   consultantId?: string;
   search?: string;
   isActive?: boolean;
@@ -72,15 +72,15 @@ export interface clientsFilters extends PaginationParams {
 // ============================================================================
 
 export interface DashboardMetrics {
-  totalsessionss: number;
-  totalclientss: number;
+  totalSessions: number;
+  totalClients: number;
   totalRevenue: number;
   revenueGrowth: number;
-  sessionsCompletionRate: number;
-  averagesessionsValue: number;
+  sessionCompletionRate: number;
+  averageSessionValue: number;
   topPerformingConsultants?: Array<{
-    consultant: consultants;
-    sessionsCount: number;
+    consultant: Consultant;
+    sessionCount: number;
     revenue: number;
   }>;
 }
@@ -92,7 +92,7 @@ export interface ChartDataPoint {
 }
 
 export interface RevenueBreakdown {
-  sessionsType: string;
+  sessionType: string;
   amount: number;
   percentage: number;
   count: number;
@@ -126,7 +126,7 @@ export interface PaginatedResult<T> {
 export interface AuditLogEntry {
   action: string;
   userId: string;
-  userType: 'consultant' | 'admins';
+  userType: 'consultant' | 'admin';
   resourceType: string;
   resourceId: string;
   changes?: Record<string, any>;

@@ -11,6 +11,8 @@ import { useClients } from "@/hooks/useClients";
 import { useAuth } from "@/app/providers";
 import { AlertCircle } from "lucide-react";
 
+import Navigator from "@/components/navigation/Navigator";
+
 // Now using dynamic data from useClients hook
 
 export default function ClientsPage() {
@@ -128,6 +130,8 @@ export default function ClientsPage() {
             </div>
           </div>
         </div>
+
+        <Navigator />
 
         {/* Breadcrumbs */}
         <div className="px-6 py-2 border-t border-[var(--stroke)] bg-white">

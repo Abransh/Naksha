@@ -27,8 +27,6 @@ import {
   X,
   Calendar,
   Clock,
-  Search,
-  ShoppingBag,
   Loader2,
   Plus,
   User,
@@ -79,7 +77,7 @@ export function CreateSessionModal({
   });
 
   const { createSession } = useSessions();
-  const { clients, isLoading: clientsLoading, refresh: refreshClients } = useClients();
+  const { clients, isLoading: clientsLoading, refetch: refreshClients } = useClients();
 
   // Generate default date (tomorrow)
   useEffect(() => {
@@ -129,17 +127,25 @@ export function CreateSessionModal({
   const handleCreateClient = useCallback(async () => {
     if (!formData.clientName || !formData.clientEmail) {
       toast.error('Please fill in client name and email');
-      return;
+      return null;
     }
 
     try {
       setIsCreatingClient(true);
+      console.log('🔄 Creating new client:', {
+        name: formData.clientName,
+        email: formData.clientEmail,
+        phone: formData.clientPhone
+      });
+      
       const newClient = await clientApi.createClient({
         name: formData.clientName,
         email: formData.clientEmail,
         phoneNumber: formData.clientPhone,
       });
 
+      console.log('✅ Client created successfully:', newClient);
+      
       setFormData(prev => ({
         ...prev,
         clientId: newClient.id,
@@ -147,9 +153,11 @@ export function CreateSessionModal({
 
       await refreshClients();
       toast.success('New client created successfully');
+      return newClient; // Return the created client
     } catch (error) {
-      console.error('Error creating client:', error);
+      console.error('❌ Error creating client:', error);
       toast.error('Failed to create client');
+      return null;
     } finally {
       setIsCreatingClient(false);
     }
@@ -157,6 +165,10 @@ export function CreateSessionModal({
 
   // Submit form
   const handleSubmit = useCallback(async () => {
+    console.log('🚀 Starting session creation process...');
+    console.log('📋 Form data:', formData);
+    console.log('🔄 Is new client:', isNewClient);
+    
     // Validation
     if (!formData.clientId && !isNewClient) {
       toast.error('Please select a client');
@@ -179,17 +191,28 @@ export function CreateSessionModal({
       let clientId = formData.clientId;
 
       // Create client if new
-      if (isNewClient && !clientId) {
-        await handleCreateClient();
-        clientId = formData.clientId; // This should be set after creating client
-        if (!clientId) {
+      if (isNewClient) {
+        console.log('👤 Creating new client first...');
+        const newClient = await handleCreateClient();
+        
+        if (!newClient || !newClient.id) {
+          console.error('❌ Failed to create client - no client returned');
           toast.error('Failed to create client');
           return;
         }
+        
+        clientId = newClient.id;
+        console.log('✅ New client created with ID:', clientId);
       }
 
-      // Create session
-      await createSession({
+      // Validate clientId before session creation
+      if (!clientId) {
+        console.error('❌ No client ID available for session creation');
+        toast.error('Client ID is required to create session');
+        return;
+      }
+
+      console.log('📝 Creating session with data:', {
         clientId,
         title: formData.title,
         sessionType: formData.sessionType,
@@ -202,12 +225,32 @@ export function CreateSessionModal({
         paymentMethod: formData.paymentMethod,
       });
 
+      // Create session
+      const newSession = await createSession({
+        clientId,
+        title: formData.title,
+        sessionType: formData.sessionType,
+        scheduledDate: formData.scheduledDate,
+        scheduledTime: formData.scheduledTime,
+        durationMinutes: formData.durationMinutes,
+        amount: formData.amount,
+        platform: formData.platform,
+        notes: formData.notes,
+        paymentMethod: formData.paymentMethod,
+      });
+
+      console.log('✅ Session created successfully:', newSession);
       toast.success('Session created successfully!');
       onOpenChange(false);
       resetForm();
     } catch (error) {
-      console.error('Error creating session:', error);
-      toast.error('Failed to create session');
+      console.error('❌ Error creating session:', error);
+      
+      // Enhanced error handling
+      const errorMessage = error instanceof Error ? error.message : 'Failed to create session';
+      console.error('📄 Error details:', errorMessage);
+      
+      toast.error(`Failed to create session: ${errorMessage}`);
     } finally {
       setIsLoading(false);
     }
