@@ -4,25 +4,25 @@
  * Common types and interfaces used across the application
  * for database operations and data modeling.
  */
-import type { Consultant, Admin, Session, Client, Quotation } from '@prisma/client';
-export type ConsultantWithRelations = Consultant & {
-    sessions?: Session[];
-    clients?: Client[];
-    quotations?: Quotation[];
+import type { consultants, admins, sessions, clients, quotations } from '@nakksha/database';
+export type ConsultantWithRelations = consultants & {
+    sessionss?: sessions[];
+    clientss?: clients[];
+    quotationss?: quotations[];
 };
-export type AdminWithPermissions = Admin & {
+export type adminsWithPermissions = admins & {
     permissions?: string[];
 };
-export type SessionWithDetails = Session & {
-    consultant: Consultant;
-    client: Client;
+export type sessionsWithDetails = sessions & {
+    consultant: consultants;
+    clients: clients;
 };
-export type SessionAnalytics = {
-    totalSessions: number;
-    completedSessions: number;
-    cancelledSessions: number;
+export type sessionsAnalytics = {
+    totalsessionss: number;
+    completedsessionss: number;
+    cancelledsessionss: number;
     revenue: number;
-    averageSessionValue: number;
+    averagesessionsValue: number;
 };
 export interface PaginationParams {
     page?: number;
@@ -34,27 +34,27 @@ export interface DateRangeFilter {
     startDate?: Date;
     endDate?: Date;
 }
-export interface SessionFilters extends PaginationParams, DateRangeFilter {
+export interface sessionsFilters extends PaginationParams, DateRangeFilter {
     status?: string[];
-    sessionType?: string[];
+    sessionsType?: string[];
     consultantId?: string;
-    clientId?: string;
+    clientsId?: string;
 }
-export interface ClientFilters extends PaginationParams {
+export interface clientsFilters extends PaginationParams {
     consultantId?: string;
     search?: string;
     isActive?: boolean;
 }
 export interface DashboardMetrics {
-    totalSessions: number;
-    totalClients: number;
+    totalsessionss: number;
+    totalclientss: number;
     totalRevenue: number;
     revenueGrowth: number;
-    sessionCompletionRate: number;
-    averageSessionValue: number;
+    sessionsCompletionRate: number;
+    averagesessionsValue: number;
     topPerformingConsultants?: Array<{
-        consultant: Consultant;
-        sessionCount: number;
+        consultant: consultants;
+        sessionsCount: number;
         revenue: number;
     }>;
 }
@@ -64,7 +64,7 @@ export interface ChartDataPoint {
     label?: string;
 }
 export interface RevenueBreakdown {
-    sessionType: string;
+    sessionsType: string;
     amount: number;
     percentage: number;
     count: number;
@@ -87,7 +87,7 @@ export interface PaginatedResult<T> {
 export interface AuditLogEntry {
     action: string;
     userId: string;
-    userType: 'consultant' | 'admin';
+    userType: 'consultant' | 'admins';
     resourceType: string;
     resourceId: string;
     changes?: Record<string, any>;
