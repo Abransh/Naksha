@@ -1,0 +1,8 @@
+# Ignore function detection in packages
+packages/
+apps/dashboard/
+apps/admin-dashboard/
+apps/public-web/
+docs/
+*.md
+!README.md
