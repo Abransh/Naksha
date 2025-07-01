@@ -90,6 +90,8 @@ export const initializeRedis = async (): Promise<RedisClientType> => {
       // Error handling
       redisClient.on('error', (error) => {
         console.error('❌ Redis client error:', error);
+        // Don't crash the app if Redis fails
+        console.log('⚠️ Continuing without Redis caching...');
       });
 
       redisClient.on('connect', () => {

@@ -1,0 +1,27 @@
+name: naksha-api-simple
+services:
+- name: api
+  source_dir: /
+  github:
+    repo: Abransh/Naksha
+    branch: main
+  build_command: |
+    npm install
+    cd packages/database && npm install && npx prisma generate && npx tsc
+    cd ../../apps/api && npm install && npm run build
+  run_command: cd apps/api && npm start
+  environment_slug: node-js
+  instance_count: 1
+  instance_size_slug: basic-xxs
+  http_port: 8000
+  envs:
+  - key: NODE_ENV
+    value: production
+  - key: PORT
+    value: "8000"
+
+databases:
+- name: db
+  engine: PG
+  version: "15"
+  size: basic

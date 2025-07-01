@@ -347,10 +347,14 @@ class App {
       await connectDatabase();
       console.log('✅ Database connected successfully');
 
-      // Initialize Redis connection
+      // Initialize Redis connection (optional)
       console.log('🔗 Connecting to Redis...');
-      await connectRedis();
-      console.log('✅ Redis connected successfully');
+      try {
+        await connectRedis();
+        console.log('✅ Redis connected successfully');
+      } catch (error) {
+        console.log('⚠️ Redis connection failed, continuing without Redis caching:', error.message);
+      }
 
       // Setup email templates
       console.log('📧 Setting up email templates...');
