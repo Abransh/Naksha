@@ -22,7 +22,7 @@
 2. Connect your GitHub repository
 3. Select branch: `main`
 4. Configure build settings:
-   - **Build Command**: `npm install && cd packages/database && npm install && npm run build && cd ../apps/api && npm install && npm run build`
+   - **Build Command**: `npm install && cd packages/database && npm install && npm run build && cd ../../apps/api && npm install && npm run build`
    - **Run Command**: `cd apps/api && npm start`
    - **Environment**: Node.js
    - **HTTP Port**: 8000

@@ -9,7 +9,7 @@ services:
   build_command: |
     npm install
     cd packages/database && npm install && npm run build
-    cd apps/api && npm install && npm run build
+    cd ../../apps/api && npm install && npm run build
   environment_slug: node-js
   instance_count: 1
   instance_size_slug: basic-xxs
@@ -60,7 +60,7 @@ services:
 databases:
 - name: db
   engine: PG
-  version: "15"
+  version: "17"
   size: basic
   num_nodes: 1
 

@@ -1,0 +1,38 @@
+# Ignore development files
+.env
+.env.local
+.env.development
+
+# Ignore build artifacts
+**/dist
+**/node_modules
+**/.next
+**/coverage
+
+# Ignore IDE files
+.vscode
+.idea
+*.swp
+*.swo
+
+# Ignore documentation
+docs/
+*.md
+!README.md
+
+# Ignore test files
+**/*.test.*
+**/*.spec.*
+**/tests/
+
+# Ignore package-lock conflicts
+**/package-lock.json
+
+# Ignore git files
+.git
+.gitignore
+
+# Ignore dev dependencies
+apps/dashboard/
+apps/admin-dashboard/
+apps/public-web/
