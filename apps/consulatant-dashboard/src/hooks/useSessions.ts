@@ -4,7 +4,7 @@
  */
 
 import { useState, useEffect, useCallback } from 'react';
-import apiRequest, { ApiError } from '@/lib/api';
+import { sessionApi, ApiError } from '@/lib/api';
 
 // Session types
 export interface Session {
@@ -152,40 +152,40 @@ export const useSessions = (
         ...currentFilters,
       });
 
-      const response = await apiRequest<{
-        data: SessionsResponse;
-        fromCache?: boolean;
-      }>(`/sessions?${params}`, {
-        requireAuth: true,
+      const response = await sessionApi.getSessions({
+        page,
+        limit,
+        sortBy: 'scheduledDate',
+        sortOrder: 'desc',
+        ...currentFilters,
       });
 
-      setSessions(response.data.sessions);
-      setPagination(response.data.pagination);
+      setSessions(response.sessions);
+      setPagination(response.pagination);
 
       // Calculate summary statistics
-      const allSessions = response.data.sessions;
+      const allSessions = response.sessions;
       const calculatedSummary = {
         totalSessions: allSessions.length,
-        pendingSessions: allSessions.filter(s => s.status === 'PENDING').length,
-        completedSessions: allSessions.filter(s => s.status === 'COMPLETED').length,
-        cancelledSessions: allSessions.filter(s => s.status === 'CANCELLED').length,
-        abandonedSessions: allSessions.filter(s => s.status === 'ABANDONED').length,
-        repeatClients: allSessions.filter(s => s.isRepeatClient).length,
-        clientsDidntJoin: allSessions.filter(s => s.status === 'NO_SHOW').length,
-        totalRevenue: allSessions.reduce((sum, s) => sum + s.amount, 0),
+        pendingSessions: allSessions.filter((s:any) => s.status === 'PENDING').length,
+        completedSessions: allSessions.filter((s:any) => s.status === 'COMPLETED').length,
+        cancelledSessions: allSessions.filter((s:any) => s.status === 'CANCELLED').length,
+        abandonedSessions: allSessions.filter((s:any) => s.status === 'ABANDONED').length,
+        repeatClients: allSessions.filter((s:any) => s.isRepeatClient).length,
+        clientsDidntJoin: allSessions.filter((s:any) => s.status === 'NO_SHOW').length,
+        totalRevenue: allSessions.reduce((sum:any, s:any) => sum + s.amount, 0),
         pendingRevenue: allSessions
-          .filter(s => s.paymentStatus === 'PENDING')
-          .reduce((sum, s) => sum + s.amount, 0),
+          .filter((s:any) => s.paymentStatus === 'PENDING')
+          .reduce((sum:any, s:any) => sum + s.amount, 0),
         completedRevenue: allSessions
-          .filter(s => s.paymentStatus === 'PAID')
-          .reduce((sum, s) => sum + s.amount, 0),
+          .filter((s:any) => s.paymentStatus === 'PAID')
+          .reduce((sum: any, s:any) => sum + s.amount, 0),
       };
 
       setSummary(calculatedSummary);
 
       console.log('✅ Sessions loaded:', {
         count: allSessions.length,
-        fromCache: response.fromCache,
         summary: calculatedSummary
       });
 
@@ -206,15 +206,7 @@ export const useSessions = (
     try {
       setError(null);
       
-      const response = await apiRequest<{
-        data: { session: Session };
-      }>('/sessions', {
-        method: 'POST',
-        body: sessionData,
-        requireAuth: true,
-      });
-
-      const newSession = response.data.session;
+      const newSession = await sessionApi.createSession(sessionData);
       
       // Update local state
       setSessions(prev => [newSession, ...prev]);
@@ -247,15 +239,7 @@ export const useSessions = (
     try {
       setError(null);
       
-      const response = await apiRequest<{
-        data: { session: Session };
-      }>(`/sessions/${sessionId}`, {
-        method: 'PUT',
-        body: updates,
-        requireAuth: true,
-      });
-
-      const updatedSession = response.data.session;
+      const updatedSession = await sessionApi.updateSession(sessionId, updates);
       
       // Update local state
       setSessions(prev => prev.map(session => 
@@ -285,10 +269,7 @@ export const useSessions = (
     try {
       setError(null);
       
-      await apiRequest(`/sessions/${sessionId}`, {
-        method: 'DELETE',
-        requireAuth: true,
-      });
+      await sessionApi.cancelSession(sessionId);
 
       // Update local state
       setSessions(prev => prev.map(session => 
@@ -324,11 +305,7 @@ export const useSessions = (
     try {
       setError(null);
       
-      await apiRequest('/sessions/bulk-update', {
-        method: 'POST',
-        body: { sessionIds, updates },
-        requireAuth: true,
-      });
+      await sessionApi.bulkUpdateSessions(sessionIds, updates);
 
       // Refresh sessions to get updated data
       await fetchSessions(pagination.page, pagination.limit, filters, true);

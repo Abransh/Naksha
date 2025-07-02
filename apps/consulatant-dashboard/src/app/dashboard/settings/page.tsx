@@ -288,8 +288,8 @@ export default function SettingsPage() {
                       <div className="flex gap-1.5">
                         <div className="w-[142px] h-[52px] bg-[var(--input-defaultBackground)] rounded-lg px-4 flex items-center gap-2">
                           <img
-                            src="https://cdn.builder.io/api/v1/image/assets/TEMP/b49f1e8b36ab5a0360a4befda2de176375c7a355?width=70"
-                            alt="Nigeria flag"
+                            src="/assets/Flag_of_India.png"
+                            alt="Indian flag"
                             className="w-[35px] h-6"
                           />
                           <span className="text-base text-[var(--black-2)] font-inter">

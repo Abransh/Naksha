@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CreateQuotationModal } from "@/components/modals/create-quotation-modal";
+import Navigator from "@/components/navigation/Navigator";
 
 // Sample quotation data - in a real app this would come from an API
 const sampleQuotations = [
@@ -233,6 +234,8 @@ export default function QuotationsPage() {
             </div>
           </div>
         </div>
+
+      <Navigator />
 
         {/* Breadcrumbs */}
         <div className="px-6 py-2 border-t border-[var(--stroke)] bg-white">

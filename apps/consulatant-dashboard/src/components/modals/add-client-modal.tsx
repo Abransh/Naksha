@@ -189,7 +189,7 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                   onChange={(e) =>
                     handleInputChange("clientName", e.target.value)
                   }
-                  className={`h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)] ${
+                  className={`h-[52px] bg-[var(--input-defaultBackground)] text-black border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)] ${
                     errors.clientName ? 'border border-red-500' : ''
                   }`}
                   style={{ fontFamily: "Inter, sans-serif" }}
@@ -208,7 +208,7 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                   onChange={(e) =>
                     handleInputChange("clientEmail", e.target.value)
                   }
-                  className={`h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)] ${
+                  className={`h-[52px] text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)] ${
                     errors.clientEmail ? 'border border-red-500' : ''
                   }`}
                   style={{ fontFamily: "Inter, sans-serif" }}
@@ -222,18 +222,18 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
               <div>
                 <div className="flex gap-1.5">
                   {/* Country Code */}
-                  <div className="w-[142px] h-[52px] bg-[var(--input-defaultBackground)] rounded-lg px-4 flex items-center gap-2">
+                  <div className="w-[142px] h-[52px] text-black bg-[var(--input-defaultBackground)] rounded-lg px-4 flex items-center gap-2">
                     <img
-                      src="https://cdn.builder.io/api/v1/image/assets/TEMP/476fcd1a2c2c98552051d9cbd7e37671aa260087?width=70"
+                      src="/assets/Flag_of_India.png"
                       alt="Nigeria Flag"
                       className="w-[35px] h-6"
                     />
                     <div className="flex-1">
                       <span
-                        className="text-base text-[var(--black-2)]"
+                        className="text-base text-black text-[var(--black-2)]"
                         style={{ fontFamily: "Inter, sans-serif" }}
                       >
-                        +234
+                        +91
                       </span>
                     </div>
                     <svg width="16" height="16" viewBox="0 0 17 16" fill="none">
@@ -254,7 +254,7 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                     onChange={(e) =>
                       handleInputChange("phoneNumber", e.target.value)
                     }
-                    className={`flex-1 h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)] ${
+                    className={`flex-1 text-black h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)] ${
                       errors.phoneNumber ? 'border border-red-500' : ''
                     }`}
                     style={{ fontFamily: "Inter, sans-serif" }}
@@ -269,7 +269,7 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-5">
                   <span
-                    className="text-sm text-[var(--black-5)]"
+                    className="text-sm text-black text-[var(--black-5)]"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
                     Add Address
@@ -278,7 +278,7 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                     onClick={() =>
                       handleInputChange("addAddress", !formData.addAddress)
                     }
-                    className="relative w-10 h-5 rounded-full transition-colors"
+                    className="relative w-10 h-5 rounded-full text-black transition-colors"
                     style={{
                       backgroundColor: formData.addAddress
                         ? "rgba(85, 112, 241, 0.40)"
@@ -286,7 +286,7 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                     }}
                   >
                     <div
-                      className="absolute w-4 h-4 rounded-full transition-transform"
+                      className="absolute w-4 h-4 text-black rounded-full transition-transform"
                       style={{
                         backgroundColor: formData.addAddress
                           ? "var(--primary)"
@@ -312,7 +312,7 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                       onChange={(e) =>
                         handleInputChange("streetAddress", e.target.value)
                       }
-                      className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
+                      className="h-[52px] text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     />
                   </div>
@@ -325,7 +325,7 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                       onChange={(e) =>
                         handleInputChange("city", e.target.value)
                       }
-                      className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
+                      className="h-[52px] text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     />
                   </div>
@@ -335,10 +335,10 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                     {/* Country */}
                     <div className="flex-1 h-[52px] bg-[var(--input-defaultBackground)] rounded-lg px-4 flex items-center justify-between">
                       <span
-                        className="text-base text-[var(--black-2)]"
+                        className="text-base text-black text-[var(--black-2)]"
                         style={{ fontFamily: "Inter, sans-serif" }}
                       >
-                        Country
+                        India
                       </span>
                       <svg
                         width="24"
@@ -389,9 +389,9 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                     >
                       Billing Address
                     </h4>
-                    <div className="flex items-center gap-5">
+                    <div className="flex text-black items-center gap-5">
                       <span
-                        className="text-sm"
+                        className="text-sm text-black"
                         style={{
                           fontFamily: "Inter, sans-serif",
                           color: formData.sameAsBillingAddress
@@ -408,7 +408,7 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                             !formData.sameAsBillingAddress,
                           )
                         }
-                        className="relative w-10 h-5 rounded-full transition-colors"
+                        className="relative w-10 h-5 rounded-full text-red-900 transition-colors"
                         style={{
                           backgroundColor: formData.sameAsBillingAddress
                             ? "rgba(85, 112, 241, 0.40)"
@@ -440,15 +440,16 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
             <Button
               variant="outline"
               onClick={handleCancel}
-              className="flex-1 h-14 border-2 border-[var(--primary)] text-[var(--primary)] hover:bg-[var(--primary)]/5 rounded-xl text-xl font-normal"
+              className="flex-1 h-14 border-2 border-[var(--primary)] text-gray-500   hover:bg-[var(--primary)]/5 rounded-xl text-xl font-normal"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
               Cancel
             </Button>
             <Button
+            variant="outline"
               onClick={handleSubmit}
               disabled={isSubmitting}
-              className="flex-1 h-14 bg-[var(--primary)] hover:bg-[var(--primary)]/90 text-white rounded-xl text-xl font-normal disabled:opacity-50"
+              className="flex-1 h-14 border-2 border-[var(--primary)] text-gray-500   hover:bg-[var(--primary)]/5 rounded-xl text-xl font-normal"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
               {isSubmitting ? (

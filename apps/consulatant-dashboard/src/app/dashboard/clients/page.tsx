@@ -628,7 +628,7 @@ export default function ClientsPage() {
                     <th className="text-left py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span
-                          className="text-sm text-[var(--black-90)]"
+                          className="text-sm text-black text-[var(--black-90)]"
                           style={{ fontFamily: "Inter, sans-serif" }}
                         >
                           Client Name
@@ -657,7 +657,7 @@ export default function ClientsPage() {
                     <th className="text-left py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span
-                          className="text-sm text-[var(--black-90)]"
+                          className="text-sm text-black text-[var(--black-90)]"
                           style={{ fontFamily: "Inter, sans-serif" }}
                         >
                           Email
@@ -686,7 +686,7 @@ export default function ClientsPage() {
                     <th className="text-left py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span
-                          className="text-sm text-[var(--black-90)]"
+                          className="text-sm text-black text-[var(--black-90)]"
                           style={{ fontFamily: "Inter, sans-serif" }}
                         >
                           Phone
@@ -715,7 +715,7 @@ export default function ClientsPage() {
                     <th className="text-left py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span
-                          className="text-sm text-[var(--black-90)]"
+                          className="text-sm text-black text-[var(--black-90)]"
                           style={{ fontFamily: "Inter, sans-serif" }}
                         >
                           Sessions
@@ -744,7 +744,7 @@ export default function ClientsPage() {
                     <th className="text-left py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span
-                          className="text-sm text-[var(--black-90)]"
+                          className="text-sm text-black text-[var(--black-90)]"
                           style={{ fontFamily: "Inter, sans-serif" }}
                         >
                           Session Charges
@@ -773,7 +773,7 @@ export default function ClientsPage() {
                     <th className="text-left py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span
-                          className="text-sm text-[var(--black-90)]"
+                          className="text-sm text-black text-[var(--black-90)]"
                           style={{ fontFamily: "Inter, sans-serif" }}
                         >
                           Client Since
@@ -802,7 +802,7 @@ export default function ClientsPage() {
                     <th className="text-left py-3 px-4">
                       <div className="flex items-center gap-2">
                         <span
-                          className="text-sm text-[var(--black-90)]"
+                          className="text-sm text-black text-[var(--black-90)]"
                           style={{ fontFamily: "Inter, sans-serif" }}
                         >
                           Status

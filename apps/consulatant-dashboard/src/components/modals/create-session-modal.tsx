@@ -334,7 +334,7 @@ export function CreateSessionModal({
                   placeholder="Client Name *"
                   value={formData.clientName}
                   onChange={(e) => handleInputChange('clientName', e.target.value)}
-                  className="h-12 bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4"
+                  className="h-12 bg-[var(--input-defaultBackground)] text-black border-0 rounded-lg px-4"
                 />
                 
                 <Input
@@ -342,7 +342,7 @@ export function CreateSessionModal({
                   placeholder="Client Email *"
                   value={formData.clientEmail}
                   onChange={(e) => handleInputChange('clientEmail', e.target.value)}
-                  className="h-12 bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4"
+                  className="h-12 bg-[var(--input-defaultBackground)] text-black border-0 rounded-lg px-4"
                 />
                 
                 <Input
@@ -350,7 +350,7 @@ export function CreateSessionModal({
                   placeholder="Client Phone"
                   value={formData.clientPhone}
                   onChange={(e) => handleInputChange('clientPhone', e.target.value)}
-                  className="h-12 bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4"
+                  className="h-12 bg-[var(--input-defaultBackground)] text-black border-0 rounded-lg px-4"
                 />
               </div>
             ) : (

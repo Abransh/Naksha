@@ -48,10 +48,10 @@ const bookSessionSchema = z.object({
 });
 
 const createSessionSchema = z.object({
-  clientId: z.string().uuid('Invalid client ID'),
+  clientId: z.string().min(1, 'Client ID is required'),
   title: z.string().min(1, 'Title is required').max(300, 'Title too long'),
   sessionType: z.enum(['PERSONAL', 'WEBINAR']),
-  scheduledDate: z.string().datetime('Invalid date format'),
+  scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
   scheduledTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
   durationMinutes: z.number().min(15).max(480).optional().default(60),
   amount: z.number().positive('Amount must be positive'),
@@ -62,7 +62,7 @@ const createSessionSchema = z.object({
 
 const updateSessionSchema = z.object({
   title: z.string().min(1).max(300).optional(),
-  scheduledDate: z.string().datetime().optional(),
+  scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   scheduledTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
   durationMinutes: z.number().min(15).max(480).optional(),
   amount: z.number().positive().optional(),
@@ -78,14 +78,14 @@ const sessionFiltersSchema = z.object({
   paymentStatus: z.enum(['PENDING', 'PAID', 'REFUNDED', 'FAILED']).optional(),
   sessionType: z.enum(['PERSONAL', 'WEBINAR']).optional(),
   platform: z.enum(['ZOOM', 'MEET', 'TEAMS']).optional(),
-  clientId: z.string().uuid().optional(),
+  clientId: z.string().min(1).optional(),
   startDate: z.string().datetime().optional(),
   endDate: z.string().datetime().optional(),
   search: z.string().max(100).optional()
 });
 
 const bulkUpdateSchema = z.object({
-  sessionIds: z.array(z.string().uuid()).min(1, 'At least one session ID required').max(50, 'Too many sessions'),
+  sessionIds: z.array(z.string().min(1)).min(1, 'At least one session ID required').max(50, 'Too many sessions'),
   updates: z.object({
     status: z.enum(['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'RETURNED', 'ABANDONED', 'NO_SHOW']).optional(),
     paymentStatus: z.enum(['PENDING', 'PAID', 'REFUNDED', 'FAILED']).optional(),
@@ -471,7 +471,7 @@ router.get('/',
  * Get a specific session by ID
  */
 router.get('/:id',
-  validateRequest(z.object({ id: z.string().uuid() }), 'params'),
+  validateRequest(z.object({ id: z.string().min(1) }), 'params'),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
@@ -745,7 +745,7 @@ router.post('/',
  * Update a session
  */
 router.put('/:id',
-  validateRequest(z.object({ id: z.string().uuid() }), 'params'),
+  validateRequest(z.object({ id: z.string().min(1) }), 'params'),
   validateRequest(updateSessionSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -903,7 +903,7 @@ router.put('/:id',
  * Delete/cancel a session
  */
 router.delete('/:id',
-  validateRequest(z.object({ id: z.string().uuid() }), 'params'),
+  validateRequest(z.object({ id: z.string().min(1) }), 'params'),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;

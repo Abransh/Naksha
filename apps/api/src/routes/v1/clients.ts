@@ -271,7 +271,7 @@ router.get('/',
  * Get a specific client with detailed information
  */
 router.get('/:id',
-  validateRequest(z.object({ id: z.string().uuid() }), 'params'),
+  validateRequest(z.object({ id: z.string().min(1) }), 'params'),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
@@ -426,7 +426,7 @@ router.post('/',
  * Update a client
  */
 router.put('/:id',
-  validateRequest(z.object({ id: z.string().uuid() }), 'params'),
+  validateRequest(z.object({ id: z.string().min(1) }), 'params'),
   validateRequest(updateClientSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -502,7 +502,7 @@ router.put('/:id',
  * Deactivate a client (soft delete)
  */
 router.delete('/:id',
-  validateRequest(z.object({ id: z.string().uuid() }), 'params'),
+  validateRequest(z.object({ id: z.string().min(1) }), 'params'),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
