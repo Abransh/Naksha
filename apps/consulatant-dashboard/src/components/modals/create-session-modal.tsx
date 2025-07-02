@@ -325,7 +325,7 @@ export function CreateSessionModal({
             {/* Client Selection/Creation */}
             {isNewClient ? (
               <div className="space-y-4">
-                <div className="flex items-center gap-2 text-sm text-[var(--black-60)]">
+                <div className="flex items-center text-black gap-2 text-sm text-[var(--black-60)]">
                   <User size={16} />
                   <span>New Client Information</span>
                 </div>
@@ -360,7 +360,7 @@ export function CreateSessionModal({
                   onValueChange={handleClientSelect}
                   disabled={clientsLoading}
                 >
-                  <SelectTrigger className="h-12 bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4">
+                  <SelectTrigger className="h-12 text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4">
                     <SelectValue placeholder={clientsLoading ? "Loading clients..." : "Select Client *"} />
                   </SelectTrigger>
                   <SelectContent>
@@ -382,14 +382,14 @@ export function CreateSessionModal({
             {/* Session Type & Payment Method */}
             <div className="grid grid-cols-2 gap-3">
               <div>
-                <label className="block text-sm font-medium text-[var(--black-60)] mb-2">
+                <label className="block text-sm  font-medium text-[var(--black-60)] mb-2">
                   Session Type *
                 </label>
                 <Select 
                   value={formData.sessionType} 
                   onValueChange={(value: 'PERSONAL' | 'WEBINAR') => handleInputChange('sessionType', value)}
                 >
-                  <SelectTrigger className="h-12 bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4">
+                  <SelectTrigger className="h-12 text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -407,7 +407,7 @@ export function CreateSessionModal({
                   value={formData.paymentMethod} 
                   onValueChange={(value: 'online' | 'cash' | 'bank_transfer') => handleInputChange('paymentMethod', value)}
                 >
-                  <SelectTrigger className="h-12 bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4">
+                  <SelectTrigger className="h-12 text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4">
                     <SelectValue />
                   </SelectTrigger>
                   <SelectContent>
@@ -424,17 +424,17 @@ export function CreateSessionModal({
               <label className="block text-sm font-medium text-[var(--black-60)] mb-2">
                 Session Date & Time *
               </label>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="grid grid-cols-2 text-black gap-3">
                 <div className="relative">
                   <Calendar
                     size={20}
-                    className="absolute left-3 top-1/2 transform -translate-y-1/2 text-[var(--black-40)]"
+                    className="absolute text-black left-3 top-1/2 transform -translate-y-1/2 text-[var(--black-40)]"
                   />
                   <Input
                     type="date"
                     value={formData.scheduledDate}
                     onChange={(e) => handleInputChange('scheduledDate', e.target.value)}
-                    className="h-12 bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-4"
+                    className="h-12 bg-[var(--input-defaultBackground)] text-black border-0 rounded-lg pl-12 pr-4"
                   />
                 </div>
                 <div className="relative">
@@ -462,7 +462,7 @@ export function CreateSessionModal({
                   type="number"
                   value={formData.durationMinutes}
                   onChange={(e) => handleInputChange('durationMinutes', Number(e.target.value))}
-                  className="h-12 bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4"
+                  className="h-12 bg-[var(--input-defaultBackground)] text-black border-0 rounded-lg px-4"
                   min="15"
                   max="480"
                 />
@@ -475,7 +475,7 @@ export function CreateSessionModal({
                   type="number"
                   value={formData.amount}
                   onChange={(e) => handleInputChange('amount', Number(e.target.value))}
-                  className="h-12 bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4"
+                  className="h-12 text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4"
                   min="0"
                 />
               </div>
@@ -490,7 +490,7 @@ export function CreateSessionModal({
                 value={formData.platform} 
                 onValueChange={(value: 'ZOOM' | 'MEET' | 'TEAMS') => handleInputChange('platform', value)}
               >
-                <SelectTrigger className="h-12 bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4">
+                <SelectTrigger className="h-12 text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
@@ -510,7 +510,7 @@ export function CreateSessionModal({
                 placeholder="Add any special notes for this session..."
                 value={formData.notes}
                 onChange={(e) => handleInputChange('notes', e.target.value)}
-                className="min-h-[100px] bg-[var(--input-defaultBackground)] border-0 rounded-lg p-4 resize-none"
+                className="min-h-[100px] text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg p-4 resize-none"
               />
             </div>
           </div>
@@ -525,7 +525,7 @@ export function CreateSessionModal({
               <div className="space-y-3">
                 <div className="flex justify-between">
                   <span className="text-sm text-[var(--black-60)]">Session Type:</span>
-                  <span className="text-sm font-medium text-[var(--black-80)]">
+                  <span className="text-sm font-medium text-black text-[var(--black-80)]">
                     {formData.sessionType === 'PERSONAL' ? 'Personal Session' : 'Webinar'}
                   </span>
                 </div>
@@ -533,7 +533,7 @@ export function CreateSessionModal({
                 {formData.clientName && (
                   <div className="flex justify-between">
                     <span className="text-sm text-[var(--black-60)]">Client:</span>
-                    <span className="text-sm font-medium text-[var(--black-80)]">
+                    <span className="text-sm font-medium text-black text-[var(--black-80)]">
                       {formData.clientName}
                     </span>
                   </div>
@@ -542,7 +542,7 @@ export function CreateSessionModal({
                 {formData.scheduledDate && (
                   <div className="flex justify-between">
                     <span className="text-sm text-[var(--black-60)]">Date:</span>
-                    <span className="text-sm font-medium text-[var(--black-80)]">
+                    <span className="text-sm font-medium text-black text-[var(--black-80)]">
                       {new Date(formData.scheduledDate).toLocaleDateString('en-IN')}
                     </span>
                   </div>
@@ -551,7 +551,7 @@ export function CreateSessionModal({
                 {formData.scheduledTime && (
                   <div className="flex justify-between">
                     <span className="text-sm text-[var(--black-60)]">Time:</span>
-                    <span className="text-sm font-medium text-[var(--black-80)]">
+                    <span className="text-sm font-medium text-black text-[var(--black-80)]">
                       {formData.scheduledTime}
                     </span>
                   </div>
@@ -559,21 +559,21 @@ export function CreateSessionModal({
                 
                 <div className="flex justify-between">
                   <span className="text-sm text-[var(--black-60)]">Duration:</span>
-                  <span className="text-sm font-medium text-[var(--black-80)]">
+                  <span className="text-sm font-medium text-black text-[var(--black-80)]">
                     {formData.durationMinutes} minutes
                   </span>
                 </div>
                 
                 <div className="flex justify-between">
                   <span className="text-sm text-[var(--black-60)]">Platform:</span>
-                  <span className="text-sm font-medium text-[var(--black-80)]">
+                  <span className="text-sm font-medium text-black text-[var(--black-80)]">
                     {formData.platform}
                   </span>
                 </div>
                 
                 <div className="border-t border-[var(--stroke)] pt-3">
                   <div className="flex justify-between">
-                    <span className="text-base font-medium text-[var(--black-80)]">Total Amount:</span>
+                    <span className="text-base font-medium text-black text-[var(--black-80)]">Total Amount:</span>
                     <span className="text-base font-semibold text-[var(--primary-100)]">
                       ₹{formData.amount.toLocaleString('en-IN')}
                     </span>
