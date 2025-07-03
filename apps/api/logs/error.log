@@ -888,3 +888,43 @@
   "statusCode": 500,
   "timestamp": "2025-07-03T00:41:08.516Z"
 }
+[2025-07-03T01:16:38.144Z] ERROR: Error generating tokens:
+{
+  "name": "PrismaClientKnownRequestError",
+  "code": "P2002",
+  "clientVersion": "5.22.0",
+  "meta": {
+    "modelName": "RefreshToken",
+    "target": [
+      "token"
+    ]
+  }
+}
+[2025-07-03T01:16:38.148Z] ERROR: Refresh token error:
+{
+  "error": "AppError",
+  "message": "Failed to generate authentication tokens",
+  "code": "INTERNAL_ERROR",
+  "statusCode": 500,
+  "timestamp": "2025-07-03T01:16:38.148Z"
+}
+[2025-07-03T01:32:35.473Z] ERROR: Error generating tokens:
+{
+  "name": "PrismaClientKnownRequestError",
+  "code": "P2002",
+  "clientVersion": "5.22.0",
+  "meta": {
+    "modelName": "RefreshToken",
+    "target": [
+      "token"
+    ]
+  }
+}
+[2025-07-03T01:32:35.475Z] ERROR: Refresh token error:
+{
+  "error": "AppError",
+  "message": "Failed to generate authentication tokens",
+  "code": "INTERNAL_ERROR",
+  "statusCode": 500,
+  "timestamp": "2025-07-03T01:32:35.475Z"
+}
