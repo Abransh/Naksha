@@ -1,0 +1,11 @@
+read CLAUDE.md and /docs, you have to ULTRATHINK and be CTO of a startup for which you are making the app for, now lets come to       │
+│   app/consultant-dashboard/src/app/dashboard/quotations/page.tsx which has lot of mock data, a lot, now understand it, quotation is     │
+│   like a consulatant wanna take a big time consultancy for a person or company so this page is used to manage the quotations, now we    │
+│   have a modal apps/consulatant-dashboard/src/components/modals/create-quotation-modal.tsx which is here add a field client's email,    │
+│   which is basically used to make a quotation read the data input check the database schema and check if its fit to use, its at         │
+│   /packages/database/prisma/schema.prisma okay so now make this modal workable so when consulant clicks on saveas draft its a draft     │
+│   and when consulatant clicks save and share with client, it sends a mail to both consulatant and client using resend api which we      │
+│   have, the consulant's mail is the mail hes logged into and client's mail is the mail he types in as input, make a email.ts file       │
+│   inside lib folder so that you make a dynamic mail with input variable as to take from database which consultant types inside modal,   │
+│   and we have upload image part, remove it from modal, and email too, understand the logic of website, make an efficient and well       │
+│   commented code with at last updating CLAUDE.md and making a .md file inside /docs     
