@@ -109,7 +109,7 @@ export default function LoginPage() {
           <div className="flex flex-col items-center gap-12 w-full">
             {/* Error Message */}
             {error && (
-              <div className="w-full p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+              <div className="w-full p-4 bg-red-50 border border-red-200 text-black rounded-lg flex items-center gap-3">
                 <AlertCircle size={20} className="text-red-600" />
                 <p className="text-red-800">{error}</p>
               </div>
@@ -125,7 +125,7 @@ export default function LoginPage() {
                 <div className="relative w-full">
                   <Mail
                     size={20}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#6E7079] z-10"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black z-10"
                   />
                   <Input
                     type="email"
@@ -133,7 +133,7 @@ export default function LoginPage() {
                     placeholder="Email Address"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-4 text-base text-[var(--black-2)] placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
+                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-4 text-base text-[var(--black-2)] placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 text-black focus-visible:ring-[var(--primary-100)]"
                     required
                   />
                 </div>
@@ -142,7 +142,7 @@ export default function LoginPage() {
                 <div className="relative w-full">
                   <Lock
                     size={20}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#6E7079] z-10"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black z-10"
                   />
                   <Input
                     type={showPassword ? "text" : "password"}
@@ -150,7 +150,7 @@ export default function LoginPage() {
                     placeholder="Password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-12 text-base text-[var(--black-2)] placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
+                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-12 text-base text-[var(--black-2)] placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 text-black focus-visible:ring-[var(--primary-100)]"
                     required
                   />
                   <button
