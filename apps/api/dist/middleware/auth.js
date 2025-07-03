@@ -59,14 +59,21 @@ const generateTokens = async (user, userType) => {
         });
         // Cache user session in Redis for faster lookups
         const redisClient = (0, redis_1.getRedisClient)();
-        await redisClient.setEx(`user_session:${user.id}`, 900, // 15 minutes (same as access token)
-        JSON.stringify({
-            id: user.id,
-            email: user.email,
-            role: userType === 'consultant' ? 'consultant' : user.role.toLowerCase(),
-            isApproved: userType === 'consultant' ? user.isApprovedByAdmin : true,
-            slug: userType === 'consultant' ? user.slug : undefined
-        }));
+        if (redisClient) {
+            try {
+                await redisClient.setEx(`user_session:${user.id}`, 900, // 15 minutes (same as access token)
+                JSON.stringify({
+                    id: user.id,
+                    email: user.email,
+                    role: userType === 'consultant' ? 'consultant' : user.role.toLowerCase(),
+                    isApproved: userType === 'consultant' ? user.isApprovedByAdmin : true,
+                    slug: userType === 'consultant' ? user.slug : undefined
+                }));
+            }
+            catch (error) {
+                console.warn('⚠️ Failed to cache user session in Redis:', error);
+            }
+        }
         return { accessToken, refreshToken };
     }
     catch (error) {
@@ -131,7 +138,15 @@ const authenticate = async (req, res, next) => {
         const payload = await verifyToken(token);
         // Check if user session exists in Redis (for faster lookups)
         const redisClient = (0, redis_1.getRedisClient)();
-        const cachedUser = await redisClient.get(`user_session:${payload.sub}`);
+        let cachedUser = null;
+        if (redisClient) {
+            try {
+                cachedUser = await redisClient.get(`user_session:${payload.sub}`);
+            }
+            catch (error) {
+                console.warn('⚠️ Failed to get user session from Redis:', error);
+            }
+        }
         if (cachedUser) {
             req.user = JSON.parse(cachedUser);
         }
@@ -427,7 +442,14 @@ const logout = async (req, res) => {
         // Clear Redis session
         if (userId) {
             const redisClient = (0, redis_1.getRedisClient)();
-            await redisClient.del(`user_session:${userId}`);
+            if (redisClient) {
+                try {
+                    await redisClient.del(`user_session:${userId}`);
+                }
+                catch (error) {
+                    console.warn('⚠️ Failed to clear user session from Redis:', error);
+                }
+            }
         }
         // Clear cookies
         res.clearCookie('accessToken');
@@ -538,6 +560,10 @@ exports.authRateLimit = authRateLimit;
 const logoutUser = async (sessionId) => {
     try {
         const redisClient = (0, redis_1.getRedisClient)();
+        if (!redisClient) {
+            console.warn('⚠️ Redis not available, session logout skipped');
+            return false;
+        }
         const deleted = await redisClient.del(`session:${sessionId}`);
         return deleted > 0;
     }

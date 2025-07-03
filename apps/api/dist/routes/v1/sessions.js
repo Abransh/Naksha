@@ -43,10 +43,10 @@ const bookSessionSchema = zod_1.z.object({
     consultantSlug: zod_1.z.string().min(1, 'Consultant slug is required')
 });
 const createSessionSchema = zod_1.z.object({
-    clientId: zod_1.z.string().uuid('Invalid client ID'),
+    clientId: zod_1.z.string().min(1, 'Client ID is required'),
     title: zod_1.z.string().min(1, 'Title is required').max(300, 'Title too long'),
     sessionType: zod_1.z.enum(['PERSONAL', 'WEBINAR']),
-    scheduledDate: zod_1.z.string().datetime('Invalid date format'),
+    scheduledDate: zod_1.z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
     scheduledTime: zod_1.z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
     durationMinutes: zod_1.z.number().min(15).max(480).optional().default(60),
     amount: zod_1.z.number().positive('Amount must be positive'),
@@ -56,7 +56,7 @@ const createSessionSchema = zod_1.z.object({
 });
 const updateSessionSchema = zod_1.z.object({
     title: zod_1.z.string().min(1).max(300).optional(),
-    scheduledDate: zod_1.z.string().datetime().optional(),
+    scheduledDate: zod_1.z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
     scheduledTime: zod_1.z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
     durationMinutes: zod_1.z.number().min(15).max(480).optional(),
     amount: zod_1.z.number().positive().optional(),
@@ -71,13 +71,13 @@ const sessionFiltersSchema = zod_1.z.object({
     paymentStatus: zod_1.z.enum(['PENDING', 'PAID', 'REFUNDED', 'FAILED']).optional(),
     sessionType: zod_1.z.enum(['PERSONAL', 'WEBINAR']).optional(),
     platform: zod_1.z.enum(['ZOOM', 'MEET', 'TEAMS']).optional(),
-    clientId: zod_1.z.string().uuid().optional(),
+    clientId: zod_1.z.string().min(1).optional(),
     startDate: zod_1.z.string().datetime().optional(),
     endDate: zod_1.z.string().datetime().optional(),
     search: zod_1.z.string().max(100).optional()
 });
 const bulkUpdateSchema = zod_1.z.object({
-    sessionIds: zod_1.z.array(zod_1.z.string().uuid()).min(1, 'At least one session ID required').max(50, 'Too many sessions'),
+    sessionIds: zod_1.z.array(zod_1.z.string().min(1)).min(1, 'At least one session ID required').max(50, 'Too many sessions'),
     updates: zod_1.z.object({
         status: zod_1.z.enum(['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'RETURNED', 'ABANDONED', 'NO_SHOW']).optional(),
         paymentStatus: zod_1.z.enum(['PENDING', 'PAID', 'REFUNDED', 'FAILED']).optional(),
@@ -198,7 +198,8 @@ router.post('/book', auth_1.optionalAuth, // Allow both authenticated and unauth
                     paymentStatus: 'PENDING',
                     platform: 'zoom',
                     clientNotes: bookingData.clientNotes || '',
-                    timezone: 'Asia/Kolkata'
+                    timezone: 'Asia/Kolkata',
+                    bookingSource: 'naksha_platform' // Mark as FROM NAKSHA
                 }
             });
             // Update client session count
@@ -424,7 +425,7 @@ router.get('/', (0, validation_1.validateRequest)(sessionFiltersSchema, 'query')
  * GET /api/sessions/:id
  * Get a specific session by ID
  */
-router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().uuid() }), 'params'), async (req, res) => {
+router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().min(1) }), 'params'), async (req, res) => {
     try {
         const { id } = req.params;
         const consultantId = req.user.id;
@@ -561,7 +562,8 @@ router.post('/', (0, validation_1.validateRequest)(createSessionSchema), async (
                 notes: sessionData.notes,
                 paymentMethod: sessionData.paymentMethod,
                 status: 'PENDING',
-                paymentStatus: sessionData.paymentMethod === 'online' ? 'PENDING' : 'PAID'
+                paymentStatus: sessionData.paymentMethod === 'online' ? 'PENDING' : 'PAID',
+                bookingSource: 'manually_added' // Mark as MANUALLY ADDED
             },
             include: {
                 client: {
@@ -666,7 +668,7 @@ router.post('/', (0, validation_1.validateRequest)(createSessionSchema), async (
  * PUT /api/sessions/:id
  * Update a session
  */
-router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().uuid() }), 'params'), (0, validation_1.validateRequest)(updateSessionSchema), async (req, res) => {
+router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().min(1) }), 'params'), (0, validation_1.validateRequest)(updateSessionSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const consultantId = req.user.id;
@@ -800,7 +802,7 @@ router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.
  * DELETE /api/sessions/:id
  * Delete/cancel a session
  */
-router.delete('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().uuid() }), 'params'), async (req, res) => {
+router.delete('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().min(1) }), 'params'), async (req, res) => {
     try {
         const { id } = req.params;
         const consultantId = req.user.id;

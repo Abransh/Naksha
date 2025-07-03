@@ -22,31 +22,36 @@ let redisClient: RedisClientType;
  */
 const redisConfig = {
   // Connection settings
-  url: process.env.REDIS_URL || 'redis://localhost:6379',
+  url: process.env.REDIS_URL,
   
   // Socket configuration
   socket: {
-    connectTimeout: 10000, // 10 seconds
-    lazyConnect: true,
+    connectTimeout: 30000, // Increased to 30 seconds for DigitalOcean
+    lazyConnect: false, // Disabled for production stability
     reconnectStrategy: (retries: number) => {
-      if (retries > 3) {
+      if (retries > 10) { // Increased max retries for production
         console.error('❌ Redis max retries exceeded');
-        return false; // Stop retrying
+        return false;
       }
-      const delay = Math.min(retries * 1000, 3000); // Max 3 seconds
+      const delay = Math.min(retries * 2000, 10000); // Exponential backoff up to 10 seconds
       console.log(`🔄 Redis reconnecting in ${delay}ms... (attempt ${retries + 1})`);
       return delay;
     },
-    // Add TLS support for DigitalOcean Redis
-    ...(process.env.REDIS_URL?.startsWith('rediss://') && {
-      tls: true,
-      rejectUnauthorized: false,
+    // Enhanced TLS support for DigitalOcean Redis
+    ...(process.env.REDIS_URL?.startsWith('rediss://') ? {
+      tls: {}
+    } : {}),
+    // Production-specific socket options
+    ...(process.env.NODE_ENV === 'production' && {
+      family: 4, // Force IPv4
+      noDelay: true,
+      keepAliveInitialDelay: 0
     })
   },
   
-  // Retry settings
-  maxRetries: 3,
-  retryDelay: 1000, // 1 second
+  // Enhanced retry settings for production
+  maxRetries: 10, // Increased for production
+  retryDelay: 2000, // 2 seconds
   
   // Key prefixes for different data types
   prefixes: {
@@ -78,16 +83,47 @@ export const initializeRedis = async (): Promise<RedisClientType> => {
     if (!redisClient) {
       console.log('🔧 Initializing Redis client...');
       
-      redisClient = createClient({
+      // Create Redis client with enhanced error handling for production
+      const clientConfig: any = {
         url: redisConfig.url,
-        socket: redisConfig.socket
-      });
+        socket: {
+          connectTimeout: redisConfig.socket.connectTimeout,
+          lazyConnect: redisConfig.socket.lazyConnect,
+          reconnectStrategy: redisConfig.socket.reconnectStrategy,
+          ...(redisConfig.url?.startsWith('rediss://') && {
+            tls: {}
+          }),
+          ...(process.env.NODE_ENV === 'production' && {
+            family: 4,
+            noDelay: true,
+            keepAliveInitialDelay: 0
+          })
+        },
+        // Add additional production-friendly options
+        pingInterval: 30000, // Ping every 30 seconds to keep connection alive
+        ...(process.env.NODE_ENV === 'production' && {
+          retryDelayOnFailover: 100,
+          enableReadyCheck: false,
+          maxRetriesPerRequest: 3
+        })
+      };
+      
+      redisClient = createClient(clientConfig);
 
-      // Error handling
+      // Enhanced error handling for production
       redisClient.on('error', (error) => {
         console.error('❌ Redis client error:', error);
-        // Don't crash the app on Redis errors
         console.log('⚠️ Redis error handled, continuing...');
+        
+        // Log error details in production for debugging
+        if (process.env.NODE_ENV === 'production') {
+          console.error('Redis Error Details:', {
+            message: error.message,
+            stack: error.stack,
+            timestamp: new Date().toISOString(),
+            url: redisConfig.url?.substring(0, 20) + '...' // Mask sensitive data
+          });
+        }
       });
 
       redisClient.on('connect', () => {
@@ -106,34 +142,78 @@ export const initializeRedis = async (): Promise<RedisClientType> => {
         console.log('🔚 Redis client connection ended');
       });
 
+      // Production-specific event handlers
+      if (process.env.NODE_ENV === 'production') {
+        redisClient.on('close', () => {
+          console.warn('⚠️ Redis connection closed unexpectedly in production');
+        });
+
+        redisClient.on('lazyConnect', () => {
+          console.log('🔌 Redis lazy connection established');
+        });
+      }
+
       console.log('✅ Redis client initialized successfully');
     }
 
     return redisClient;
   } catch (error) {
     console.error('❌ Failed to initialize Redis client:', error);
+    
+    // In production, don't crash the app - Redis is optional for basic functionality
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️ Redis initialization failed in production, continuing without cache...');
+      return null as any; // Return null to indicate Redis is not available
+    }
+    
     throw new Error(`Redis initialization failed: ${error}`);
   }
 };
 
 /**
- * Connect to Redis with retry logic
+ * Connect to Redis with enhanced retry logic for production
  * @returns Promise<void>
  */
 export const connectRedis = async (): Promise<void> => {
   let retries = 0;
   
+  // Check if Redis URL is available
+  if (!process.env.REDIS_URL) {
+    console.warn('⚠️ REDIS_URL not configured, skipping Redis connection');
+    return;
+  }
+  
   while (retries < redisConfig.maxRetries) {
     try {
       if (!redisClient) {
         redisClient = await initializeRedis();
+        if (!redisClient) {
+          console.warn('⚠️ Redis client initialization returned null, skipping connection');
+          return;
+        }
       }
 
-      // Connect to Redis
-      await redisClient.connect();
+      // Skip connection if already connected
+      if (redisClient.isOpen) {
+        console.log('✅ Redis already connected');
+        return;
+      }
+
+      // Connect to Redis with timeout
+      console.log(`🔌 Attempting Redis connection (attempt ${retries + 1}/${redisConfig.maxRetries})...`);
       
-      // Test the connection
-      await redisClient.ping();
+      const connectionPromise = redisClient.connect();
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('Connection timeout')), 30000);
+      });
+      
+      await Promise.race([connectionPromise, timeoutPromise]);
+      
+      // Test the connection with a simple ping
+      const pingResult = await redisClient.ping();
+      if (pingResult !== 'PONG') {
+        throw new Error('Redis ping failed');
+      }
       
       console.log('✅ Redis connection established successfully');
       return;
@@ -142,12 +222,29 @@ export const connectRedis = async (): Promise<void> => {
       retries++;
       console.error(`❌ Redis connection attempt ${retries} failed:`, error);
       
-      if (retries >= redisConfig.maxRetries) {
-        throw new Error(`Failed to connect to Redis after ${redisConfig.maxRetries} attempts`);
+      // Clean up failed connection
+      if (redisClient && !redisClient.isOpen) {
+        try {
+          await redisClient.disconnect();
+        } catch (disconnectError) {
+          // Ignore disconnect errors
+        }
+        redisClient = null as any;
       }
       
-      console.log(`⏳ Retrying Redis connection in ${redisConfig.retryDelay}ms...`);
-      await new Promise(resolve => setTimeout(resolve, redisConfig.retryDelay));
+      if (retries >= redisConfig.maxRetries) {
+        if (process.env.NODE_ENV === 'production') {
+          console.error(`❌ Failed to connect to Redis after ${redisConfig.maxRetries} attempts in production`);
+          console.warn('⚠️ Continuing without Redis - some features will be disabled');
+          return; // Don't crash in production
+        } else {
+          throw new Error(`Failed to connect to Redis after ${redisConfig.maxRetries} attempts`);
+        }
+      }
+      
+      const delayMs = Math.min(retries * redisConfig.retryDelay, 10000);
+      console.log(`⏳ Retrying Redis connection in ${delayMs}ms...`);
+      await new Promise(resolve => setTimeout(resolve, delayMs));
     }
   }
 };
@@ -219,10 +316,14 @@ export const getRedisInfo = async () => {
 
 /**
  * Get the Redis client instance
- * @returns RedisClientType - The global Redis client
+ * @returns RedisClientType | null - The global Redis client or null if not available
  */
-export const getRedisClient = (): RedisClientType => {
+export const getRedisClient = (): RedisClientType | null => {
   if (!redisClient || !redisClient.isOpen) {
+    if (process.env.NODE_ENV === 'production') {
+      console.warn('⚠️ Redis not available in production, returning null');
+      return null;
+    }
     throw new Error('Redis not connected. Call connectRedis() first.');
   }
   return redisClient;
@@ -238,6 +339,11 @@ export const cacheUtils = {
   set: async (key: string, value: any, ttlSeconds?: number): Promise<boolean> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, skipping cache set for key: ${key}`);
+        return false;
+      }
+      
       const serializedValue = JSON.stringify(value);
       
       if (ttlSeconds) {
@@ -259,6 +365,11 @@ export const cacheUtils = {
   get: async <T = any>(key: string): Promise<T | null> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, cache miss for key: ${key}`);
+        return null;
+      }
+      
       const value = await client.get(`${redisConfig.prefixes.cache}${key}`);
       
       if (!value) return null;
@@ -276,6 +387,11 @@ export const cacheUtils = {
   delete: async (key: string): Promise<boolean> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, skipping cache delete for key: ${key}`);
+        return false;
+      }
+      
       const result = await client.del(`${redisConfig.prefixes.cache}${key}`);
       return result > 0;
     } catch (error) {
@@ -290,6 +406,11 @@ export const cacheUtils = {
   exists: async (key: string): Promise<boolean> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, cache exists check for key: ${key} returns false`);
+        return false;
+      }
+      
       const result = await client.exists(`${redisConfig.prefixes.cache}${key}`);
       return result > 0;
     } catch (error) {
@@ -311,6 +432,11 @@ export const cacheUtils = {
   clearPattern: async (pattern: string): Promise<number> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, skipping cache pattern clear: ${pattern}`);
+        return 0;
+      }
+      
       const keys = await client.keys(`${redisConfig.prefixes.cache}${pattern}`);
       
       if (keys.length === 0) return 0;
@@ -334,6 +460,11 @@ export const sessionUtils = {
   setSession: async (sessionId: string, sessionData: any): Promise<boolean> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, session storage disabled for: ${sessionId}`);
+        return false;
+      }
+      
       const serializedData = JSON.stringify(sessionData);
       
       await client.setEx(
@@ -355,6 +486,11 @@ export const sessionUtils = {
   getSession: async <T = any>(sessionId: string): Promise<T | null> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, session lookup disabled for: ${sessionId}`);
+        return null;
+      }
+      
       const sessionData = await client.get(`${redisConfig.prefixes.session}${sessionId}`);
       
       if (!sessionData) return null;
@@ -372,6 +508,11 @@ export const sessionUtils = {
   deleteSession: async (sessionId: string): Promise<boolean> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, session deletion disabled for: ${sessionId}`);
+        return false;
+      }
+      
       const result = await client.del(`${redisConfig.prefixes.session}${sessionId}`);
       return result > 0;
     } catch (error) {
@@ -386,6 +527,11 @@ export const sessionUtils = {
   extendSession: async (sessionId: string): Promise<boolean> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, session extension disabled for: ${sessionId}`);
+        return false;
+      }
+      
       const result = await client.expire(
         `${redisConfig.prefixes.session}${sessionId}`,
         redisConfig.ttl.session
@@ -412,6 +558,12 @@ export const rateLimitUtils = {
   ): Promise<{ allowed: boolean; remaining: number; resetTime: number }> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, rate limiting disabled - allowing request for: ${identifier}`);
+        // Fail open - allow request if Redis is down
+        return { allowed: true, remaining: maxRequests, resetTime: Date.now() + (windowSeconds * 1000) };
+      }
+      
       const key = `${redisConfig.prefixes.rate_limit}${identifier}`;
       
       const current = await client.incr(key);
@@ -446,6 +598,11 @@ export const realTimeUtils = {
   setUserSocket: async (userId: string, socketId: string): Promise<boolean> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, socket mapping disabled for user: ${userId}`);
+        return false;
+      }
+      
       await client.set(`${redisConfig.prefixes.real_time}user:${userId}`, socketId);
       return true;
     } catch (error) {
@@ -460,6 +617,11 @@ export const realTimeUtils = {
   getUserSocket: async (userId: string): Promise<string | null> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, socket lookup disabled for user: ${userId}`);
+        return null;
+      }
+      
       return await client.get(`${redisConfig.prefixes.real_time}user:${userId}`);
     } catch (error) {
       console.error(`❌ Error getting user socket ${userId}:`, error);
@@ -473,6 +635,11 @@ export const realTimeUtils = {
   removeUserSocket: async (userId: string): Promise<boolean> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        console.warn(`⚠️ Redis not available, socket removal disabled for user: ${userId}`);
+        return false;
+      }
+      
       const result = await client.del(`${redisConfig.prefixes.real_time}user:${userId}`);
       return result > 0;
     } catch (error) {
@@ -514,6 +681,10 @@ export const redisTestUtils = process.env.NODE_ENV !== 'production' ? {
     console.warn('⚠️ Clearing all Redis data!');
     
     const client = getRedisClient();
+    if (!client) {
+      throw new Error('Redis client not available');
+    }
+    
     await client.flushAll();
     
     console.log('🗑️ All Redis data cleared');
@@ -525,6 +696,10 @@ export const redisTestUtils = process.env.NODE_ENV !== 'production' ? {
   getAllKeys: async (pattern: string = '*'): Promise<string[]> => {
     try {
       const client = getRedisClient();
+      if (!client) {
+        throw new Error('Redis client not available');
+      }
+      
       return await client.keys(pattern);
     } catch (error) {
       console.error('❌ Error getting Redis keys:', error);

@@ -245,7 +245,7 @@ router.get('/', (0, validation_1.validateRequest)(clientFiltersSchema, 'query'),
  * GET /api/clients/:id
  * Get a specific client with detailed information
  */
-router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().uuid() }), 'params'), async (req, res) => {
+router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().min(1) }), 'params'), async (req, res) => {
     try {
         const { id } = req.params;
         const consultantId = req.user.id;
@@ -378,7 +378,7 @@ router.post('/', (0, validation_1.validateRequest)(createClientSchema), async (r
  * PUT /api/clients/:id
  * Update a client
  */
-router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().uuid() }), 'params'), (0, validation_1.validateRequest)(updateClientSchema), async (req, res) => {
+router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().min(1) }), 'params'), (0, validation_1.validateRequest)(updateClientSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const consultantId = req.user.id;
@@ -440,7 +440,7 @@ router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.
  * DELETE /api/clients/:id
  * Deactivate a client (soft delete)
  */
-router.delete('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().uuid() }), 'params'), async (req, res) => {
+router.delete('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().min(1) }), 'params'), async (req, res) => {
     try {
         const { id } = req.params;
         const consultantId = req.user.id;

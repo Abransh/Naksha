@@ -18,12 +18,18 @@ declare let redisClient: RedisClientType;
  * Redis configuration
  */
 declare const redisConfig: {
-    url: string;
-    connectTimeout: number;
-    commandTimeout: number;
+    url: string | undefined;
+    socket: {
+        family?: number | undefined;
+        noDelay?: boolean | undefined;
+        keepAliveInitialDelay?: number | undefined;
+        tls?: {} | undefined;
+        connectTimeout: number;
+        lazyConnect: boolean;
+        reconnectStrategy: (retries: number) => number | false;
+    };
     maxRetries: number;
     retryDelay: number;
-    lazyConnect: boolean;
     prefixes: {
         session: string;
         cache: string;
@@ -47,7 +53,7 @@ declare const redisConfig: {
  */
 export declare const initializeRedis: () => Promise<RedisClientType>;
 /**
- * Connect to Redis with retry logic
+ * Connect to Redis with enhanced retry logic for production
  * @returns Promise<void>
  */
 export declare const connectRedis: () => Promise<void>;
@@ -80,9 +86,9 @@ export declare const getRedisInfo: () => Promise<{
 }>;
 /**
  * Get the Redis client instance
- * @returns RedisClientType - The global Redis client
+ * @returns RedisClientType | null - The global Redis client or null if not available
  */
-export declare const getRedisClient: () => RedisClientType;
+export declare const getRedisClient: () => RedisClientType | null;
 /**
  * Redis cache utilities
  */

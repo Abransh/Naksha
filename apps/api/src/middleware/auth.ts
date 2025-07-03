@@ -102,17 +102,23 @@ export const generateTokens = async (user: any, userType: 'consultant' | 'admin'
 
     // Cache user session in Redis for faster lookups
     const redisClient = getRedisClient();
-    await redisClient.setEx(
-      `user_session:${user.id}`,
-      900, // 15 minutes (same as access token)
-      JSON.stringify({
-        id: user.id,
-        email: user.email,
-        role: userType === 'consultant' ? 'consultant' : user.role.toLowerCase(),
-        isApproved: userType === 'consultant' ? user.isApprovedByAdmin : true,
-        slug: userType === 'consultant' ? user.slug : undefined
-      })
-    );
+    if (redisClient) {
+      try {
+        await redisClient.setEx(
+          `user_session:${user.id}`,
+          900, // 15 minutes (same as access token)
+          JSON.stringify({
+            id: user.id,
+            email: user.email,
+            role: userType === 'consultant' ? 'consultant' : user.role.toLowerCase(),
+            isApproved: userType === 'consultant' ? user.isApprovedByAdmin : true,
+            slug: userType === 'consultant' ? user.slug : undefined
+          })
+        );
+      } catch (error) {
+        console.warn('⚠️ Failed to cache user session in Redis:', error);
+      }
+    }
 
     return { accessToken, refreshToken };
 
@@ -184,7 +190,15 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
 
     // Check if user session exists in Redis (for faster lookups)
     const redisClient = getRedisClient();
-    const cachedUser = await redisClient.get(`user_session:${payload.sub}`);
+    let cachedUser = null;
+    
+    if (redisClient) {
+      try {
+        cachedUser = await redisClient.get(`user_session:${payload.sub}`);
+      } catch (error) {
+        console.warn('⚠️ Failed to get user session from Redis:', error);
+      }
+    }
     
     if (cachedUser) {
       req.user = JSON.parse(cachedUser);
@@ -499,7 +513,13 @@ export const logout = async (req: Request, res: Response): Promise<void> => {
     // Clear Redis session
     if (userId) {
       const redisClient = getRedisClient();
-      await redisClient.del(`user_session:${userId}`);
+      if (redisClient) {
+        try {
+          await redisClient.del(`user_session:${userId}`);
+        } catch (error) {
+          console.warn('⚠️ Failed to clear user session from Redis:', error);
+        }
+      }
     }
 
     // Clear cookies
@@ -643,6 +663,11 @@ export interface AuthenticatedRequest extends Request {
 export const logoutUser = async (sessionId: string): Promise<boolean> => {
   try {
     const redisClient = getRedisClient();
+    if (!redisClient) {
+      console.warn('⚠️ Redis not available, session logout skipped');
+      return false;
+    }
+    
     const deleted = await redisClient.del(`session:${sessionId}`);
     return deleted > 0;
   } catch (error) {

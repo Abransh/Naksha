@@ -119,14 +119,8 @@ export default function Dashboard() {
                 size={12}
                 className="text-[var(--primary-100)] flex-shrink-0"
               />
-              <span className="text-[var(--black-30)] flex-shrink-0">/</span>
-              <span className="text-[var(--black-30)] flex-shrink-0">Page</span>
-              <span className="text-[var(--black-30)] flex-shrink-0">/</span>
-              <span className="text-[var(--black-30)] flex-shrink-0">Page</span>
-              <span className="text-[var(--black-30)] flex-shrink-0">/</span>
-              <span className="text-[var(--black-30)] flex-shrink-0">Page</span>
-              <span className="text-[var(--black-30)] flex-shrink-0">/</span>
-              <span className="text-[var(--black-30)] flex-shrink-0">Page</span>
+          
+          
             </div>
           </div>
         </div>

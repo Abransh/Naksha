@@ -18,6 +18,7 @@ const database_1 = require("../../config/database");
 const redis_1 = require("../../config/redis");
 const validation_1 = require("../../middleware/validation");
 const errorHandler_1 = require("../../middleware/errorHandler");
+const emailService_1 = require("../../services/emailService");
 const router = (0, express_1.Router)();
 /**
  * Validation schemas
@@ -416,11 +417,22 @@ router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: 
         const { emailMessage, includeAttachment } = req.body;
         const consultantId = req.user.id;
         const prisma = (0, database_1.getPrismaClient)();
-        // Get quotation
+        // Get quotation and consultant information
         const quotation = await prisma.quotation.findFirst({
             where: {
                 id,
                 consultantId
+            },
+            include: {
+                consultant: {
+                    select: {
+                        firstName: true,
+                        lastName: true,
+                        email: true,
+                        personalSessionTitle: true,
+                        webinarSessionTitle: true
+                    }
+                }
             }
         });
         if (!quotation) {
@@ -434,20 +446,75 @@ router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: 
         if (quotation.expiresAt && new Date() > quotation.expiresAt) {
             throw new errorHandler_1.ValidationError('Cannot send expired quotation');
         }
-        // Generate quotation PDF if not exists and attachment requested
-        let quotationPDFUrl = quotation.quotationImageUrl;
-        if (includeAttachment && !quotationPDFUrl) {
-            try {
-                // TODO: Implement PDF generation service
-                const quotationPDF = { secure_url: null };
+        // Send quotation email to client
+        const clientEmailSent = await (0, emailService_1.sendEmail)('quotation_shared', {
+            to: quotation.clientEmail,
+            data: {
+                clientName: quotation.clientName,
+                consultantName: `${quotation.consultant.firstName} ${quotation.consultant.lastName}`,
+                quotationName: quotation.quotationName,
+                description: quotation.description,
+                baseAmount: Number(quotation.baseAmount),
+                discountPercentage: Number(quotation.discountPercentage),
+                finalAmount: Number(quotation.finalAmount),
+                currency: quotation.currency,
+                validUntil: quotation.expiresAt?.toLocaleDateString(),
+                quotationNumber: quotation.quotationNumber,
+                emailMessage: emailMessage || '',
+                viewQuotationUrl: `${process.env.FRONTEND_URL}/quotation/${quotation.id}`,
+                consultantEmail: quotation.consultant.email
             }
-            catch (error) {
-                console.error('Error generating quotation PDF:', error);
-                throw new errorHandler_1.ValidationError('Failed to generate quotation PDF');
+        }, consultantId);
+        // Send confirmation email to consultant
+        const consultantEmailSent = await (0, emailService_1.sendEmail)('quotation_sent_confirmation', {
+            to: quotation.consultant.email,
+            data: {
+                consultantName: quotation.consultant.firstName,
+                clientName: quotation.clientName,
+                clientEmail: quotation.clientEmail,
+                quotationName: quotation.quotationName,
+                finalAmount: Number(quotation.finalAmount),
+                currency: quotation.currency,
+                quotationNumber: quotation.quotationNumber,
+                sentDate: new Date().toLocaleDateString()
             }
+        }, consultantId);
+        if (!clientEmailSent) {
+            throw new errorHandler_1.AppError('Failed to send quotation email to client', 500, 'EMAIL_SEND_ERROR');
         }
+        // Update quotation status and sent timestamp
+        const updatedQuotation = await prisma.quotation.update({
+            where: { id },
+            data: {
+                status: 'SENT',
+                sentAt: new Date(),
+                updatedAt: new Date()
+            }
+        });
+        // Clear related caches
+        await redis_1.cacheUtils.clearPattern(`quotations:${consultantId}:*`);
+        await redis_1.cacheUtils.clearPattern(`dashboard_*:${consultantId}:*`);
+        console.log(`✅ Quotation sent: ${id} to ${quotation.clientEmail}`);
+        res.json({
+            message: 'Quotation sent successfully',
+            data: {
+                quotation: {
+                    ...updatedQuotation,
+                    baseAmount: Number(updatedQuotation.baseAmount),
+                    discountPercentage: Number(updatedQuotation.discountPercentage),
+                    finalAmount: Number(updatedQuotation.finalAmount)
+                },
+                emailStatus: {
+                    clientEmailSent,
+                    consultantEmailSent
+                }
+            }
+        });
     }
     catch (error) {
+        if (error instanceof errorHandler_1.NotFoundError || error instanceof errorHandler_1.ValidationError || error instanceof errorHandler_1.AppError) {
+            throw error;
+        }
         console.error('❌ Send quotation error:', error);
         throw new errorHandler_1.AppError('Failed to send quotation', 500, 'QUOTATION_SEND_ERROR');
     }
