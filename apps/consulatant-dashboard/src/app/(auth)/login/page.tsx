@@ -1,7 +1,7 @@
 // apps/consulatant-dashboard/src/app/(auth)/login/page.tsx
 
 "use client";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -17,8 +17,20 @@ export default function LoginPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login, error, clearError } = useAuth();
+  const { login, error, clearError, user, isAuthenticated } = useAuth();
   const router = useRouter();
+
+  // Handle redirect after successful login
+  useEffect(() => {
+    if (isAuthenticated && user) {
+      // Redirect based on profile completion status
+      if (!user.profileCompleted) {
+        router.push('/dashboard/settings');
+      } else {
+        router.push('/dashboard');
+      }
+    }
+  }, [isAuthenticated, user, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,14 +43,10 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
-      const user = await login(formData.email.trim(), formData.password);
+      await login(formData.email.trim(), formData.password);
       
-      // Redirect based on profile completion status
-      if (user && !user.profileCompleted) {
-        router.push('/dashboard/settings');
-      } else {
-        router.push('/dashboard');
-      }
+      // The user will be updated in auth state after successful login
+      // We'll handle redirect in useEffect when user state changes
     } catch (err) {
       // Error is handled by the auth context
       console.error('Login error:', err);

@@ -3,6 +3,7 @@
 "use client";
 
 import { useState } from "react";
+
 import { Dialog, DialogContent, DialogTrigger } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
@@ -15,6 +16,10 @@ import {
 } from "@/components/ui/select";
 import { Switch } from "@/components/ui/switch";
 import { Textarea } from "@/components/ui/textarea";
+
+// API Configuration
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = `${API_BASE_URL}/api/v1`;
 
 interface CreateQuotationModalProps {
   children: React.ReactNode;
@@ -99,11 +104,11 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
       };
 
       // Create quotation via API
-      const response = await fetch('/api/v1/quotations', {
+      const response = await fetch(`${API_URL}/quotations`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
         },
         body: JSON.stringify(quotationData),
       });
@@ -118,11 +123,11 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
 
       // If not draft, send the quotation via email
       if (!isDraft) {
-        const sendResponse = await fetch(`/api/v1/quotations/${quotationId}/send`, {
+        const sendResponse = await fetch(`${API_URL}/quotations/${quotationId}/send`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',
-            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+            'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
           },
           body: JSON.stringify({
             emailMessage: "", // Could add custom message field later

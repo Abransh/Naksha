@@ -526,7 +526,7 @@ export default function HomePage() {
       <section className="py-16 bg-[#F5F7FA]">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-4xl md:text-6xl font-bold text-[#6D83EC] mb-8 leading-tight">
-            You focus on your business. We've got tech & marketing fully
+            You focus on your business. We&apos;ve got tech & marketing fully
             covered.
           </h2>
           <Button className="bg-[#5570F1] text-white hover:bg-[#4A5CE6] px-8 py-3 text-base font-medium">

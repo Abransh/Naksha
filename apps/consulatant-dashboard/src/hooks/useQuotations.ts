@@ -5,6 +5,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 
+// API Configuration
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
+const API_URL = `${API_BASE_URL}/api/v1`;
+
 // Types for quotations
 export interface Quotation {
   id: string;
@@ -109,13 +113,13 @@ export const useQuotations = (initialFilters: QuotationFilters = {}): UseQuotati
       setError(null);
 
       const queryParams = buildQueryParams(page);
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('accessToken');
       
       if (!token) {
         throw new Error('Authentication token not found');
       }
 
-      const response = await fetch(`/api/v1/quotations?${queryParams}`, {
+      const response = await fetch(`${API_URL}/quotations?${queryParams}`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -149,13 +153,13 @@ export const useQuotations = (initialFilters: QuotationFilters = {}): UseQuotati
   // Delete quotation
   const deleteQuotation = useCallback(async (id: string): Promise<boolean> => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('accessToken');
       
       if (!token) {
         throw new Error('Authentication token not found');
       }
 
-      const response = await fetch(`/api/v1/quotations/${id}`, {
+      const response = await fetch(`${API_URL}/quotations/${id}`, {
         method: 'DELETE',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -183,13 +187,13 @@ export const useQuotations = (initialFilters: QuotationFilters = {}): UseQuotati
   // Update quotation status
   const updateQuotationStatus = useCallback(async (id: string, status: string): Promise<boolean> => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('accessToken');
       
       if (!token) {
         throw new Error('Authentication token not found');
       }
 
-      const response = await fetch(`/api/v1/quotations/${id}`, {
+      const response = await fetch(`${API_URL}/quotations/${id}`, {
         method: 'PUT',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -220,13 +224,13 @@ export const useQuotations = (initialFilters: QuotationFilters = {}): UseQuotati
   // Send quotation to client
   const sendQuotation = useCallback(async (id: string, emailMessage: string = ''): Promise<boolean> => {
     try {
-      const token = localStorage.getItem('authToken');
+      const token = localStorage.getItem('accessToken');
       
       if (!token) {
         throw new Error('Authentication token not found');
       }
 
-      const response = await fetch(`/api/v1/quotations/${id}/send`, {
+      const response = await fetch(`${API_URL}/quotations/${id}/send`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

@@ -38,7 +38,6 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
   }, [params]);
 
   const {
-
     summary,
     services,
     testimonials,
@@ -47,7 +46,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
     isLoading,
     error,
     refetch,
-  } = useConsultantShowcase(consultantSlug);
+  } = useConsultantShowcase(consultantSlug || '');
 
   // Show loading state
   if (!consultantSlug || isLoading) {

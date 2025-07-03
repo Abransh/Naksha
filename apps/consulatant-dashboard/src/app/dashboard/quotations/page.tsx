@@ -557,8 +557,8 @@ export default function QuotationsPage() {
                         type="checkbox"
                         checked={
                           selectedQuotations.length ===
-                            currentQuotations.length &&
-                          currentQuotations.length > 0
+                            quotations.length &&
+                          quotations.length > 0
                         }
                         onChange={handleSelectAll}
                         className="w-6 h-6 rounded-lg border border-[var(--black-1)]"

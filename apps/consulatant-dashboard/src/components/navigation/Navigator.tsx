@@ -32,7 +32,7 @@ import {
 
 interface NavigationItem {
   id: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
+  icon: React.ComponentType<any>;
   label: string;
   href: string;
   badge?: number;
