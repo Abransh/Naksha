@@ -8,6 +8,43 @@ import { getPrismaClient } from '../config/database';
 import { AuthenticatedRequest } from '../middleware/auth';
 
 /**
+ * Utility function to get date range based on timeframe
+ */
+const getTimeframeDates = (timeframe: string = 'month') => {
+  const now = new Date();
+  let current: Date;
+  let previous: Date;
+
+  switch (timeframe) {
+    case 'today':
+      current = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      previous = new Date(current.getTime() - 24 * 60 * 60 * 1000);
+      break;
+    case 'week':
+      current = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+      previous = new Date(current.getTime() - 7 * 24 * 60 * 60 * 1000);
+      break;
+    case 'month':
+      current = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      previous = new Date(current.getTime() - 30 * 24 * 60 * 60 * 1000);
+      break;
+    case 'quarter':
+      current = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      previous = new Date(current.getTime() - 90 * 24 * 60 * 60 * 1000);
+      break;
+    case 'year':
+      current = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+      previous = new Date(current.getTime() - 365 * 24 * 60 * 60 * 1000);
+      break;
+    default:
+      current = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+      previous = new Date(current.getTime() - 30 * 24 * 60 * 60 * 1000);
+  }
+
+  return { current, previous };
+};
+
+/**
  * GET /api/v1/dashboard/overview
  * Get comprehensive dashboard overview data
  */
@@ -24,11 +61,13 @@ export const getDashboardOverview = async (req: AuthenticatedRequest, res: Respo
 
     const consultantId = req.user.id;
     const prisma = getPrismaClient();
+    
+    // Get timeframe from query parameters
+    const timeframe = (req.query.timeframe as string) || 'month';
 
-    // Get current date and date 30 days ago for comparison
+    // Get date ranges based on timeframe
+    const { current: currentPeriodStart, previous: previousPeriodStart } = getTimeframeDates(timeframe);
     const now = new Date();
-    const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    const sixtyDaysAgo = new Date(now.getTime() - 60 * 24 * 60 * 60 * 1000);
 
     // Parallel data fetching for optimal performance
     const [
@@ -57,22 +96,28 @@ export const getDashboardOverview = async (req: AuthenticatedRequest, res: Respo
       // Time series data for chart (last 7 days)
       weeklySessionData
     ] = await Promise.all([
-      // Current period revenue (last 30 days)
-      prisma.paymentTransaction.aggregate({
+      // Current period revenue from completed or paid sessions
+      prisma.session.aggregate({
         where: {
           consultantId,
-          status: 'SUCCESS',
-          createdAt: { gte: thirtyDaysAgo }
+          OR: [
+            { paymentStatus: 'PAID' },
+            { status: 'COMPLETED' }
+          ],
+          createdAt: { gte: currentPeriodStart }
         },
         _sum: { amount: true }
       }),
       
-      // Previous period revenue (30-60 days ago)
-      prisma.paymentTransaction.aggregate({
+      // Previous period revenue from completed or paid sessions
+      prisma.session.aggregate({
         where: {
           consultantId,
-          status: 'SUCCESS',
-          createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo }
+          OR: [
+            { paymentStatus: 'PAID' },
+            { status: 'COMPLETED' }
+          ],
+          createdAt: { gte: previousPeriodStart, lt: currentPeriodStart }
         },
         _sum: { amount: true }
       }),
@@ -81,7 +126,7 @@ export const getDashboardOverview = async (req: AuthenticatedRequest, res: Respo
       prisma.client.count({
         where: { 
           consultantId,
-          createdAt: { gte: thirtyDaysAgo }
+          createdAt: { gte: currentPeriodStart }
         }
       }),
       
@@ -89,7 +134,7 @@ export const getDashboardOverview = async (req: AuthenticatedRequest, res: Respo
       prisma.client.count({
         where: { 
           consultantId,
-          createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo }
+          createdAt: { gte: previousPeriodStart, lt: currentPeriodStart }
         }
       }),
       
@@ -98,7 +143,7 @@ export const getDashboardOverview = async (req: AuthenticatedRequest, res: Respo
         where: {
           consultantId,
           status: { not: 'DRAFT' },
-          createdAt: { gte: thirtyDaysAgo }
+          createdAt: { gte: currentPeriodStart }
         }
       }),
       
@@ -107,7 +152,7 @@ export const getDashboardOverview = async (req: AuthenticatedRequest, res: Respo
         where: {
           consultantId,
           status: { not: 'DRAFT' },
-          createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo }
+          createdAt: { gte: previousPeriodStart, lt: currentPeriodStart }
         }
       }),
       
@@ -144,7 +189,7 @@ export const getDashboardOverview = async (req: AuthenticatedRequest, res: Respo
       prisma.session.count({
         where: { 
           consultantId,
-          createdAt: { gte: sixtyDaysAgo, lt: thirtyDaysAgo }
+          createdAt: { gte: previousPeriodStart, lt: currentPeriodStart }
         }
       }),
       
@@ -233,9 +278,39 @@ export const getDashboardOverview = async (req: AuthenticatedRequest, res: Respo
 
     const activeServices = allServices; // All configured services are considered active
 
-    // Revenue split data (for now, all revenue is from Naksha platform)
-    const revenueFromNaksha = currentRevenueAmount;
-    const revenueManuallyAdded = 0; // This would be tracked separately in future
+    // Get revenue split data based on booking source
+    const [revenueFromNaksha, revenueManuallyAdded] = await Promise.all([
+      // Revenue from Naksha platform bookings
+      prisma.session.aggregate({
+        where: {
+          consultantId,
+          OR: [
+            { paymentStatus: 'PAID' },
+            { status: 'COMPLETED' }
+          ],
+          bookingSource: 'naksha_platform',
+          createdAt: { gte: currentPeriodStart }
+        },
+        _sum: { amount: true }
+      }),
+      
+      // Revenue from manually added sessions
+      prisma.session.aggregate({
+        where: {
+          consultantId,
+          OR: [
+            { paymentStatus: 'PAID' },
+            { status: 'COMPLETED' }
+          ],
+          bookingSource: 'manually_added',
+          createdAt: { gte: currentPeriodStart }
+        },
+        _sum: { amount: true }
+      })
+    ]);
+    
+    const revenueFromNakshaAmount = revenueFromNaksha._sum.amount?.toNumber() || 0;
+    const revenueManuallyAddedAmount = revenueManuallyAdded._sum.amount?.toNumber() || 0;
 
     const dashboardData = {
       // Revenue card data
@@ -271,9 +346,9 @@ export const getDashboardOverview = async (req: AuthenticatedRequest, res: Respo
       
       // Revenue split chart data
       revenueSplit: {
-        fromNaksha: revenueFromNaksha,
-        manuallyAdded: revenueManuallyAdded,
-        total: revenueFromNaksha + revenueManuallyAdded
+        fromNaksha: revenueFromNakshaAmount,
+        manuallyAdded: revenueManuallyAddedAmount,
+        total: revenueFromNakshaAmount + revenueManuallyAddedAmount
       },
       
       // Recent sessions

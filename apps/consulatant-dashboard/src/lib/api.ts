@@ -351,8 +351,9 @@ export const dashboardApi = {
   /**
    * Get dashboard overview data
    */
-  async getOverview(): Promise<DashboardOverview> {
-    const response = await apiRequest<ApiResponse<DashboardOverview>>('/dashboard/overview', {
+  async getOverview(timeframe: string = 'month'): Promise<DashboardOverview> {
+    const params = new URLSearchParams({ timeframe });
+    const response = await apiRequest<ApiResponse<DashboardOverview>>(`/dashboard/overview?${params}`, {
       requireAuth: true,
     });
     return response.data!;

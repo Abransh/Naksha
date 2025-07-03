@@ -487,11 +487,22 @@ router.post('/:id/send',
 
       const prisma = getPrismaClient();
 
-      // Get quotation
+      // Get quotation and consultant information
       const quotation = await prisma.quotation.findFirst({
         where: {
           id,
           consultantId
+        },
+        include: {
+          consultant: {
+            select: {
+              firstName: true,
+              lastName: true,
+              email: true,
+              personalSessionTitle: true,
+              webinarSessionTitle: true
+            }
+          }
         }
       });
 
@@ -509,24 +520,84 @@ router.post('/:id/send',
         throw new ValidationError('Cannot send expired quotation');
       }
 
-      // Generate quotation PDF if not exists and attachment requested
-      let quotationPDFUrl = quotation.quotationImageUrl;
-      if (includeAttachment && !quotationPDFUrl) {
-        try { 
-          // TODO: Implement PDF generation service
-          
-          const quotationPDF = { secure_url: null };
+      // Send quotation email to client
+      const clientEmailSent = await sendEmail('quotation_shared', {
+        to: quotation.clientEmail,
+        data: {
+          clientName: quotation.clientName,
+          consultantName: `${quotation.consultant.firstName} ${quotation.consultant.lastName}`,
+          quotationName: quotation.quotationName,
+          description: quotation.description,
+          baseAmount: Number(quotation.baseAmount),
+          discountPercentage: Number(quotation.discountPercentage),
+          finalAmount: Number(quotation.finalAmount),
+          currency: quotation.currency,
+          validUntil: quotation.expiresAt?.toLocaleDateString(),
+          quotationNumber: quotation.quotationNumber,
+          emailMessage: emailMessage || '',
+          viewQuotationUrl: `${process.env.FRONTEND_URL}/quotation/${quotation.id}`,
+          consultantEmail: quotation.consultant.email
         }
-            catch (error) {
-            console.error('Error generating quotation PDF:', error);
-            throw new ValidationError('Failed to generate quotation PDF');
-          }}
+      }, consultantId);
+
+      // Send confirmation email to consultant
+      const consultantEmailSent = await sendEmail('quotation_sent_confirmation', {
+        to: quotation.consultant.email,
+        data: {
+          consultantName: quotation.consultant.firstName,
+          clientName: quotation.clientName,
+          clientEmail: quotation.clientEmail,
+          quotationName: quotation.quotationName,
+          finalAmount: Number(quotation.finalAmount),
+          currency: quotation.currency,
+          quotationNumber: quotation.quotationNumber,
+          sentDate: new Date().toLocaleDateString()
         }
-        catch (error) {
-          console.error('❌ Send quotation error:', error);
-          throw new AppError('Failed to send quotation', 500, 'QUOTATION_SEND_ERROR');
+      }, consultantId);
+
+      if (!clientEmailSent) {
+        throw new AppError('Failed to send quotation email to client', 500, 'EMAIL_SEND_ERROR');
+      }
+
+      // Update quotation status and sent timestamp
+      const updatedQuotation = await prisma.quotation.update({
+        where: { id },
+        data: {
+          status: 'SENT',
+          sentAt: new Date(),
+          updatedAt: new Date()
         }
-        
+      });
+
+      // Clear related caches
+      await cacheUtils.clearPattern(`quotations:${consultantId}:*`);
+      await cacheUtils.clearPattern(`dashboard_*:${consultantId}:*`);
+
+      console.log(`✅ Quotation sent: ${id} to ${quotation.clientEmail}`);
+
+      res.json({
+        message: 'Quotation sent successfully',
+        data: {
+          quotation: {
+            ...updatedQuotation,
+            baseAmount: Number(updatedQuotation.baseAmount),
+            discountPercentage: Number(updatedQuotation.discountPercentage),
+            finalAmount: Number(updatedQuotation.finalAmount)
+          },
+          emailStatus: {
+            clientEmailSent,
+            consultantEmailSent
+          }
+        }
+      });
+
+    } catch (error) {
+      if (error instanceof NotFoundError || error instanceof ValidationError || error instanceof AppError) {
+        throw error;
+      }
+      console.error('❌ Send quotation error:', error);
+      throw new AppError('Failed to send quotation', 500, 'QUOTATION_SEND_ERROR');
+    }
   });
     
     

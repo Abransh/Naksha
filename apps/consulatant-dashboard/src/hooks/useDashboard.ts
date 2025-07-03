@@ -3,12 +3,13 @@
  * Handles fetching and caching of dashboard data
  */
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { dashboardApi, type DashboardOverview, type DashboardStats } from '@/lib/api';
 
 interface UseDashboardOptions {
   refetchInterval?: number;
   enabled?: boolean;
+  timeframe?: string;
 }
 
 interface DashboardData {
@@ -18,27 +19,32 @@ interface DashboardData {
   error: string | null;
   refetch: () => Promise<void>;
   lastUpdated: Date | null;
+  timeframe: string;
+  setTimeframe: (timeframe: string) => void;
 }
 
 export const useDashboard = (options: UseDashboardOptions = {}): DashboardData => {
-  const { refetchInterval = 60000, enabled = true } = options; // Default: refetch every minute
+  const { refetchInterval = 60000, enabled = true, timeframe: initialTimeframe = 'month' } = options;
   
   const [overview, setOverview] = useState<DashboardOverview | null>(null);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [timeframe, setTimeframe] = useState(initialTimeframe);
 
-  const fetchDashboardData = async () => {
+  const fetchDashboardData = useCallback(async (currentTimeframe?: string) => {
     if (!enabled) return;
     
     try {
       setIsLoading(true);
       setError(null);
 
+      const activeTimeframe = currentTimeframe || timeframe;
+
       // Fetch both overview and stats in parallel for better performance
       const [overviewData, statsData] = await Promise.all([
-        dashboardApi.getOverview(),
+        dashboardApi.getOverview(activeTimeframe),
         dashboardApi.getStats().catch((err) => {
           // If stats fail, continue with overview only
           console.warn('Dashboard stats failed to load:', err);
@@ -55,12 +61,17 @@ export const useDashboard = (options: UseDashboardOptions = {}): DashboardData =
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [enabled, timeframe]);
+
+  const handleTimeframeChange = useCallback((newTimeframe: string) => {
+    setTimeframe(newTimeframe);
+    fetchDashboardData(newTimeframe);
+  }, [fetchDashboardData]);
 
   // Initial fetch
   useEffect(() => {
     fetchDashboardData();
-  }, [enabled]);
+  }, [fetchDashboardData]);
 
   // Set up automatic refetching
   useEffect(() => {
@@ -71,7 +82,7 @@ export const useDashboard = (options: UseDashboardOptions = {}): DashboardData =
     }, refetchInterval);
 
     return () => clearInterval(interval);
-  }, [enabled, refetchInterval]);
+  }, [enabled, refetchInterval, fetchDashboardData]);
 
   return {
     overview,
@@ -79,13 +90,15 @@ export const useDashboard = (options: UseDashboardOptions = {}): DashboardData =
     isLoading,
     error,
     refetch: fetchDashboardData,
-    lastUpdated
+    lastUpdated,
+    timeframe,
+    setTimeframe: handleTimeframeChange
   };
 };
 
 // Helper hook for individual dashboard metrics
 export const useDashboardMetrics = () => {
-  const { overview, isLoading, error } = useDashboard();
+  const { overview, isLoading, error, timeframe, setTimeframe } = useDashboard();
   
   return {
     revenue: overview?.revenue || { amount: 0, change: 0, withdrawn: 0 },
@@ -97,7 +110,9 @@ export const useDashboardMetrics = () => {
     chartData: overview?.chartData || [],
     metrics: overview?.metrics || { totalRevenue: 0, totalClients: 0, totalSessions: 0, completionRate: 0, averageSessionValue: 0 },
     isLoading,
-    error
+    error,
+    timeframe,
+    setTimeframe
   };
 };
 

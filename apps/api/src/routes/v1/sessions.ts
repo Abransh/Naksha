@@ -222,7 +222,8 @@ router.post('/book',
             paymentStatus: 'PENDING',
             platform: 'zoom',
             clientNotes: bookingData.clientNotes || '',
-            timezone: 'Asia/Kolkata'
+            timezone: 'Asia/Kolkata',
+            bookingSource: 'naksha_platform' // Mark as FROM NAKSHA
           }
         });
 
@@ -631,7 +632,8 @@ router.post('/',
           notes: sessionData.notes,
           paymentMethod: sessionData.paymentMethod,
           status: 'PENDING',
-          paymentStatus: sessionData.paymentMethod === 'online' ? 'PENDING' : 'PAID'
+          paymentStatus: sessionData.paymentMethod === 'online' ? 'PENDING' : 'PAID',
+          bookingSource: 'manually_added' // Mark as MANUALLY ADDED
         },
         include: {
           client: {

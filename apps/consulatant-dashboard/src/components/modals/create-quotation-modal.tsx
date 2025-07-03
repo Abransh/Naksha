@@ -1,3 +1,5 @@
+// apps/consulatant-dashboard/src/components/modals/create-quotation-modal.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -21,21 +23,21 @@ interface CreateQuotationModalProps {
 export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
   const [formData, setFormData] = useState({
     quotationName: "",
+    clientName: "",
+    clientEmail: "",
     category: "",
-    quotedPrice: "",
-    finalPrice: "",
-    quantityInStock: 1,
-    quotationType: "",
-    shortDescription: "",
-    longDescription: "",
+    baseAmount: "",
+    discountPercentage: 0,
+    description: "",
+    notes: "",
+    expiryDays: 30,
     addDiscount: false,
     addExpiryDate: false,
-    addReturnPolicy: false,
-    dateAdded: "12/12/2020",
-    timeAdded: "12:00 PM",
   });
 
   const [isOpen, setIsOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [errors, setErrors] = useState<Record<string, string>>({});
 
   const handleInputChange = (
     field: string,
@@ -45,16 +47,132 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
       ...prev,
       [field]: value,
     }));
+    // Clear error for this field when user starts typing
+    if (errors[field]) {
+      setErrors((prev) => ({
+        ...prev,
+        [field]: "",
+      }));
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors: Record<string, string> = {};
+
+    if (!formData.quotationName.trim()) {
+      newErrors.quotationName = "Quotation name is required";
+    }
+    if (!formData.clientName.trim()) {
+      newErrors.clientName = "Client name is required";
+    }
+    if (!formData.clientEmail.trim()) {
+      newErrors.clientEmail = "Client email is required";
+    } else if (!/\S+@\S+\.\S+/.test(formData.clientEmail)) {
+      newErrors.clientEmail = "Please enter a valid email address";
+    }
+    if (!formData.baseAmount || parseFloat(formData.baseAmount) <= 0) {
+      newErrors.baseAmount = "Please enter a valid amount";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const createQuotation = async (isDraft: boolean = true) => {
+    if (!validateForm()) {
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      // Prepare quotation data for API
+      const quotationData = {
+        quotationName: formData.quotationName,
+        clientName: formData.clientName,
+        clientEmail: formData.clientEmail,
+        description: formData.description,
+        baseAmount: parseFloat(formData.baseAmount),
+        discountPercentage: formData.addDiscount ? formData.discountPercentage : 0,
+        currency: "INR",
+        expiryDays: formData.addExpiryDate ? formData.expiryDays : 30,
+        notes: formData.notes,
+      };
+
+      // Create quotation via API
+      const response = await fetch('/api/v1/quotations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+        },
+        body: JSON.stringify(quotationData),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to create quotation');
+      }
+
+      const result = await response.json();
+      const quotationId = result.data.quotation.id;
+
+      // If not draft, send the quotation via email
+      if (!isDraft) {
+        const sendResponse = await fetch(`/api/v1/quotations/${quotationId}/send`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${localStorage.getItem('authToken')}`,
+          },
+          body: JSON.stringify({
+            emailMessage: "", // Could add custom message field later
+            includeAttachment: false,
+          }),
+        });
+
+        if (!sendResponse.ok) {
+          const errorData = await sendResponse.json();
+          throw new Error(errorData.message || 'Failed to send quotation');
+        }
+      }
+
+      // Show success message
+      console.log(isDraft ? '✅ Quotation saved as draft' : '✅ Quotation sent to client');
+      
+      // Reset form and close modal
+      setFormData({
+        quotationName: "",
+        clientName: "",
+        clientEmail: "",
+        category: "",
+        baseAmount: "",
+        discountPercentage: 0,
+        description: "",
+        notes: "",
+        expiryDays: 30,
+        addDiscount: false,
+        addExpiryDate: false,
+      });
+      setErrors({});
+      setIsOpen(false);
+
+      // Refresh quotations list (you may want to add a callback prop for this)
+      window.location.reload();
+
+    } catch (error) {
+      console.error('❌ Error creating quotation:', error);
+      setErrors({ submit: error instanceof Error ? error.message : 'An error occurred' });
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSaveAsDraft = () => {
-    console.log("Saving as draft:", formData);
-    setIsOpen(false);
+    createQuotation(true);
   };
 
   const handleSaveAndShare = () => {
-    console.log("Saving and sharing:", formData);
-    setIsOpen(false);
+    createQuotation(false);
   };
 
   return (
@@ -70,40 +188,38 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
             New Quotations Item
           </h2>
           <div className="flex items-center gap-3">
-            {/* Save as Draft Button with Dropdown */}
-            <div className="relative">
-              <Button
-                onClick={handleSaveAsDraft}
-                className="bg-[var(--black-100)] hover:bg-[var(--black-100)]/90 text-white font-normal px-4 py-2 h-9 rounded-lg flex items-center gap-2"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                Save as Draft
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M4 6L8 10L12 6"
-                    stroke="white"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
-              </Button>
-            </div>
+            {/* Error message */}
+            {errors.submit && (
+              <div className="text-sm text-red-600 font-medium">
+                {errors.submit}
+              </div>
+            )}
+
+            {/* Save as Draft Button */}
+            <Button
+              onClick={handleSaveAsDraft}
+              disabled={isLoading}
+              className="bg-[var(--black-100)] hover:bg-[var(--black-100)]/90 text-white font-normal px-4 py-2 h-9 rounded-lg flex items-center gap-2 disabled:opacity-50"
+              style={{ fontFamily: "Inter, sans-serif" }}
+            >
+              {isLoading ? "Saving..." : "Save as Draft"}
+            </Button>
 
             {/* Save & Share Button */}
             <Button
               onClick={handleSaveAndShare}
-              className="bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white font-normal px-4 py-2 h-9 rounded-lg"
+              disabled={isLoading}
+              className="bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white font-normal px-4 py-2 h-9 rounded-lg disabled:opacity-50"
               style={{ fontFamily: "Inter, sans-serif" }}
             >
-              Save & Share with Client
+              {isLoading ? "Sending..." : "Save & Share with Client"}
             </Button>
           </div>
         </div>
 
-        {/* Modal Body - Three Column Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 p-6">
-          {/* Left Column - Form Fields */}
+        {/* Modal Body - Two Column Layout */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 p-6">
+          {/* Left Column - Basic Information */}
           <div className="space-y-5">
             {/* Quotation Name */}
             <div className="space-y-2">
@@ -111,7 +227,7 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
                 className="text-sm font-medium text-[var(--black-100)]"
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
-                Quotation Name
+                Quotation Name <span className="text-red-500">*</span>
               </label>
               <Input
                 type="text"
@@ -120,169 +236,93 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
                 onChange={(e) =>
                   handleInputChange("quotationName", e.target.value)
                 }
-                className="h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)]"
+                className={`h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)] ${
+                  errors.quotationName ? "border-red-500" : ""
+                }`}
                 style={{ fontFamily: "Inter, sans-serif" }}
               />
+              {errors.quotationName && (
+                <p className="text-sm text-red-600">{errors.quotationName}</p>
+              )}
             </div>
 
-            {/* Select Quotation Category */}
+            {/* Client Name */}
             <div className="space-y-2">
               <label
                 className="text-sm font-medium text-[var(--black-100)]"
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
-                Select Quotation Category
+                Client Name <span className="text-red-500">*</span>
               </label>
-              <Select
-                onValueChange={(value) => handleInputChange("category", value)}
-              >
-                <SelectTrigger className="h-10 border-[var(--stroke)] text-[var(--black-40)]">
-                  <SelectValue placeholder="Select category" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="design">Design</SelectItem>
-                  <SelectItem value="business">Business</SelectItem>
-                  <SelectItem value="technology">Technology</SelectItem>
-                  <SelectItem value="marketing">Marketing</SelectItem>
-                  <SelectItem value="branding">Branding</SelectItem>
-                  <SelectItem value="product">Product</SelectItem>
-                  <SelectItem value="finance">Finance</SelectItem>
-                  <SelectItem value="legal">Legal</SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {/* Quoted Price and Final Price */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-2">
-                <label
-                  className="text-sm font-medium text-[var(--black-100)]"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  Quoted Price
-                </label>
-                <Input
-                  type="text"
-                  placeholder="₹0.00"
-                  value={formData.quotedPrice}
-                  onChange={(e) =>
-                    handleInputChange("quotedPrice", e.target.value)
-                  }
-                  className="h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)]"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                />
-              </div>
-              <div className="space-y-2">
-                <label
-                  className="text-sm font-medium text-[var(--black-100)]"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  Final Price (Inc Tax)
-                </label>
-                <Input
-                  type="text"
-                  placeholder="₹0.00"
-                  value={formData.finalPrice}
-                  onChange={(e) =>
-                    handleInputChange("finalPrice", e.target.value)
-                  }
-                  className="h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)]"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                />
-              </div>
-            </div>
-
-            {/* Quantity in Stock */}
-            <div className="space-y-2">
-              <label
-                className="text-sm font-medium text-[var(--black-100)]"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                Quantity in Stock
-              </label>
-              <div className="relative">
-                <Input
-                  type="number"
-                  value={formData.quantityInStock}
-                  onChange={(e) =>
-                    handleInputChange(
-                      "quantityInStock",
-                      parseInt(e.target.value) || 1,
-                    )
-                  }
-                  className="h-10 border-[var(--stroke)] text-[var(--black-40)] pr-12"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                />
-                <div className="absolute right-1 top-1 flex flex-col">
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleInputChange(
-                        "quantityInStock",
-                        formData.quantityInStock + 1,
-                      )
-                    }
-                    className="w-8 h-4 flex items-center justify-center border-b border-[var(--stroke)] hover:bg-gray-50"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path
-                        d="M6 3V9M3 6H9"
-                        stroke="#666"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() =>
-                      handleInputChange(
-                        "quantityInStock",
-                        Math.max(1, formData.quantityInStock - 1),
-                      )
-                    }
-                    className="w-8 h-4 flex items-center justify-center hover:bg-gray-50"
-                  >
-                    <svg width="12" height="12" viewBox="0 0 12 12" fill="none">
-                      <path
-                        d="M3 6H9"
-                        stroke="#666"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                      />
-                    </svg>
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* Quotation Type */}
-            <div className="space-y-2">
-              <label
-                className="text-sm font-medium text-[var(--black-100)]"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                Quotation Type
-              </label>
-              <Select
-                onValueChange={(value) =>
-                  handleInputChange("quotationType", value)
+              <Input
+                type="text"
+                placeholder="Enter client name"
+                value={formData.clientName}
+                onChange={(e) =>
+                  handleInputChange("clientName", e.target.value)
                 }
-              >
-                <SelectTrigger className="h-10 border-[var(--stroke)] text-[var(--black-40)]">
-                  <SelectValue placeholder="Select type" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="standard">Standard</SelectItem>
-                  <SelectItem value="premium">Premium</SelectItem>
-                  <SelectItem value="custom">Custom</SelectItem>
-                </SelectContent>
-              </Select>
+                className={`h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)] ${
+                  errors.clientName ? "border-red-500" : ""
+                }`}
+                style={{ fontFamily: "Inter, sans-serif" }}
+              />
+              {errors.clientName && (
+                <p className="text-sm text-red-600">{errors.clientName}</p>
+              )}
             </div>
 
-            {/* Toggle Switches */}
-            <div className="space-y-4">
-              {/* Add Discount */}
+            {/* Client Email */}
+            <div className="space-y-2">
+              <label
+                className="text-sm font-medium text-[var(--black-100)]"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                Client Email <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="email"
+                placeholder="Enter client email"
+                value={formData.clientEmail}
+                onChange={(e) =>
+                  handleInputChange("clientEmail", e.target.value)
+                }
+                className={`h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)] ${
+                  errors.clientEmail ? "border-red-500" : ""
+                }`}
+                style={{ fontFamily: "Inter, sans-serif" }}
+              />
+              {errors.clientEmail && (
+                <p className="text-sm text-red-600">{errors.clientEmail}</p>
+              )}
+            </div>
+
+            {/* Base Amount */}
+            <div className="space-y-2">
+              <label
+                className="text-sm font-medium text-[var(--black-100)]"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                Base Amount <span className="text-red-500">*</span>
+              </label>
+              <Input
+                type="number"
+                placeholder="Enter amount in ₹"
+                value={formData.baseAmount}
+                onChange={(e) =>
+                  handleInputChange("baseAmount", e.target.value)
+                }
+                className={`h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)] ${
+                  errors.baseAmount ? "border-red-500" : ""
+                }`}
+                style={{ fontFamily: "Inter, sans-serif" }}
+              />
+              {errors.baseAmount && (
+                <p className="text-sm text-red-600">{errors.baseAmount}</p>
+              )}
+            </div>
+
+            {/* Discount Section */}
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label
                   className="text-sm font-medium text-[var(--black-100)]"
@@ -297,8 +337,33 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
                   }
                 />
               </div>
+              
+              {formData.addDiscount && (
+                <div className="space-y-2">
+                  <label
+                    className="text-sm font-medium text-[var(--black-100)]"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    Discount Percentage
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="Enter discount percentage"
+                    value={formData.discountPercentage}
+                    onChange={(e) =>
+                      handleInputChange("discountPercentage", parseFloat(e.target.value) || 0)
+                    }
+                    min="0"
+                    max="100"
+                    className="h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)]"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  />
+                </div>
+              )}
+            </div>
 
-              {/* Add Expiry Date */}
+            {/* Expiry Date Section */}
+            <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label
                   className="text-sm font-medium text-[var(--black-100)]"
@@ -313,322 +378,118 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
                   }
                 />
               </div>
+              
+              {formData.addExpiryDate && (
+                <div className="space-y-2">
+                  <label
+                    className="text-sm font-medium text-[var(--black-100)]"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  >
+                    Valid for (days)
+                  </label>
+                  <Input
+                    type="number"
+                    placeholder="Enter number of days"
+                    value={formData.expiryDays}
+                    onChange={(e) =>
+                      handleInputChange("expiryDays", parseInt(e.target.value) || 30)
+                    }
+                    min="1"
+                    max="365"
+                    className="h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)]"
+                    style={{ fontFamily: "Inter, sans-serif" }}
+                  />
+                </div>
+              )}
             </div>
           </div>
 
-          {/* Middle Column - Description & Rich Text */}
+          {/* Right Column - Description & Notes */}
           <div className="space-y-5">
-            {/* Short Description */}
+            {/* Description */}
             <div className="space-y-2">
               <label
                 className="text-sm font-medium text-[var(--black-100)]"
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
-                Short Description
+                Description
               </label>
               <Textarea
-                placeholder="Enter short description"
-                value={formData.shortDescription}
+                placeholder="Enter detailed description of the service/quotation"
+                value={formData.description}
                 onChange={(e) =>
-                  handleInputChange("shortDescription", e.target.value)
+                  handleInputChange("description", e.target.value)
+                }
+                className="min-h-32 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)] resize-none"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              />
+            </div>
+
+            {/* Notes */}
+            <div className="space-y-2">
+              <label
+                className="text-sm font-medium text-[var(--black-100)]"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                Notes (Internal)
+              </label>
+              <Textarea
+                placeholder="Add any internal notes about this quotation"
+                value={formData.notes}
+                onChange={(e) =>
+                  handleInputChange("notes", e.target.value)
                 }
                 className="min-h-20 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)] resize-none"
                 style={{ fontFamily: "Inter, sans-serif" }}
               />
             </div>
 
-            {/* Quotation Long Description with Rich Text Editor */}
-            <div className="space-y-2">
-              <label
-                className="text-sm font-medium text-[var(--black-100)]"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                Quotation Long Description
-              </label>
-
-              {/* Rich Text Toolbar */}
-              <div className="border border-[var(--stroke)] rounded-lg overflow-hidden">
-                <div className="flex items-center gap-1 p-2 border-b border-[var(--stroke)] bg-gray-50">
-                  {/* Font Dropdowns */}
-                  <Select defaultValue="roboto">
-                    <SelectTrigger className="w-24 h-8 text-xs border-0 bg-transparent">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="roboto">Roboto</SelectItem>
-                      <SelectItem value="arial">Arial</SelectItem>
-                      <SelectItem value="helvetica">Helvetica</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <Select defaultValue="paragraph">
-                    <SelectTrigger className="w-24 h-8 text-xs border-0 bg-transparent">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="paragraph">Paragraph</SelectItem>
-                      <SelectItem value="heading1">Heading 1</SelectItem>
-                      <SelectItem value="heading2">Heading 2</SelectItem>
-                    </SelectContent>
-                  </Select>
-
-                  <div className="w-px h-6 bg-[var(--stroke)] mx-1"></div>
-
-                  {/* Format Buttons */}
-                  <button className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 rounded">
-                    <span className="text-sm font-bold">B</span>
-                  </button>
-                  <button className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 rounded">
-                    <span className="text-sm underline">U</span>
-                  </button>
-                  <button className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 rounded">
-                    <span className="text-sm italic">I</span>
-                  </button>
-
-                  <div className="w-px h-6 bg-[var(--stroke)] mx-1"></div>
-
-                  {/* Alignment Buttons */}
-                  <button className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 rounded">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path
-                        d="M2 3H12M2 6H12M2 9H12M2 12H8"
-                        stroke="#666"
-                        strokeWidth="1"
-                      />
-                    </svg>
-                  </button>
-                  <button className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 rounded">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path
-                        d="M2 3H12M2 6H8M2 9H10M2 12H6"
-                        stroke="#666"
-                        strokeWidth="1"
-                      />
-                    </svg>
-                  </button>
-                  <button className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 rounded">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path
-                        d="M2 3H12M6 6H12M4 9H12M8 12H12"
-                        stroke="#666"
-                        strokeWidth="1"
-                      />
-                    </svg>
-                  </button>
-
-                  <div className="w-px h-6 bg-[var(--stroke)] mx-1"></div>
-
-                  {/* Link Button */}
-                  <button className="w-8 h-8 flex items-center justify-center hover:bg-gray-200 rounded">
-                    <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
-                      <path
-                        d="M6 9L8 7M8 7L6 5M8 7H2M12 7C12 9.761 9.761 12 7 12S2 9.761 2 7 4.239 2 7 2 12 4.239 12 7Z"
-                        stroke="#666"
-                        strokeWidth="1"
-                      />
-                    </svg>
-                  </button>
-                </div>
-
-                {/* Rich Text Area */}
-                <div className="p-3 min-h-32">
-                  <Textarea
-                    placeholder="Your text goes here"
-                    value={formData.longDescription}
-                    onChange={(e) =>
-                      handleInputChange("longDescription", e.target.value)
-                    }
-                    className="border-0 resize-none shadow-none focus:outline-none min-h-28 text-[var(--black-40)] placeholder:text-[var(--black-20)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  />
-                </div>
-              </div>
-            </div>
-
-            {/* Return Policy Toggle */}
-            <div className="flex items-center justify-between">
-              <label
-                className="text-sm font-medium text-[var(--black-100)]"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                Add Return Policy
-              </label>
-              <Switch
-                checked={formData.addReturnPolicy}
-                onCheckedChange={(checked) =>
-                  handleInputChange("addReturnPolicy", checked)
-                }
-              />
-            </div>
-
-            {/* Date Added Section */}
-            <div className="space-y-3">
-              <label
-                className="text-sm font-medium text-[var(--black-100)]"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                Date Added
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="space-y-1">
-                  <span
-                    className="text-xs text-[var(--black-30)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    Date
-                  </span>
-                  <Input
-                    type="date"
-                    value="2020-12-12"
-                    onChange={(e) =>
-                      handleInputChange("dateAdded", e.target.value)
-                    }
-                    className="h-10 border-[var(--stroke)] text-[var(--black-40)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  />
-                </div>
-                <div className="space-y-1">
-                  <span
-                    className="text-xs text-[var(--black-30)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    Time
-                  </span>
-                  <Input
-                    type="time"
-                    value="12:00"
-                    onChange={(e) =>
-                      handleInputChange("timeAdded", e.target.value)
-                    }
-                    className="h-10 border-[var(--stroke)] text-[var(--black-40)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  />
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Right Column - Image Upload */}
-          <div className="space-y-5">
-            {/* Main Image Upload */}
-            <div className="space-y-2">
-              <label
-                className="text-sm font-medium text-[var(--black-100)]"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                Upload Image
-              </label>
-              <div className="border-2 border-dashed border-[var(--stroke)] rounded-lg p-8 text-center bg-[var(--main-background)]">
-                <div className="flex flex-col items-center gap-3">
-                  <div className="w-12 h-12 rounded-lg bg-white flex items-center justify-center border border-[var(--stroke)]">
-                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-                      <path
-                        d="M21 15V19C21 19.5304 20.7893 20.0391 20.4142 20.4142C20.0391 20.7893 19.5304 21 19 21H5C4.46957 21 3.96086 20.7893 3.58579 20.4142C3.21071 20.0391 3 19.5304 3 19V15"
-                        stroke="#5570F1"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M7 10L12 15L17 10"
-                        stroke="#5570F1"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                      <path
-                        d="M12 15V3"
-                        stroke="#5570F1"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                  <div>
-                    <div
-                      className="text-sm font-medium text-[var(--primary-100)] mb-1"
-                      style={{ fontFamily: "Inter, sans-serif" }}
-                    >
-                      Upload Image
-                    </div>
-                    <div
-                      className="text-xs text-[var(--black-30)] mb-2"
-                      style={{ fontFamily: "Inter, sans-serif" }}
-                    >
-                      Upload a cover image for your Quotation
-                    </div>
-                    <div
-                      className="text-xs text-[var(--black-20)]"
-                      style={{ fontFamily: "Inter, sans-serif" }}
-                    >
-                      jpeg, png Recommended Size 600x600 (1:1)
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Additional Images */}
-            <div className="space-y-2">
-              <label
-                className="text-sm font-medium text-[var(--black-100)]"
-                style={{ fontFamily: "Inter, sans-serif" }}
-              >
-                Additional Images
-              </label>
-              <div className="grid grid-cols-2 gap-3">
-                <div className="border-2 border-dashed border-[var(--stroke)] rounded-lg p-4 aspect-square flex items-center justify-center bg-[var(--main-background)]">
+            {/* Final Amount Preview */}
+            {formData.baseAmount && (
+              <div className="space-y-2">
+                <label
+                  className="text-sm font-medium text-[var(--black-100)]"
+                  style={{ fontFamily: "Inter, sans-serif" }}
+                >
+                  Final Amount
+                </label>
+                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
                   <div className="text-center">
-                    <div className="w-8 h-8 rounded bg-white flex items-center justify-center border border-[var(--stroke)] mx-auto mb-2">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                      >
-                        <path
-                          d="M8 3V13M3 8H13"
-                          stroke="#5570F1"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                    <div className="text-2xl font-bold text-green-600">
+                      ₹{(
+                        parseFloat(formData.baseAmount || "0") *
+                        (1 - (formData.addDiscount ? formData.discountPercentage : 0) / 100)
+                      ).toLocaleString()}
                     </div>
-                    <div
-                      className="text-xs text-[var(--black-30)]"
-                      style={{ fontFamily: "Inter, sans-serif" }}
-                    >
-                      Upload
-                    </div>
+                    {formData.addDiscount && formData.discountPercentage > 0 && (
+                      <div className="text-sm text-gray-600 mt-1">
+                        <span className="line-through">₹{parseFloat(formData.baseAmount || "0").toLocaleString()}</span>
+                        <span className="text-green-600 ml-2">
+                          {formData.discountPercentage}% discount applied
+                        </span>
+                      </div>
+                    )}
                   </div>
                 </div>
-                <div className="border-2 border-dashed border-[var(--stroke)] rounded-lg p-4 aspect-square flex items-center justify-center bg-[var(--main-background)]">
-                  <div className="text-center">
-                    <div className="w-8 h-8 rounded bg-white flex items-center justify-center border border-[var(--stroke)] mx-auto mb-2">
-                      <svg
-                        width="16"
-                        height="16"
-                        viewBox="0 0 16 16"
-                        fill="none"
-                      >
-                        <path
-                          d="M8 3V13M3 8H13"
-                          stroke="#5570F1"
-                          strokeWidth="1.5"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
-                    </div>
-                    <div
-                      className="text-xs text-[var(--black-30)]"
-                      style={{ fontFamily: "Inter, sans-serif" }}
-                    >
-                      Upload
-                    </div>
-                  </div>
+              </div>
+            )}
+
+            {/* Quotation Summary */}
+            <div className="space-y-2">
+              <label
+                className="text-sm font-medium text-[var(--black-100)]"
+                style={{ fontFamily: "Inter, sans-serif" }}
+              >
+                Summary
+              </label>
+              <div className="p-3 bg-gray-50 border border-[var(--stroke)] rounded-lg text-sm">
+                <div className="space-y-1">
+                  <div><strong>Service:</strong> {formData.quotationName || "Not specified"}</div>
+                  <div><strong>Client:</strong> {formData.clientName || "Not specified"}</div>
+                  <div><strong>Email:</strong> {formData.clientEmail || "Not specified"}</div>
+                  {formData.addExpiryDate && (
+                    <div><strong>Valid for:</strong> {formData.expiryDays} days</div>
+                  )}
                 </div>
               </div>
             </div>

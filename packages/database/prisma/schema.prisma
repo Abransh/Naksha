@@ -221,6 +221,7 @@ model Session {
   consultantNotes   String?     @map("consultant_notes") // Internal notes
   notes             String?     // General notes field
   reminderSent      Boolean     @default(false) @map("reminder_sent") // Reminder email sent
+  bookingSource     String?     @map("booking_source") // Track booking source: naksha_platform, manually_added
   
   // Metadata
   createdAt         DateTime    @default(now()) @map("created_at")

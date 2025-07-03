@@ -1,3 +1,5 @@
+// app/consultant-dashboard/dashboard/quotations/page.tsx
+
 "use client";
 
 import { useState } from "react";
@@ -6,173 +8,127 @@ import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { CreateQuotationModal } from "@/components/modals/create-quotation-modal";
 import Navigator from "@/components/navigation/Navigator";
-
-// Sample quotation data - in a real app this would come from an API
-const sampleQuotations = [
-  {
-    id: 1,
-    name: "Website Design Consultation",
-    category: "Design",
-    unitPrice: "₹2500",
-    duration: 8,
-    discount: "₹250",
-    totalValue: "₹2250",
-    action: "Accepted",
-    status: "Accepted",
-    image:
-      "https://cdn.builder.io/api/v1/image/assets/TEMP/76a7617e053d28956ec05dd316a55e231c4f7877?width=72",
-  },
-  {
-    id: 2,
-    name: "Business Strategy Session",
-    category: "Business",
-    unitPrice: "₹3000",
-    duration: 12,
-    discount: "₹300",
-    totalValue: "₹2700",
-    action: "Accepted",
-    status: "Accepted",
-    image:
-      "https://cdn.builder.io/api/v1/image/assets/TEMP/50968f5cbf6bbcb6503f0e57c7bf343dce7e97c2?width=72",
-  },
-  {
-    id: 3,
-    name: "Technical Advisory",
-    category: "Technology",
-    unitPrice: "₹4000",
-    duration: 120,
-    discount: "₹500",
-    totalValue: "₹3500",
-    action: "Rejected",
-    status: "Rejected",
-    image:
-      "https://cdn.builder.io/api/v1/image/assets/TEMP/646fe7e1522d172a999eda0bef11ccf537b5f3e7?width=72",
-  },
-  {
-    id: 4,
-    name: "Marketing Consultation",
-    category: "Marketing",
-    unitPrice: "₹2000",
-    duration: "Expired",
-    discount: "₹200",
-    totalValue: "₹1800",
-    action: "Rejected",
-    status: "Rejected",
-    image:
-      "https://cdn.builder.io/api/v1/image/assets/TEMP/646fe7e1522d172a999eda0bef11ccf537b5f3e7?width=72",
-  },
-  {
-    id: 5,
-    name: "Brand Strategy Workshop",
-    category: "Branding",
-    unitPrice: "₹3500",
-    duration: "Expired",
-    discount: "₹350",
-    totalValue: "₹3150",
-    action: "Rejected",
-    status: "Rejected",
-    image:
-      "https://cdn.builder.io/api/v1/image/assets/TEMP/646fe7e1522d172a999eda0bef11ccf537b5f3e7?width=72",
-  },
-  {
-    id: 6,
-    name: "Product Development Review",
-    category: "Product",
-    unitPrice: "₹2800",
-    duration: 8,
-    discount: "₹280",
-    totalValue: "₹2520",
-    action: "Accepted",
-    status: "Accepted",
-    image:
-      "https://cdn.builder.io/api/v1/image/assets/TEMP/76a7617e053d28956ec05dd316a55e231c4f7877?width=72",
-  },
-  {
-    id: 7,
-    name: "Digital Transformation",
-    category: "Technology",
-    unitPrice: "₹5000",
-    duration: 12,
-    discount: "₹500",
-    totalValue: "₹4500",
-    action: "Accepted",
-    status: "Accepted",
-    image:
-      "https://cdn.builder.io/api/v1/image/assets/TEMP/50968f5cbf6bbcb6503f0e57c7bf343dce7e97c2?width=72",
-  },
-  {
-    id: 8,
-    name: "UX Research Session",
-    category: "Design",
-    unitPrice: "₹2200",
-    duration: 8,
-    discount: "₹220",
-    totalValue: "₹1980",
-    action: "Accepted",
-    status: "Accepted",
-    image:
-      "https://cdn.builder.io/api/v1/image/assets/TEMP/76a7617e053d28956ec05dd316a55e231c4f7877?width=72",
-  },
-  {
-    id: 9,
-    name: "Financial Planning Advisory",
-    category: "Finance",
-    unitPrice: "₹4500",
-    duration: 12,
-    discount: "₹450",
-    totalValue: "₹4050",
-    action: "Accepted",
-    status: "Accepted",
-    image:
-      "https://cdn.builder.io/api/v1/image/assets/TEMP/50968f5cbf6bbcb6503f0e57c7bf343dce7e97c2?width=72",
-  },
-  {
-    id: 10,
-    name: "Legal Consultation",
-    category: "Legal",
-    unitPrice: "₹6000",
-    duration: 120,
-    discount: "₹600",
-    totalValue: "₹5400",
-    action: "Rejected",
-    status: "Rejected",
-    image:
-      "https://cdn.builder.io/api/v1/image/assets/TEMP/646fe7e1522d172a999eda0bef11ccf537b5f3e7?width=72",
-  },
-];
+import { useQuotations, formatQuotationStatus, formatCurrency, getDaysUntilExpiry } from "@/hooks/useQuotations";
 
 export default function QuotationsPage() {
   const [searchTerm, setSearchTerm] = useState("");
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedQuotations, setSelectedQuotations] = useState<number[]>([]);
-  const itemsPerPage = 10;
+  const [statusFilter, setStatusFilter] = useState("");
+  const [selectedQuotations, setSelectedQuotations] = useState<string[]>([]);
 
-  const filteredQuotations = sampleQuotations.filter(
-    (quotation) =>
-      quotation.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      quotation.category.toLowerCase().includes(searchTerm.toLowerCase()),
-  );
+  // Use quotations hook for dynamic data
+  const {
+    quotations,
+    summaryStats,
+    pagination,
+    isLoading,
+    error,
+    filters,
+    refetch,
+    setFilters,
+    setPage,
+    deleteQuotation,
+    updateQuotationStatus,
+    sendQuotation,
+  } = useQuotations({
+    search: searchTerm,
+    status: statusFilter,
+  });
 
-  const totalPages = Math.ceil(filteredQuotations.length / itemsPerPage);
-  const startIndex = (currentPage - 1) * itemsPerPage;
-  const endIndex = startIndex + itemsPerPage;
-  const currentQuotations = filteredQuotations.slice(startIndex, endIndex);
+  // Update filters when search or status changes
+  const handleSearchChange = (value: string) => {
+    setSearchTerm(value);
+    setFilters({ ...filters, search: value });
+  };
+
+  const handleStatusFilterChange = (status: string) => {
+    setStatusFilter(status);
+    setFilters({ ...filters, status: status || undefined });
+  };
 
   const handleSelectAll = () => {
-    if (selectedQuotations.length === currentQuotations.length) {
+    if (selectedQuotations.length === quotations.length) {
       setSelectedQuotations([]);
     } else {
-      setSelectedQuotations(currentQuotations.map((quotation) => quotation.id));
+      setSelectedQuotations(quotations.map((quotation) => quotation.id));
     }
   };
 
-  const handleSelectQuotation = (quotationId: number) => {
+  const handleSelectQuotation = (quotationId: string) => {
     setSelectedQuotations((prev) =>
       prev.includes(quotationId)
         ? prev.filter((id) => id !== quotationId)
         : [...prev, quotationId],
     );
   };
+
+  const handleSendQuotation = async (id: string) => {
+    await sendQuotation(id);
+  };
+
+  const handleDeleteQuotation = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this quotation?')) {
+      await deleteQuotation(id);
+    }
+  };
+
+  // Show loading state
+  if (isLoading && quotations.length === 0) {
+    return (
+      <div style={{ background: "var(--main-background)" }} className="min-h-screen">
+        {/* Top Navigation */}
+        <div className="bg-white border-b border-[var(--stroke)]">
+          <div className="px-6 py-3">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-medium text-[var(--black-60)]" style={{ fontFamily: "Poppins, sans-serif" }}>
+                Quotations
+              </h1>
+            </div>
+          </div>
+          <Navigator />
+        </div>
+        
+        <div className="p-6 max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-[var(--primary-100)] mx-auto mb-4"></div>
+              <p className="text-[var(--black-40)]">Loading quotations...</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Show error state
+  if (error) {
+    return (
+      <div style={{ background: "var(--main-background)" }} className="min-h-screen">
+        {/* Top Navigation */}
+        <div className="bg-white border-b border-[var(--stroke)]">
+          <div className="px-6 py-3">
+            <div className="flex items-center justify-between">
+              <h1 className="text-xl font-medium text-[var(--black-60)]" style={{ fontFamily: "Poppins, sans-serif" }}>
+                Quotations
+              </h1>
+            </div>
+          </div>
+          <Navigator />
+        </div>
+        
+        <div className="p-6 max-w-7xl mx-auto">
+          <div className="flex items-center justify-center h-64">
+            <div className="text-center">
+              <div className="text-red-500 text-xl mb-4">⚠️</div>
+              <p className="text-red-600 mb-4">{error}</p>
+              <Button onClick={refetch} variant="outline">
+                Try Again
+              </Button>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div
@@ -324,7 +280,7 @@ export default function QuotationsPage() {
                 </svg>
               </div>
               <div className="text-xs text-[var(--primary-10)]">
-                {"{Timeline}"}
+                {isLoading ? "..." : "This Month"}
               </div>
             </div>
             <div className="grid grid-cols-2 gap-8">
@@ -335,16 +291,18 @@ export default function QuotationsPage() {
                     className="text-xl font-medium text-white"
                     style={{ fontFamily: "Poppins, sans-serif" }}
                   >
-                    10
+                    {summaryStats?.totalQuotations || 0}
                   </div>
                   <span className="text-xs text-[var(--primary-10)]">
-                    +0.00%
+                    {formatCurrency(summaryStats?.totalValue || 0)}
                   </span>
                 </div>
               </div>
               <div>
                 <div className="text-sm text-white mb-2">Accepted</div>
-                <div className="text-xl font-medium text-white">3</div>
+                <div className="text-xl font-medium text-white">
+                  {summaryStats?.acceptedQuotations || 0}
+                </div>
               </div>
             </div>
           </div>
@@ -393,17 +351,8 @@ export default function QuotationsPage() {
                   className="text-xs text-[var(--black-10)]"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
-                  {"{Timeline}"}
+                  Conversion: {summaryStats?.conversionRate.toFixed(1)}%
                 </span>
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path
-                    d="M4 6L8 10L12 6"
-                    stroke="#BEC0CA"
-                    strokeWidth="2"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  />
-                </svg>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-8">
@@ -419,14 +368,8 @@ export default function QuotationsPage() {
                     className="text-xl font-medium text-[var(--black-60)]"
                     style={{ fontFamily: "Poppins, sans-serif" }}
                   >
-                    2
+                    {summaryStats?.rejectedQuotations || 0}
                   </div>
-                  <span
-                    className="text-xs text-[var(--action-green)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    +15.80%
-                  </span>
                 </div>
               </div>
               <div>
@@ -441,14 +384,8 @@ export default function QuotationsPage() {
                     className="text-xl font-medium text-[var(--black-60)]"
                     style={{ fontFamily: "Poppins, sans-serif" }}
                   >
-                    5
+                    {summaryStats?.expiredQuotations || 0}
                   </div>
-                  <span
-                    className="text-xs text-[var(--action-green)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    +85%
-                  </span>
                 </div>
               </div>
               <div>
@@ -463,14 +400,8 @@ export default function QuotationsPage() {
                     className="text-xl font-medium text-[var(--black-60)]"
                     style={{ fontFamily: "Poppins, sans-serif" }}
                   >
-                    2
+                    {summaryStats?.draftQuotations || 0}
                   </div>
-                  <span
-                    className="text-xs text-[var(--action-red)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    -10%
-                  </span>
                 </div>
               </div>
             </div>
@@ -513,9 +444,9 @@ export default function QuotationsPage() {
                   </div>
                   <Input
                     type="text"
-                    placeholder="Search"
+                    placeholder="Search quotations..."
                     value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
+                    onChange={(e) => handleSearchChange(e.target.value)}
                     className="pl-10 w-44 h-7 text-xs border-[var(--black-1)] text-[var(--black-2)] placeholder:text-[var(--black-2)]"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
@@ -868,213 +799,270 @@ export default function QuotationsPage() {
                   </tr>
                 </thead>
                 <tbody>
-                  {currentQuotations.map((quotation) => (
-                    <tr
-                      key={quotation.id}
-                      className="border-b border-[var(--grey)] last:border-b-0"
-                    >
-                      <td className="py-3 pl-0 pr-4">
-                        <input
-                          type="checkbox"
-                          checked={selectedQuotations.includes(quotation.id)}
-                          onChange={() => handleSelectQuotation(quotation.id)}
-                          className="w-6 h-6 rounded-lg border border-[var(--black-1)]"
-                        />
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={quotation.image}
-                            alt="Quotation"
-                            className="w-9 h-9 rounded-lg border border-[var(--stroke)]"
-                          />
-                          <span
-                            className="text-sm text-[var(--black-40)]"
-                            style={{ fontFamily: "Inter, sans-serif" }}
-                          >
-                            {quotation.name}
-                          </span>
+                  {quotations.length === 0 ? (
+                    <tr>
+                      <td colSpan={9} className="py-8 text-center">
+                        <div className="text-[var(--black-30)]">
+                          {isLoading ? "Loading quotations..." : "No quotations found"}
                         </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="text-sm text-[var(--black-40)]"
-                          style={{ fontFamily: "Inter, sans-serif" }}
-                        >
-                          {quotation.category}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="text-sm text-[var(--black-40)] text-right"
-                          style={{ fontFamily: "Inter, sans-serif" }}
-                        >
-                          {quotation.unitPrice}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className={`text-sm ${
-                            quotation.duration === "Expired"
-                              ? "text-[var(--black-20)]"
-                              : "text-[var(--black-40)]"
-                          }`}
-                          style={{ fontFamily: "Inter, sans-serif" }}
-                        >
-                          {quotation.duration}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="text-sm text-[var(--black-40)] text-right"
-                          style={{ fontFamily: "Inter, sans-serif" }}
-                        >
-                          {quotation.discount}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <span
-                          className="text-sm text-[var(--black-40)]"
-                          style={{ fontFamily: "Inter, sans-serif" }}
-                        >
-                          {quotation.totalValue}
-                        </span>
-                      </td>
-                      <td className="py-3 px-4">
-                        <div className="flex items-center gap-2 bg-[rgba(94,99,102,0.08)] rounded-lg px-3 py-1">
-                          <span
-                            className="text-xs text-[var(--black-30)]"
-                            style={{ fontFamily: "Inter, sans-serif" }}
-                          >
-                            {quotation.action}
-                          </span>
-                          <svg
-                            width="16"
-                            height="16"
-                            viewBox="0 0 16 17"
-                            fill="none"
-                          >
-                            <path
-                              d="M4 6.5L8 10.5L12 6.5"
-                              stroke="#8B8D97"
-                              strokeWidth="2"
-                              strokeLinecap="round"
-                              strokeLinejoin="round"
-                            />
-                          </svg>
-                        </div>
-                      </td>
-                      <td className="py-3 px-4">
-                        <Badge
-                          className={`${
-                            quotation.status === "Accepted"
-                              ? "bg-[rgba(85,112,241,0.16)] text-[var(--primary-100)]"
-                              : "bg-[var(--secondary-30)] text-[var(--black-100)]"
-                          } hover:bg-[rgba(85,112,241,0.16)] border-0 text-xs font-normal px-3 py-1`}
-                        >
-                          {quotation.status}
-                        </Badge>
                       </td>
                     </tr>
-                  ))}
+                  ) : (
+                    quotations.map((quotation) => {
+                      const statusInfo = formatQuotationStatus(quotation.status);
+                      const daysUntilExpiry = getDaysUntilExpiry(quotation.validUntil);
+                      
+                      return (
+                        <tr
+                          key={quotation.id}
+                          className="border-b border-[var(--grey)] last:border-b-0"
+                        >
+                          <td className="py-3 pl-0 pr-4">
+                            <input
+                              type="checkbox"
+                              checked={selectedQuotations.includes(quotation.id)}
+                              onChange={() => handleSelectQuotation(quotation.id)}
+                              className="w-6 h-6 rounded-lg border border-[var(--black-1)]"
+                            />
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="w-9 h-9 rounded-lg border border-[var(--stroke)] bg-gray-50 flex items-center justify-center">
+                                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                                  <path
+                                    fillRule="evenodd"
+                                    clipRule="evenodd"
+                                    d="M14.8492 10.11C14.8492 13.0917 13.0917 14.8492 10.11 14.8492H3.625C0.635833 14.8492 -1.125 13.0917 -1.125 10.11V3.61C-1.125 0.6325 -0.03 -1.125 2.9525 -1.125H4.61917C5.2175 -1.12583 5.78083 -0.843333 6.13917 -0.364167L6.9 0.6475C7.26 1.12583 7.82333 1.4075 8.42167 1.40833H10.78C13.7692 1.40833 14.8725 2.93 14.8725 5.9725L14.8492 10.11Z"
+                                    stroke="#666"
+                                    strokeWidth="1.5"
+                                    strokeLinecap="round"
+                                    strokeLinejoin="round"
+                                  />
+                                </svg>
+                              </div>
+                              <div>
+                                <div
+                                  className="text-sm text-[var(--black-40)] font-medium"
+                                  style={{ fontFamily: "Inter, sans-serif" }}
+                                >
+                                  {quotation.quotationName}
+                                </div>
+                                <div
+                                  className="text-xs text-[var(--black-20)]"
+                                  style={{ fontFamily: "Inter, sans-serif" }}
+                                >
+                                  #{quotation.quotationNumber}
+                                </div>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div>
+                              <div
+                                className="text-sm text-[var(--black-40)]"
+                                style={{ fontFamily: "Inter, sans-serif" }}
+                              >
+                                {quotation.clientName}
+                              </div>
+                              <div
+                                className="text-xs text-[var(--black-20)]"
+                                style={{ fontFamily: "Inter, sans-serif" }}
+                              >
+                                {quotation.clientEmail}
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className="text-sm text-[var(--black-40)] text-right"
+                              style={{ fontFamily: "Inter, sans-serif" }}
+                            >
+                              {formatCurrency(quotation.baseAmount, quotation.currency)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div>
+                              <span
+                                className={`text-sm ${
+                                  quotation.isExpired
+                                    ? "text-[var(--action-red)]"
+                                    : "text-[var(--black-40)]"
+                                }`}
+                                style={{ fontFamily: "Inter, sans-serif" }}
+                              >
+                                {quotation.isExpired 
+                                  ? "Expired" 
+                                  : daysUntilExpiry !== null 
+                                    ? `${daysUntilExpiry} days left`
+                                    : "No expiry"
+                                }
+                              </span>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className="text-sm text-[var(--black-40)] text-right"
+                              style={{ fontFamily: "Inter, sans-serif" }}
+                            >
+                              {quotation.discountPercentage > 0 
+                                ? `${quotation.discountPercentage}%`
+                                : "No discount"
+                              }
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <span
+                              className="text-sm text-[var(--black-40)] font-medium"
+                              style={{ fontFamily: "Inter, sans-serif" }}
+                            >
+                              {formatCurrency(quotation.finalAmount, quotation.currency)}
+                            </span>
+                          </td>
+                          <td className="py-3 px-4">
+                            <div className="flex items-center gap-2">
+                              {quotation.status === 'DRAFT' && (
+                                <Button
+                                  size="sm"
+                                  onClick={() => handleSendQuotation(quotation.id)}
+                                  className="h-6 px-2 text-xs bg-[var(--primary-100)] text-white hover:bg-[var(--primary-100)]/90"
+                                >
+                                  Send
+                                </Button>
+                              )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => handleDeleteQuotation(quotation.id)}
+                                className="h-6 px-2 text-xs text-red-600 border-red-200 hover:bg-red-50"
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                          <td className="py-3 px-4">
+                            <Badge className={`${statusInfo.color} border-0 text-xs font-normal px-3 py-1`}>
+                              {statusInfo.label}
+                            </Badge>
+                          </td>
+                        </tr>
+                      );
+                    })
+                  )}
                 </tbody>
               </table>
             </div>
 
             {/* Pagination */}
-            <div className="flex items-center justify-between mt-4 pt-4 border-t border-[var(--grey)]">
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <span
-                    className="text-sm text-[var(--black-20)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    Items per page
-                  </span>
-                  <div className="flex items-center gap-2 bg-[rgba(94,99,102,0.08)] rounded-lg px-3 py-1">
+            {pagination && pagination.totalCount > 0 && (
+              <div className="flex items-center justify-between mt-4 pt-4 border-t border-[var(--grey)]">
+                <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-2">
                     <span
-                      className="text-xs text-[var(--black-30)]"
+                      className="text-sm text-[var(--black-20)]"
                       style={{ fontFamily: "Inter, sans-serif" }}
                     >
-                      10
+                      Items per page
                     </span>
-                    <svg width="16" height="16" viewBox="0 0 16 17" fill="none">
-                      <path
-                        d="M4 6.5L8 10.5L12 6.5"
-                        stroke="#8B8D97"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
-                </div>
-                <span
-                  className="text-sm text-[#666]"
-                  style={{ fontFamily: "Inter, sans-serif" }}
-                >
-                  {startIndex + 1}-
-                  {Math.min(endIndex, filteredQuotations.length)} of{" "}
-                  {filteredQuotations.length} items
-                </span>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <div className="flex items-center gap-2">
-                  <div className="flex items-center gap-2 bg-[rgba(94,99,102,0.08)] rounded-lg px-3 py-1">
-                    <span
-                      className="text-xs text-[var(--black-30)]"
-                      style={{ fontFamily: "Inter, sans-serif" }}
-                    >
-                      {currentPage}
-                    </span>
-                    <svg width="16" height="16" viewBox="0 0 16 17" fill="none">
-                      <path
-                        d="M4 6.5L8 10.5L12 6.5"
-                        stroke="#8B8D97"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                    <div className="flex items-center gap-2 bg-[rgba(94,99,102,0.08)] rounded-lg px-3 py-1">
+                      <span
+                        className="text-xs text-[var(--black-30)]"
+                        style={{ fontFamily: "Inter, sans-serif" }}
+                      >
+                        {pagination.limit}
+                      </span>
+                    </div>
                   </div>
                   <span
                     className="text-sm text-[#666]"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   >
-                    of {totalPages} pages
+                    {((pagination.page - 1) * pagination.limit) + 1}-
+                    {Math.min(pagination.page * pagination.limit, pagination.totalCount)} of{" "}
+                    {pagination.totalCount} items
                   </span>
                 </div>
 
                 <div className="flex items-center gap-2">
-                  <button
-                    onClick={() => setCurrentPage(Math.max(1, currentPage - 1))}
-                    disabled={currentPage === 1}
-                    className="p-1 disabled:opacity-50"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path
-                        d="M10.4711 11.5279C10.7314 11.7883 10.7314 12.2104 10.4711 12.4708C10.2107 12.7311 9.78862 12.7311 9.52827 12.4708L5.52827 8.47075C5.27589 8.21837 5.26705 7.81198 5.50824 7.54887L9.17491 3.54887C9.4237 3.27745 9.84541 3.25912 10.1168 3.50791C10.3882 3.75671 10.4066 4.17842 10.1578 4.44983L6.92243 7.9793L10.4711 11.5279Z"
-                        fill="#666666"
-                      />
-                    </svg>
-                  </button>
-                  <button
-                    onClick={() =>
-                      setCurrentPage(Math.min(totalPages, currentPage + 1))
-                    }
-                    disabled={currentPage === totalPages}
-                    className="p-1 disabled:opacity-50"
-                  >
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path
-                        d="M5.52892 4.47206C5.26857 4.21171 5.26857 3.7896 5.52892 3.52925C5.78927 3.2689 6.21138 3.2689 6.47173 3.52925L10.4717 7.52925C10.7241 7.78163 10.7329 8.18802 10.4918 8.45113L6.82509 12.4511C6.5763 12.7225 6.15459 12.7409 5.88317 12.4921C5.61176 12.2433 5.59343 11.8216 5.84222 11.5502L9.07757 8.0207L5.52892 4.47206Z"
-                        fill="#666666"
-                      />
-                    </svg>
-                  </button>
+                  <div className="flex items-center gap-2">
+                    <div className="flex items-center gap-2 bg-[rgba(94,99,102,0.08)] rounded-lg px-3 py-1">
+                      <span
+                        className="text-xs text-[var(--black-30)]"
+                        style={{ fontFamily: "Inter, sans-serif" }}
+                      >
+                        {pagination.page}
+                      </span>
+                    </div>
+                    <span
+                      className="text-sm text-[#666]"
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    >
+                      of {pagination.totalPages} pages
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setPage(Math.max(1, pagination.page - 1))}
+                      disabled={!pagination.hasPrevPage || isLoading}
+                      className="p-1 disabled:opacity-50 hover:bg-gray-100 rounded"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path
+                          d="M10.4711 11.5279C10.7314 11.7883 10.7314 12.2104 10.4711 12.4708C10.2107 12.7311 9.78862 12.7311 9.52827 12.4708L5.52827 8.47075C5.27589 8.21837 5.26705 7.81198 5.50824 7.54887L9.17491 3.54887C9.4237 3.27745 9.84541 3.25912 10.1168 3.50791C10.3882 3.75671 10.4066 4.17842 10.1578 4.44983L6.92243 7.9793L10.4711 11.5279Z"
+                          fill="#666666"
+                        />
+                      </svg>
+                    </button>
+                    <button
+                      onClick={() => setPage(Math.min(pagination.totalPages, pagination.page + 1))}
+                      disabled={!pagination.hasNextPage || isLoading}
+                      className="p-1 disabled:opacity-50 hover:bg-gray-100 rounded"
+                    >
+                      <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                        <path
+                          d="M5.52892 4.47206C5.26857 4.21171 5.26857 3.7896 5.52892 3.52925C5.78927 3.2689 6.21138 3.2689 6.47173 3.52925L10.4717 7.52925C10.7241 7.78163 10.7329 8.18802 10.4918 8.45113L6.82509 12.4511C6.5763 12.7225 6.15459 12.7409 5.88317 12.4921C5.61176 12.2433 5.59343 11.8216 5.84222 11.5502L9.07757 8.0207L5.52892 4.47206Z"
+                          fill="#666666"
+                        />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
+            )}
+
+            {/* Refresh Button */}
+            <div className="flex justify-center mt-4">
+              <Button
+                onClick={refetch}
+                variant="outline"
+                size="sm"
+                disabled={isLoading}
+                className="flex items-center gap-2"
+              >
+                <svg 
+                  width="16" 
+                  height="16" 
+                  viewBox="0 0 16 16" 
+                  fill="none"
+                  className={isLoading ? "animate-spin" : ""}
+                >
+                  <path
+                    d="M1.33325 8.00008C1.33325 11.6821 4.31792 14.6667 7.99992 14.6667C11.6819 14.6667 14.6666 11.6821 14.6666 8.00008C14.6666 4.31808 11.6819 1.33341 7.99992 1.33341C6.87325 1.33341 5.81992 1.61208 4.89325 2.10674"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                  <path
+                    d="M2.66675 3.33341L4.89341 2.10674L6.12008 4.33341"
+                    stroke="currentColor"
+                    strokeWidth="1.5"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                  />
+                </svg>
+                {isLoading ? "Refreshing..." : "Refresh"}
+              </Button>
             </div>
           </div>
         </div>

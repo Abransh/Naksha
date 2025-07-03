@@ -10,6 +10,8 @@ import { useAuth } from "@/app/providers";
 import { useDashboardMetrics, useRecentSessions } from "@/hooks/useDashboard";
 import { useClientSummary } from "@/hooks/useClients";
 import Navigator from "@/components/navigation/Navigator";
+import { Timeline } from "@/components/ui/timeline";
+import { RevenueSplitChart } from "@/components/charts/revenue-split-chart";
 import {
   BarChart3,
   ShoppingBag,
@@ -33,7 +35,9 @@ export default function Dashboard() {
     revenueSplit,
     chartData,
     isLoading,
-    error
+    error,
+    timeframe,
+    setTimeframe
   } = useDashboardMetrics();
   
   const { sessions: recentSessions, hasData: hasRecentSessions } = useRecentSessions();
@@ -141,12 +145,10 @@ export default function Dashboard() {
                       className="text-[var(--primary-100)]"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[var(--black-10)] text-xs">
-                      {"{Timeline}"}
-                    </span>
-                    <ChevronDown size={12} className="text-[var(--black-10)]" />
-                  </div>
+                  <Timeline 
+                    value={timeframe || 'month'} 
+                    onChange={setTimeframe || (() => {})} 
+                  />
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -184,12 +186,10 @@ export default function Dashboard() {
                   <div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center">
                     <Users size={20} className="text-[var(--black-100)]" />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[var(--black-10)] text-xs">
-                      {"{Timeline}"}
-                    </span>
-                    <ChevronDown size={12} className="text-[var(--black-10)]" />
-                  </div>
+                  <Timeline 
+                    value={timeframe || 'month'} 
+                    onChange={setTimeframe || (() => {})} 
+                  />
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -233,12 +233,10 @@ export default function Dashboard() {
                       className="text-[var(--black-100)]"
                     />
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-[var(--black-10)] text-xs">
-                      {"{Timeline}"}
-                    </span>
-                    <ChevronDown size={12} className="text-[var(--black-10)]" />
-                  </div>
+                  <Timeline 
+                    value={timeframe || 'month'} 
+                    onChange={setTimeframe || (() => {})} 
+                  />
                 </div>
               </CardHeader>
               <CardContent className="space-y-4">
@@ -296,15 +294,10 @@ export default function Dashboard() {
                       <h3 className="text-[var(--black-60)] font-inter text-base font-medium">
                         REVENUE SPLIT
                       </h3>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[var(--black-10)] text-xs">
-                          {"{Timeline}"}
-                        </span>
-                        <ChevronDown
-                          size={12}
-                          className="text-[var(--black-10)]"
-                        />
-                      </div>
+                      <Timeline 
+                        value={timeframe || 'month'} 
+                        onChange={setTimeframe || (() => {})} 
+                      />
                     </div>
                     <div className="flex items-center justify-between mt-3">
                       <div className="flex items-center gap-2">
@@ -328,22 +321,12 @@ export default function Dashboard() {
                     </div>
                   </CardHeader>
                   <CardContent className="flex items-center justify-center">
-                    <div className="w-40 h-40 lg:w-52 lg:h-52 rounded-full border-[24px] lg:border-[32px] border-gray-100 flex items-center justify-center">
-                      {revenueSplit.total > 0 ? (
-                        <div className="text-center">
-                          <div className="text-[var(--black-60)] font-poppins text-lg font-medium">
-                            {formatCurrency(revenueSplit.total)}
-                          </div>
-                          <div className="text-[var(--black-30)] text-xs">
-                            Total Revenue
-                          </div>
-                        </div>
-                      ) : (
-                        <span className="text-[var(--black-30)] text-sm">
-                          No revenue yet
-                        </span>
-                      )}
-                    </div>
+                    <RevenueSplitChart
+                      fromNaksha={revenueSplit.fromNaksha}
+                      manuallyAdded={revenueSplit.manuallyAdded}
+                      total={revenueSplit.total}
+                      formatCurrency={formatCurrency}
+                    />
                   </CardContent>
                 </Card>
 

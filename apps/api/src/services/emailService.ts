@@ -314,6 +314,157 @@ const emailTemplates: Record<string, (data: any) => EmailTemplate> = {
       </html>
     `,
     text: `Session Confirmed!\n\nHi ${data.clientName},\n\nYour session with ${data.consultantName} has been confirmed!\n\nSession Details:\n- Date: ${data.sessionDate}\n- Time: ${data.sessionTime}\n- Amount: ₹${data.amount}\n${data.meetingLink ? `\nMeeting Link: ${data.meetingLink}` : ''}\n\nPlease join the meeting 5-10 minutes before the scheduled time.\n\nBest regards,\nThe Nakksha Team`
+  }),
+
+  // Quotation shared with client
+  quotation_shared: (data) => ({
+    subject: `Quotation from ${data.consultantName} - ${data.quotationName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Quotation Received</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .logo { color: #4F46E5; font-size: 24px; font-weight: bold; }
+          .quotation-card { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 20px; margin: 20px 0; }
+          .amount-highlight { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 6px; padding: 15px; margin: 15px 0; text-align: center; }
+          .view-button { background: #4F46E5; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; display: inline-block; margin: 15px 0; }
+          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666; }
+          .expires-warning { background: #FEF3C7; border: 1px solid #F59E0B; border-radius: 6px; padding: 12px; margin: 15px 0; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">Nakksha</div>
+            <h1>💼 Quotation Received</h1>
+          </div>
+          
+          <p>Dear ${data.clientName},</p>
+          
+          <p>You have received a quotation from <strong>${data.consultantName}</strong> for your consulting needs.</p>
+          
+          ${data.emailMessage ? `
+            <div class="quotation-card">
+              <h3>📩 Message from ${data.consultantName}:</h3>
+              <p style="font-style: italic;">"${data.emailMessage}"</p>
+            </div>
+          ` : ''}
+          
+          <div class="quotation-card">
+            <h3>📋 Quotation Details</h3>
+            <p><strong>Service:</strong> ${data.quotationName}</p>
+            <p><strong>Quotation #:</strong> ${data.quotationNumber}</p>
+            ${data.description ? `<p><strong>Description:</strong> ${data.description}</p>` : ''}
+            
+            <div class="amount-highlight">
+              <h2 style="margin: 0; color: #059669;">
+                ${data.currency === 'INR' ? '₹' : data.currency} ${data.finalAmount.toLocaleString()}
+                ${data.discountPercentage > 0 ? `
+                  <span style="font-size: 14px; color: #6B7280; text-decoration: line-through;">
+                    ${data.currency === 'INR' ? '₹' : data.currency} ${data.baseAmount.toLocaleString()}
+                  </span>
+                  <span style="font-size: 16px; color: #DC2626; font-weight: normal;">
+                    (${data.discountPercentage}% discount)
+                  </span>
+                ` : ''}
+              </h2>
+            </div>
+          </div>
+          
+          ${data.validUntil ? `
+            <div class="expires-warning">
+              <strong>⏰ This quotation expires on ${data.validUntil}</strong> - Please respond before this date.
+            </div>
+          ` : ''}
+          
+          <div style="text-align: center; margin: 30px 0;">
+            <a href="${data.viewQuotationUrl}" class="view-button">View Full Quotation</a>
+          </div>
+          
+          <p>To accept this quotation or discuss further details, please click the link above or reply to this email.</p>
+          
+          <div class="footer">
+            <p>Best regards,<br>${data.consultantName}<br>
+            <a href="mailto:${data.consultantEmail}">${data.consultantEmail}</a></p>
+            <p style="margin-top: 20px; font-size: 12px; color: #9CA3AF;">
+              This quotation was sent through Nakksha Consulting Platform<br>
+              © 2024 Nakksha Platform. All rights reserved.
+            </p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `Quotation Received from ${data.consultantName}\n\nDear ${data.clientName},\n\nYou have received a quotation for: ${data.quotationName}\nQuotation #: ${data.quotationNumber}\n\n${data.emailMessage ? `Message: "${data.emailMessage}"\n\n` : ''}Amount: ${data.currency === 'INR' ? '₹' : data.currency} ${data.finalAmount.toLocaleString()}${data.discountPercentage > 0 ? ` (${data.discountPercentage}% discount from ${data.currency === 'INR' ? '₹' : data.currency} ${data.baseAmount.toLocaleString()})` : ''}\n\n${data.validUntil ? `This quotation expires on ${data.validUntil}\n\n` : ''}View full quotation: ${data.viewQuotationUrl}\n\nBest regards,\n${data.consultantName}\n${data.consultantEmail}`
+  }),
+
+  // Quotation sent confirmation (to consultant)
+  quotation_sent_confirmation: (data) => ({
+    subject: `Quotation Sent Successfully - ${data.quotationName}`,
+    html: `
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>Quotation Sent Confirmation</title>
+        <style>
+          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
+          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
+          .header { text-align: center; margin-bottom: 30px; }
+          .logo { color: #4F46E5; font-size: 24px; font-weight: bold; }
+          .success-card { background: #F0FDF4; border: 1px solid #BBF7D0; border-radius: 8px; padding: 20px; margin: 20px 0; }
+          .quotation-details { background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 8px; padding: 15px; margin: 15px 0; }
+          .footer { margin-top: 30px; padding-top: 20px; border-top: 1px solid #eee; font-size: 14px; color: #666; }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="header">
+            <div class="logo">Nakksha</div>
+            <h1>✅ Quotation Sent Successfully</h1>
+          </div>
+          
+          <p>Hi ${data.consultantName},</p>
+          
+          <div class="success-card">
+            <h3>🎉 Your quotation has been sent successfully!</h3>
+            <p>Your quotation for <strong>${data.quotationName}</strong> has been delivered to ${data.clientName}.</p>
+          </div>
+          
+          <div class="quotation-details">
+            <h3>📋 Quotation Summary</h3>
+            <p><strong>Client:</strong> ${data.clientName} (${data.clientEmail})</p>
+            <p><strong>Service:</strong> ${data.quotationName}</p>
+            <p><strong>Amount:</strong> ${data.currency === 'INR' ? '₹' : data.currency} ${data.finalAmount.toLocaleString()}</p>
+            <p><strong>Quotation #:</strong> ${data.quotationNumber}</p>
+            <p><strong>Sent on:</strong> ${data.sentDate}</p>
+          </div>
+          
+          <p><strong>What happens next:</strong></p>
+          <ul>
+            <li>The client will receive the quotation via email</li>
+            <li>You'll be notified when they view or respond to the quotation</li>
+            <li>You can track the status in your dashboard</li>
+          </ul>
+          
+          <p>You can monitor the quotation status and any client responses from your dashboard.</p>
+          
+          <div class="footer">
+            <p>Best regards,<br>The Nakksha Team</p>
+            <p>Keep building your consulting business! 🚀</p>
+          </div>
+        </div>
+      </body>
+      </html>
+    `,
+    text: `Quotation Sent Successfully!\n\nHi ${data.consultantName},\n\nYour quotation for "${data.quotationName}" has been sent to ${data.clientName} (${data.clientEmail}).\n\nQuotation Details:\n- Service: ${data.quotationName}\n- Amount: ${data.currency === 'INR' ? '₹' : data.currency} ${data.finalAmount.toLocaleString()}\n- Quotation #: ${data.quotationNumber}\n- Sent on: ${data.sentDate}\n\nThe client will receive the quotation via email and you'll be notified of any responses.\n\nBest regards,\nThe Nakksha Team`
   })
 };
 
