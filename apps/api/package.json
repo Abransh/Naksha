@@ -9,8 +9,6 @@
     "build:database": "cd ../../packages/database && npm install && npm run db:generate && npm run build",
     "start": "node dist/index.js",
     "start:production": "./start-production.sh",
-    "check-env": "node check-env.js",
-    "prestart": "npm run check-env",
     "test": "jest",
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
