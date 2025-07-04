@@ -49,83 +49,109 @@ declare global {
 /**
  * Generate JWT tokens for authentication
  */
-export const generateTokens = async (user: any, userType: 'consultant' | 'admin') => {
+export const generateTokens = async (user: any, userType: 'consultant' | 'admin'): Promise<{ accessToken: string; refreshToken: string }> => {
   const JWT_SECRET = process.env.JWT_SECRET;
   const JWT_REFRESH_SECRET = process.env.JWT_REFRESH_SECRET;
-  const ACCESS_TOKEN_EXPIRES = process.env.ACCESS_TOKEN_EXPIRES || '15m';
-  const REFRESH_TOKEN_EXPIRES = process.env.REFRESH_TOKEN_EXPIRES || '7d';
 
   if (!JWT_SECRET || !JWT_REFRESH_SECRET) {
     throw new AppError('JWT secrets not configured', 500);
   }
 
-  try {
-    // Access token payload
-    const accessTokenPayload: ConsultantJWTPayload | AdminJWTPayload = 
-      userType === 'consultant' 
-        ? {
-            sub: user.id,
-            email: user.email,
-            role: 'consultant',
-            isApproved: user.isApprovedByAdmin,
-            slug: user.slug,
-            iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
-          }
-        : {
-            sub: user.id,
-            email: user.email,
-            role: user.role.toLowerCase(),
-            iat: Math.floor(Date.now() / 1000),
-            exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
-          };
+  // Retry logic for unique constraint violations
+  const MAX_RETRIES = 3;
+  let retryCount = 0;
 
-    // Generate tokens
-    const accessToken = jwt.sign(accessTokenPayload, JWT_SECRET);
-    const refreshToken = jwt.sign(
-      { sub: user.id, type: userType },
-      JWT_REFRESH_SECRET
-    );
+  while (retryCount < MAX_RETRIES) {
+    try {
+      // Access token payload
+      const accessTokenPayload: ConsultantJWTPayload | AdminJWTPayload = 
+        userType === 'consultant' 
+          ? {
+              sub: user.id,
+              email: user.email,
+              role: 'consultant',
+              isApproved: user.isApprovedByAdmin,
+              slug: user.slug,
+              iat: Math.floor(Date.now() / 1000),
+              exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
+            }
+          : {
+              sub: user.id,
+              email: user.email,
+              role: user.role.toLowerCase(),
+              iat: Math.floor(Date.now() / 1000),
+              exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
+            };
 
-    // Store refresh token in database
-    const expiresAt = new Date();
-    expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+      // Generate tokens with additional randomness to prevent duplicates
+      const accessToken = jwt.sign(accessTokenPayload, JWT_SECRET);
+      const refreshToken = jwt.sign(
+        { 
+          sub: user.id, 
+          type: userType, 
+          nonce: Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15)
+        },
+        JWT_REFRESH_SECRET
+      );
 
-    await prisma.refreshToken.create({
-      data: {
-        token: refreshToken,
-        expiresAt,
-        consultantId: userType === 'consultant' ? user.id : null,
-        adminId: userType === 'admin' ? user.id : null
+      // Store refresh token in database
+      const expiresAt = new Date();
+      expiresAt.setDate(expiresAt.getDate() + 7); // 7 days
+
+      await prisma.refreshToken.create({
+        data: {
+          token: refreshToken,
+          expiresAt,
+          consultantId: userType === 'consultant' ? user.id : null,
+          adminId: userType === 'admin' ? user.id : null
+        }
+      });
+
+      // Cache user session in Redis for faster lookups
+      const redisClient = getRedisClient();
+      if (redisClient) {
+        try {
+          await redisClient.setEx(
+            `user_session:${user.id}`,
+            900, // 15 minutes (same as access token)
+            JSON.stringify({
+              id: user.id,
+              email: user.email,
+              role: userType === 'consultant' ? 'consultant' : user.role.toLowerCase(),
+              isApproved: userType === 'consultant' ? user.isApprovedByAdmin : true,
+              slug: userType === 'consultant' ? user.slug : undefined
+            })
+          );
+        } catch (error) {
+          console.warn('⚠️ Failed to cache user session in Redis:', error);
+        }
       }
-    });
 
-    // Cache user session in Redis for faster lookups
-    const redisClient = getRedisClient();
-    if (redisClient) {
-      try {
-        await redisClient.setEx(
-          `user_session:${user.id}`,
-          900, // 15 minutes (same as access token)
-          JSON.stringify({
-            id: user.id,
-            email: user.email,
-            role: userType === 'consultant' ? 'consultant' : user.role.toLowerCase(),
-            isApproved: userType === 'consultant' ? user.isApprovedByAdmin : true,
-            slug: userType === 'consultant' ? user.slug : undefined
-          })
-        );
-      } catch (error) {
-        console.warn('⚠️ Failed to cache user session in Redis:', error);
+      return { accessToken, refreshToken };
+
+    } catch (error: any) {
+      // Check if this is a unique constraint violation on refresh token
+      if (error.code === 'P2002' && error.meta?.target?.includes('token')) {
+        retryCount++;
+        if (retryCount < MAX_RETRIES) {
+          // Wait a small random time before retry to avoid timing collisions
+          await new Promise(resolve => setTimeout(resolve, Math.random() * 100));
+          logger.warn(`Refresh token collision detected, retrying... (${retryCount}/${MAX_RETRIES})`);
+          continue;
+        } else {
+          logger.error('Max retries exceeded for token generation:', error);
+          throw new AppError('Failed to generate unique refresh token after multiple attempts', 500);
+        }
       }
+      
+      // For other errors, throw immediately
+      logger.error('Error generating tokens:', error);
+      throw new AppError('Failed to generate authentication tokens', 500);
     }
-
-    return { accessToken, refreshToken };
-
-  } catch (error) {
-    logger.error('Error generating tokens:', error);
-    throw new AppError('Failed to generate authentication tokens', 500);
   }
+
+  // This should never be reached, but TypeScript requires it
+  throw new AppError('Token generation failed - unexpected error', 500);
 };
 
 /**
