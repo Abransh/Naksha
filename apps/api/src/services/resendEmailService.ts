@@ -11,8 +11,19 @@
 import { Resend } from 'resend';
 import { getPrismaClient } from '../config/database';
 
-// Initialize Resend client
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend client lazily
+let resend: Resend | null = null;
+
+const getResendClient = (): Resend => {
+  if (!resend) {
+    const apiKey = process.env.RESEND_API_KEY;
+    if (!apiKey) {
+      throw new Error('RESEND_API_KEY environment variable is required');
+    }
+    resend = new Resend(apiKey);
+  }
+  return resend;
+};
 
 /**
  * Email configuration for Resend
@@ -292,7 +303,7 @@ export const sendQuotationToClient = async (data: QuotationEmailData): Promise<E
   try {
     console.log(`📧 Sending quotation email to client: ${data.clientEmail}`);
 
-    const emailResponse = await resend.emails.send({
+    const emailResponse = await getResendClient().emails.send({
       from: resendConfig.from,
       to: data.clientEmail,
       replyTo: data.consultantEmail,
@@ -349,7 +360,7 @@ export const sendQuotationConfirmationToConsultant = async (data: QuotationEmail
   try {
     console.log(`📧 Sending quotation confirmation to consultant: ${data.consultantEmail}`);
 
-    const emailResponse = await resend.emails.send({
+    const emailResponse = await getResendClient().emails.send({
       from: resendConfig.from,
       to: data.consultantEmail,
       replyTo: resendConfig.replyTo,
@@ -463,6 +474,13 @@ export const validateResendConfig = (): { valid: boolean; errors: string[] } => 
 
   if (!resendConfig.from) {
     errors.push('EMAIL_FROM environment variable is required');
+  }
+
+  // Test Resend client initialization
+  try {
+    getResendClient();
+  } catch (error) {
+    errors.push(`Failed to initialize Resend client: ${error instanceof Error ? error.message : 'Unknown error'}`);
   }
 
   return {

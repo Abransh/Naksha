@@ -12,8 +12,18 @@ Object.defineProperty(exports, "__esModule", { value: true });
 exports.validateResendConfig = exports.sendQuotationEmails = exports.sendQuotationConfirmationToConsultant = exports.sendQuotationToClient = void 0;
 const resend_1 = require("resend");
 const database_1 = require("../config/database");
-// Initialize Resend client
-const resend = new resend_1.Resend(process.env.RESEND_API_KEY);
+// Initialize Resend client lazily
+let resend = null;
+const getResendClient = () => {
+    if (!resend) {
+        const apiKey = process.env.RESEND_API_KEY;
+        if (!apiKey) {
+            throw new Error('RESEND_API_KEY environment variable is required');
+        }
+        resend = new resend_1.Resend(apiKey);
+    }
+    return resend;
+};
 /**
  * Email configuration for Resend
  */
@@ -223,7 +233,7 @@ const getConsultantConfirmationEmailHtml = (data) => {
 const sendQuotationToClient = async (data) => {
     try {
         console.log(`📧 Sending quotation email to client: ${data.clientEmail}`);
-        const emailResponse = await resend.emails.send({
+        const emailResponse = await getResendClient().emails.send({
             from: resendConfig.from,
             to: data.clientEmail,
             replyTo: data.consultantEmail,
@@ -274,7 +284,7 @@ exports.sendQuotationToClient = sendQuotationToClient;
 const sendQuotationConfirmationToConsultant = async (data) => {
     try {
         console.log(`📧 Sending quotation confirmation to consultant: ${data.consultantEmail}`);
-        const emailResponse = await resend.emails.send({
+        const emailResponse = await getResendClient().emails.send({
             from: resendConfig.from,
             to: data.consultantEmail,
             replyTo: resendConfig.replyTo,
@@ -367,6 +377,13 @@ const validateResendConfig = () => {
     }
     if (!resendConfig.from) {
         errors.push('EMAIL_FROM environment variable is required');
+    }
+    // Test Resend client initialization
+    try {
+        getResendClient();
+    }
+    catch (error) {
+        errors.push(`Failed to initialize Resend client: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
     return {
         valid: errors.length === 0,

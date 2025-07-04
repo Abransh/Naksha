@@ -1,0 +1,45 @@
+
+> api@1.0.0 start
+> node dist/index.js
+
+🔗 Connecting to database...
+🔧 Initializing Prisma client...
+✅ Prisma client initialized successfully
+Query undefined.queryRaw took 720ms
+✅ Database connection established successfully
+✅ Database connected successfully
+🔗 Connecting to Redis...
+🔧 Initializing Redis client...
+✅ Redis client initialized successfully
+🔌 Attempting Redis connection (attempt 1/10)...
+🔗 Redis client connected
+✅ Redis client ready
+✅ Redis connection established successfully
+✅ Redis connected successfully
+📧 Setting up email templates...
+⚠️ Email service: SMTP credentials not configured, emails will be logged only
+📧 Templates loaded: 6
+✅ Email templates ready
+⚙️ Starting background jobs...
+⚙️ Starting background jobs...
+✅ Background jobs started successfully
+📋 Scheduled jobs: 7
+📅 Job schedules:
+  - Session reminders: Every hour
+  - Email queue: Every 15 minutes
+  - Database cleanup: Daily at 2 AM
+  - File cleanup: Daily at 3 AM
+  - Analytics: Daily at 1 AM
+  - Health check: Every 30 minutes
+  - Session status: Every 10 minutes
+✅ Background jobs started
+
+🚀 Nakksha API Server is running!
+📍 Environment: development
+🌐 Server: http://localhost:8000
+💾 Database: Connected
+🔄 Redis: Connected
+📊 Health Check: http://localhost:8000/health
+📚 API Docs: http://localhost:8000/api/docs
+        
+[0mGET /health [32m200[0m 2.264 ms - 242[0m
