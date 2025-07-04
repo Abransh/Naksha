@@ -18,13 +18,13 @@ const database_1 = require("../../config/database");
 const redis_1 = require("../../config/redis");
 const validation_1 = require("../../middleware/validation");
 const errorHandler_1 = require("../../middleware/errorHandler");
-const emailService_1 = require("../../services/emailService");
+const resendEmailService_1 = require("../../services/resendEmailService");
 const router = (0, express_1.Router)();
 /**
  * Validation schemas
  */
 const createQuotationSchema = zod_1.z.object({
-    clientId: zod_1.z.string().uuid('Invalid client ID').optional(),
+    clientId: validation_1.commonSchemas.id.optional(),
     clientEmail: zod_1.z.string().email('Invalid email format').max(255),
     clientName: zod_1.z.string().min(1, 'Client name is required').max(200),
     quotationName: zod_1.z.string().min(1, 'Quotation name is required').max(300),
@@ -189,7 +189,7 @@ router.get('/', (0, validation_1.validateRequest)(quotationFiltersSchema, 'query
  * GET /api/quotations/:id
  * Get a specific quotation by ID
  */
-router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().uuid() }), 'params'), async (req, res) => {
+router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: validation_1.commonSchemas.id }), 'params'), async (req, res) => {
     try {
         const { id } = req.params;
         const consultantId = req.user.id;
@@ -347,7 +347,7 @@ router.post('/', (0, validation_1.validateRequest)(createQuotationSchema), async
  * PUT /api/quotations/:id
  * Update a quotation
  */
-router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().uuid() }), 'params'), (0, validation_1.validateRequest)(updateQuotationSchema), async (req, res) => {
+router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: validation_1.commonSchemas.id }), 'params'), (0, validation_1.validateRequest)(updateQuotationSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const consultantId = req.user.id;
@@ -411,7 +411,7 @@ router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.
  * POST /api/quotations/:id/send
  * Send quotation to client via email
  */
-router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().uuid() }), 'params'), (0, validation_1.validateRequest)(shareQuotationSchema), async (req, res) => {
+router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: validation_1.commonSchemas.id }), 'params'), (0, validation_1.validateRequest)(shareQuotationSchema), async (req, res) => {
     try {
         const { id } = req.params;
         const { emailMessage, includeAttachment } = req.body;
@@ -446,42 +446,44 @@ router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: 
         if (quotation.expiresAt && new Date() > quotation.expiresAt) {
             throw new errorHandler_1.ValidationError('Cannot send expired quotation');
         }
-        // Send quotation email to client
-        const clientEmailSent = await (0, emailService_1.sendEmail)('quotation_shared', {
-            to: quotation.clientEmail,
-            data: {
-                clientName: quotation.clientName,
-                consultantName: `${quotation.consultant.firstName} ${quotation.consultant.lastName}`,
-                quotationName: quotation.quotationName,
-                description: quotation.description,
-                baseAmount: Number(quotation.baseAmount),
-                discountPercentage: Number(quotation.discountPercentage),
-                finalAmount: Number(quotation.finalAmount),
-                currency: quotation.currency,
-                validUntil: quotation.expiresAt?.toLocaleDateString(),
-                quotationNumber: quotation.quotationNumber,
-                emailMessage: emailMessage || '',
-                viewQuotationUrl: `${process.env.FRONTEND_URL}/quotation/${quotation.id}`,
-                consultantEmail: quotation.consultant.email
-            }
-        }, consultantId);
-        // Send confirmation email to consultant
-        const consultantEmailSent = await (0, emailService_1.sendEmail)('quotation_sent_confirmation', {
-            to: quotation.consultant.email,
-            data: {
-                consultantName: quotation.consultant.firstName,
-                clientName: quotation.clientName,
-                clientEmail: quotation.clientEmail,
-                quotationName: quotation.quotationName,
-                finalAmount: Number(quotation.finalAmount),
-                currency: quotation.currency,
-                quotationNumber: quotation.quotationNumber,
-                sentDate: new Date().toLocaleDateString()
-            }
-        }, consultantId);
-        if (!clientEmailSent) {
+        // Prepare email data for Resend service
+        const emailData = {
+            quotationId: quotation.id,
+            quotationNumber: quotation.quotationNumber,
+            quotationName: quotation.quotationName,
+            description: quotation.description,
+            baseAmount: Number(quotation.baseAmount),
+            discountPercentage: Number(quotation.discountPercentage),
+            finalAmount: Number(quotation.finalAmount),
+            currency: quotation.currency,
+            validUntil: quotation.expiresAt?.toISOString(),
+            notes: quotation.notes || undefined,
+            clientName: quotation.clientName,
+            clientEmail: quotation.clientEmail,
+            consultantName: `${quotation.consultant.firstName} ${quotation.consultant.lastName}`,
+            consultantEmail: quotation.consultant.email,
+            emailMessage: emailMessage || '',
+            viewQuotationUrl: `${process.env.FRONTEND_URL}/quotation/${quotation.id}`,
+            sentDate: new Date().toLocaleDateString()
+        };
+        // Send emails using Resend service
+        console.log(`📧 Sending quotation emails via Resend for quotation: ${quotation.id}`);
+        const emailResults = await (0, resendEmailService_1.sendQuotationEmails)(emailData);
+        // Check if both emails were sent successfully
+        if (!emailResults.client.success) {
+            console.error('❌ Failed to send quotation email to client:', emailResults.client.error);
             throw new errorHandler_1.AppError('Failed to send quotation email to client', 500, 'EMAIL_SEND_ERROR');
         }
+        if (!emailResults.consultant.success) {
+            console.warn('⚠️ Failed to send confirmation email to consultant:', emailResults.consultant.error);
+            // Don't fail the request if consultant email fails - client email is more important
+        }
+        console.log(`✅ Quotation emails sent successfully:`, {
+            client: emailResults.client.success,
+            consultant: emailResults.consultant.success,
+            clientEmailId: emailResults.client.emailId,
+            consultantEmailId: emailResults.consultant.emailId
+        });
         // Update quotation status and sent timestamp
         const updatedQuotation = await prisma.quotation.update({
             where: { id },
@@ -505,8 +507,10 @@ router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: 
                     finalAmount: Number(updatedQuotation.finalAmount)
                 },
                 emailStatus: {
-                    clientEmailSent,
-                    consultantEmailSent
+                    clientEmailSent: emailResults.client.success,
+                    consultantEmailSent: emailResults.consultant.success,
+                    clientEmailId: emailResults.client.emailId,
+                    consultantEmailId: emailResults.consultant.emailId
                 }
             }
         });
@@ -523,7 +527,7 @@ router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: 
  * DELETE /api/quotations/:id
  * Delete a quotation (only if draft)
  */
-router.delete('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().uuid() }), 'params'), async (req, res) => {
+router.delete('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: validation_1.commonSchemas.id }), 'params'), async (req, res) => {
     try {
         const { id } = req.params;
         const consultantId = req.user.id;

@@ -98,6 +98,8 @@ export declare const commonSchemas: {
     }>;
     objectId: z.ZodString;
     uuid: z.ZodString;
+    cuid: z.ZodString;
+    id: z.ZodEffects<z.ZodString, string, string>;
     email: z.ZodString;
     phoneNumber: z.ZodObject<{
         countryCode: z.ZodString;

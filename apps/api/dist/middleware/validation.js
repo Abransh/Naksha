@@ -300,6 +300,16 @@ exports.commonSchemas = {
     objectId: zod_1.z.string().regex(/^[0-9a-fA-F]{24}$/, 'Invalid ID format'),
     // UUID
     uuid: zod_1.z.string().uuid('Invalid UUID format'),
+    // CUID (Prisma default ID format)
+    cuid: zod_1.z.string().cuid('Invalid CUID format'),
+    // Generic ID that accepts both UUID and CUID
+    id: zod_1.z.string().refine((value) => {
+        // Check if it's a valid UUID
+        const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+        // Check if it's a valid CUID
+        const cuidRegex = /^[a-z0-9]{25}$/i;
+        return uuidRegex.test(value) || cuidRegex.test(value);
+    }, 'Invalid ID format'),
     // Email
     email: zod_1.z.string().email('Invalid email format').max(255),
     // Phone number (international format)

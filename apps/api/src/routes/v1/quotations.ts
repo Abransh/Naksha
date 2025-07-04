@@ -18,7 +18,7 @@ import { cacheUtils } from '../../config/redis';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { validateRequest, commonSchemas } from '../../middleware/validation';
 import { AppError, NotFoundError, ValidationError } from '../../middleware/errorHandler';
-import { sendEmail } from '../../services/emailService';
+import { sendQuotationEmails } from '../../services/resendEmailService';
 // import { generateQuotationPDF } from '../../services/pdfService'; // TODO: Create PDF service
 import { uploadToCloudinary } from '../../services/uploadService';
 
@@ -28,7 +28,7 @@ const router = Router();
  * Validation schemas
  */
 const createQuotationSchema = z.object({
-  clientId: z.string().uuid('Invalid client ID').optional(),
+  clientId: commonSchemas.id.optional(),
   clientEmail: z.string().email('Invalid email format').max(255),
   clientName: z.string().min(1, 'Client name is required').max(200),
   quotationName: z.string().min(1, 'Quotation name is required').max(300),
@@ -215,7 +215,7 @@ router.get('/',
  * Get a specific quotation by ID
  */
 router.get('/:id',
-  validateRequest(z.object({ id: z.string().uuid() }), 'params'),
+  validateRequest(z.object({ id: commonSchemas.id }), 'params'),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;
@@ -399,7 +399,7 @@ router.post('/',
  * Update a quotation
  */
 router.put('/:id',
-  validateRequest(z.object({ id: z.string().uuid() }), 'params'),
+  validateRequest(z.object({ id: commonSchemas.id }), 'params'),
   validateRequest(updateQuotationSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -477,7 +477,7 @@ router.put('/:id',
  * Send quotation to client via email
  */
 router.post('/:id/send',
-  validateRequest(z.object({ id: z.string().uuid() }), 'params'),
+  validateRequest(z.object({ id: commonSchemas.id }), 'params'),
   validateRequest(shareQuotationSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -520,44 +520,48 @@ router.post('/:id/send',
         throw new ValidationError('Cannot send expired quotation');
       }
 
-      // Send quotation email to client
-      const clientEmailSent = await sendEmail('quotation_shared', {
-        to: quotation.clientEmail,
-        data: {
-          clientName: quotation.clientName,
-          consultantName: `${quotation.consultant.firstName} ${quotation.consultant.lastName}`,
-          quotationName: quotation.quotationName,
-          description: quotation.description,
-          baseAmount: Number(quotation.baseAmount),
-          discountPercentage: Number(quotation.discountPercentage),
-          finalAmount: Number(quotation.finalAmount),
-          currency: quotation.currency,
-          validUntil: quotation.expiresAt?.toLocaleDateString(),
-          quotationNumber: quotation.quotationNumber,
-          emailMessage: emailMessage || '',
-          viewQuotationUrl: `${process.env.FRONTEND_URL}/quotation/${quotation.id}`,
-          consultantEmail: quotation.consultant.email
-        }
-      }, consultantId);
+      // Prepare email data for Resend service
+      const emailData = {
+        quotationId: quotation.id,
+        quotationNumber: quotation.quotationNumber,
+        quotationName: quotation.quotationName,
+        description: quotation.description,
+        baseAmount: Number(quotation.baseAmount),
+        discountPercentage: Number(quotation.discountPercentage),
+        finalAmount: Number(quotation.finalAmount),
+        currency: quotation.currency,
+        validUntil: quotation.expiresAt?.toISOString(),
+        notes: quotation.notes || undefined,
+        clientName: quotation.clientName,
+        clientEmail: quotation.clientEmail,
+        consultantName: `${quotation.consultant.firstName} ${quotation.consultant.lastName}`,
+        consultantEmail: quotation.consultant.email,
+        emailMessage: emailMessage || '',
+        viewQuotationUrl: `${process.env.FRONTEND_URL}/quotation/${quotation.id}`,
+        sentDate: new Date().toLocaleDateString()
+      };
 
-      // Send confirmation email to consultant
-      const consultantEmailSent = await sendEmail('quotation_sent_confirmation', {
-        to: quotation.consultant.email,
-        data: {
-          consultantName: quotation.consultant.firstName,
-          clientName: quotation.clientName,
-          clientEmail: quotation.clientEmail,
-          quotationName: quotation.quotationName,
-          finalAmount: Number(quotation.finalAmount),
-          currency: quotation.currency,
-          quotationNumber: quotation.quotationNumber,
-          sentDate: new Date().toLocaleDateString()
-        }
-      }, consultantId);
+      // Send emails using Resend service
+      console.log(`📧 Sending quotation emails via Resend for quotation: ${quotation.id}`);
+      const emailResults = await sendQuotationEmails(emailData);
 
-      if (!clientEmailSent) {
+      // Check if both emails were sent successfully
+      if (!emailResults.client.success) {
+        console.error('❌ Failed to send quotation email to client:', emailResults.client.error);
         throw new AppError('Failed to send quotation email to client', 500, 'EMAIL_SEND_ERROR');
       }
+
+      if (!emailResults.consultant.success) {
+        console.warn('⚠️ Failed to send confirmation email to consultant:', emailResults.consultant.error);
+        // Don't fail the request if consultant email fails - client email is more important
+      }
+
+      console.log(`✅ Quotation emails sent successfully:`, {
+        client: emailResults.client.success,
+        consultant: emailResults.consultant.success,
+        clientEmailId: emailResults.client.emailId,
+        consultantEmailId: emailResults.consultant.emailId
+      });
 
       // Update quotation status and sent timestamp
       const updatedQuotation = await prisma.quotation.update({
@@ -585,8 +589,10 @@ router.post('/:id/send',
             finalAmount: Number(updatedQuotation.finalAmount)
           },
           emailStatus: {
-            clientEmailSent,
-            consultantEmailSent
+            clientEmailSent: emailResults.client.success,
+            consultantEmailSent: emailResults.consultant.success,
+            clientEmailId: emailResults.client.emailId,
+            consultantEmailId: emailResults.consultant.emailId
           }
         }
       });
@@ -608,7 +614,7 @@ router.post('/:id/send',
  * Delete a quotation (only if draft)
  */
 router.delete('/:id',
-  validateRequest(z.object({ id: z.string().uuid() }), 'params'),
+  validateRequest(z.object({ id: commonSchemas.id }), 'params'),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;

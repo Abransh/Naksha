@@ -108,7 +108,7 @@ const createAvailabilitySchema = z.object({
 );
 
 const updateAvailabilitySchema = z.object({
-  availabilitySlotIds: z.array(z.string().uuid()).min(1, 'At least one slot ID required'),
+  availabilitySlotIds: z.array(commonSchemas.id).min(1, 'At least one slot ID required'),
   isBooked: z.boolean().optional()
 });
 
@@ -768,7 +768,7 @@ router.put('/availability',
  * Delete an availability slot
  */
 router.delete('/availability/:id',
-  validateRequest(z.object({ id: z.string().uuid() }), 'params'),
+  validateRequest(z.object({ id: commonSchemas.id }), 'params'),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { id } = req.params;

@@ -372,6 +372,21 @@ export const commonSchemas = {
 
   // UUID
   uuid: z.string().uuid('Invalid UUID format'),
+  
+  // CUID (Prisma default ID format)
+  cuid: z.string().cuid('Invalid CUID format'),
+  
+  // Generic ID that accepts both UUID and CUID
+  id: z.string().refine(
+    (value) => {
+      // Check if it's a valid UUID
+      const uuidRegex = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+      // Check if it's a valid CUID
+      const cuidRegex = /^[a-z0-9]{25}$/i;
+      return uuidRegex.test(value) || cuidRegex.test(value);
+    },
+    'Invalid ID format'
+  ),
 
   // Email
   email: z.string().email('Invalid email format').max(255),

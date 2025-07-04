@@ -101,7 +101,7 @@ const createAvailabilitySchema = zod_1.z.object({
     path: ['timeSlots']
 });
 const updateAvailabilitySchema = zod_1.z.object({
-    availabilitySlotIds: zod_1.z.array(zod_1.z.string().uuid()).min(1, 'At least one slot ID required'),
+    availabilitySlotIds: zod_1.z.array(validation_1.commonSchemas.id).min(1, 'At least one slot ID required'),
     isBooked: zod_1.z.boolean().optional()
 });
 /**
@@ -667,7 +667,7 @@ router.put('/availability', (0, validation_1.validateRequest)(updateAvailability
  * DELETE /api/consultant/availability/:id
  * Delete an availability slot
  */
-router.delete('/availability/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.z.string().uuid() }), 'params'), async (req, res) => {
+router.delete('/availability/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: validation_1.commonSchemas.id }), 'params'), async (req, res) => {
     try {
         const { id } = req.params;
         const consultantId = req.user.id;
