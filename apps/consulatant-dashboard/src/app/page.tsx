@@ -256,7 +256,7 @@ export default function HomePage() {
 
             {/* Action Buttons */}
             <div className="flex items-center space-x-4">
-              <Link href="/">
+              <Link href="/dashboard">
                 <Button
                   variant="outline"
                   className="bg-[#F5F7FA] text-[#5570F1] border-none hover:bg-gray-100"
@@ -296,9 +296,11 @@ export default function HomePage() {
               <p className="text-lg md:text-xl text-[#717171] mb-8">
                 A tool to grow your online consultancy business.
               </p>
+              <Link href="/signup">
               <Button className="bg-[#5570F1] text-white hover:bg-[#4A5CE6] px-8 py-3 text-base font-semibold">
                 Sign Up
               </Button>
+              </Link>
             </div>
 
             {/* Right Image */}
@@ -529,6 +531,7 @@ export default function HomePage() {
             You focus on your business. We&apos;ve got tech & marketing fully
             covered.
           </h2>
+          <Link href="/signup">
           <Button className="bg-[#5570F1] text-white hover:bg-[#4A5CE6] px-8 py-3 text-base font-medium">
             Register Now
             <svg
@@ -547,6 +550,7 @@ export default function HomePage() {
               />
             </svg>
           </Button>
+          </Link>
         </div>
       </section>
 

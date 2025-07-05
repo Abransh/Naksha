@@ -8,7 +8,7 @@ import { z } from 'zod';
 import { prisma } from '@nakksha/database';
 import { logger } from '../utils/logger';
 import { AppError, NotFoundError, ValidationError, ConflictError } from '../utils/appError';
-import { sendEmail } from '../services/emailService';
+import { sendConsultantApprovedEmail, sendConsultantRejectedEmail } from '../services/resendEmailService';
 import { generateSlug } from '../utils/helpers';
 import bcrypt from 'bcryptjs';
 
@@ -343,26 +343,21 @@ export const approveConsultant = async (req: Request, res: Response): Promise<vo
       }
     });
 
-    // Send appropriate email notification
+    // Send appropriate email notification via Resend
     if (approved) {
       // Send approval email
-      await sendEmail('consultant_approved', {
-        to: consultant.email,
-        data: {
-          firstName: consultant.firstName,
-          dashboardUrl: process.env.CONSULTANT_DASHBOARD_URL || 'https://dashboard.nakksha.com',
-          loginUrl: `${process.env.CONSULTANT_DASHBOARD_URL}/auth/login`
-        }
+      await sendConsultantApprovedEmail({
+        firstName: consultant.firstName,
+        email: consultant.email,
+        adminDashboardUrl: process.env.CONSULTANT_DASHBOARD_URL || 'https://dashboard.nakksha.com'
       });
     } else {
       // Send rejection email
-      await sendEmail('consultant_rejected', {
-        to: consultant.email,
-        data: {
-          firstName: consultant.firstName,
-          reason: adminNotes || 'Your application did not meet our current requirements',
-          supportEmail: process.env.SUPPORT_EMAIL || 'support@nakksha.com'
-        }
+      await sendConsultantRejectedEmail({
+        firstName: consultant.firstName,
+        email: consultant.email,
+        reason: adminNotes || 'Your application did not meet our current requirements',
+        supportEmail: process.env.SUPPORT_EMAIL || 'support@nakksha.com'
       });
     }
 

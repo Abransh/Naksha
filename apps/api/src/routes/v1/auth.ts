@@ -18,7 +18,7 @@ import { getPrismaClient } from '../../config/database';
 import { sessionUtils, cacheUtils } from '../../config/redis';
 import { tokenUtils, authRateLimit, logoutUser, AuthenticatedRequest } from '../../middleware/auth';
 import { validateRequest } from '../../middleware/validation';
-import { sendEmail } from '../../services/emailService';
+import { sendConsultantWelcomeEmail, sendPasswordResetEmail, sendAdminNotificationEmail } from '../../services/resendEmailService';
 import { generateSlug } from '../../utils/helpers';
 
 const router = Router();
@@ -153,13 +153,21 @@ router.post('/signup',
         'mediumCache' // 30 minutes
       );
 
-      // Send verification email
-      await sendEmail('email_verification', {
-        to: user.email,
-        data: {
-          firstName: user.firstName,
-          verificationLink: `${process.env.FRONTEND_URL}/auth/verify-email?token=${verificationToken}`
-        }
+      // Send welcome email with verification link via Resend
+      await sendConsultantWelcomeEmail({
+        firstName: user.firstName,
+        lastName: user.lastName,
+        email: user.email,
+        verificationLink: `${process.env.FRONTEND_URL}/auth/verify-email?token=${verificationToken}`
+      });
+
+      // Send admin notification email via Resend
+      await sendAdminNotificationEmail({
+        consultantName: `${user.firstName} ${user.lastName}`,
+        consultantEmail: user.email,
+        consultantId: user.id,
+        signupDate: new Date().toLocaleDateString(),
+        adminDashboardUrl: `${process.env.FRONTEND_URL}/admin/consultants`
       });
 
       console.log(`✅ New user registered: ${user.email}`);
@@ -469,13 +477,11 @@ router.post('/forgot-password',
           'mediumCache' // 30 minutes
         );
 
-        // Send password reset email
-        await sendEmail('password_reset', {
-          to: user.email,
-          data: {
-            firstName: user.firstName,
-            resetLink: `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`
-          }
+        // Send password reset email via Resend
+        await sendPasswordResetEmail({
+          firstName: user.firstName,
+          email: user.email,
+          resetLink: `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`
         });
       }
 

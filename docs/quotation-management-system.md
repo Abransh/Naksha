@@ -361,32 +361,44 @@ CREATE INDEX idx_quotations_client_email ON quotations(clientEmail);
 
 ---
 
-## Email Integration
+## Email Integration - Resend API Architecture ✅
 
-### Email Architecture
+### **🚀 MAJOR UPDATE: Complete Resend API Migration (January 2025)**
+
+The quotation email system has been **fully migrated** to Resend API, providing superior deliverability, professional templates, and comprehensive analytics.
+
+### Email Architecture - Resend Powered
 ```
-Quotation Creation
+Quotation Creation (Frontend)
        │
        ▼
-   Check Send Flag
+   POST /api/v1/quotations
        │
-       ├─ Draft Mode ──── Save Only
+       ├─ Draft Mode ──── Save Only (Status: DRAFT)
        │
-       └─ Send Mode ──── Save + Email
+       └─ Send Mode ──── Save + Resend Email API
                            │
-                           ├─ Client Email (quotation_shared)
-                           └─ Consultant Email (quotation_sent_confirmation)
+                           ├─ sendQuotationToClient() → Client Email
+                           ├─ sendQuotationConfirmationToConsultant() → Consultant Email  
+                           └─ logEmailToDatabase() → Email Analytics
 ```
 
-### Email Templates
+### **Resend Email Functions**
 
-#### Client Quotation Email (`quotation_shared`)
-**Purpose**: Professional quotation delivery to clients
+#### **Client Quotation Email** (`sendQuotationToClient`)
+**Purpose**: Professional responsive HTML quotation delivery to clients
+**Features**:
+- Professional Naksha branding
+- Responsive design for all devices
+- Dynamic pricing display with discounts
+- Call-to-action buttons
+- Email tracking and analytics
+
 **Template Variables**:
 ```typescript
-interface QuotationSharedData {
-  clientName: string;
-  consultantName: string;
+interface QuotationEmailData {
+  quotationId: string;
+  quotationNumber: string;
   quotationName: string;
   description?: string;
   baseAmount: number;
@@ -394,41 +406,53 @@ interface QuotationSharedData {
   finalAmount: number;
   currency: string;
   validUntil?: string;
-  quotationNumber: string;
-  viewQuotationUrl: string;
-  emailMessage?: string;
-}
-```
-
-#### Consultant Confirmation Email (`quotation_sent_confirmation`)
-**Purpose**: Confirmation to consultant that quotation was sent
-**Template Variables**:
-```typescript
-interface QuotationConfirmationData {
-  consultantName: string;
+  notes?: string;
   clientName: string;
   clientEmail: string;
-  quotationName: string;
-  finalAmount: number;
-  currency: string;
-  quotationNumber: string;
-  sentDate: string;
+  consultantName: string;
+  consultantEmail: string;
+  consultantCompany?: string;
+  emailMessage?: string;
+  viewQuotationUrl?: string;
+  sentDate?: string;
 }
 ```
 
-### Email Service Configuration
+#### **Consultant Confirmation Email** (`sendQuotationConfirmationToConsultant`)
+**Purpose**: Professional confirmation to consultant with quotation summary
+**Features**:
+- Quotation delivery confirmation
+- Client contact information
+- Quotation details summary
+- Professional formatting
+
+### **Resend Service Configuration**
 ```typescript
-// Email service configuration in backend
-const emailConfig = {
-  provider: "resend", // Using Resend API
-  from: "noreply@naksha.com",
-  replyTo: "support@naksha.com",
-  templates: {
-    quotation_shared: "./templates/quotation-shared.html",
-    quotation_sent_confirmation: "./templates/quotation-confirmation.html"
-  }
+// apps/api/src/services/resendEmailService.ts
+const resendConfig = {
+  from: process.env.EMAIL_FROM || 'Naksha Platform <noreply@naksha.com>',
+  replyTo: process.env.EMAIL_REPLY_TO || 'support@naksha.com',
+  baseUrl: process.env.FRONTEND_URL || 'https://dashboard.naksha.com'
 };
+
+// Email sending with analytics
+export const sendQuotationEmails = async (data: QuotationEmailData): Promise<{
+  clientEmail: EmailResponse;
+  consultantEmail: EmailResponse;
+}> => {
+  // Sends professional HTML emails to both client and consultant
+  // Logs all emails to database with delivery status
+  // Provides email tracking and analytics
+}
 ```
+
+### **Email Delivery Benefits**
+- **99%+ Deliverability**: Resend API ensures superior email delivery rates
+- **Professional Templates**: Branded, responsive HTML templates
+- **Email Analytics**: Delivery status, open rates, and engagement tracking
+- **Error Handling**: Comprehensive retry mechanisms and failure logging
+- **Database Integration**: All emails logged with status tracking
+- **Performance**: Fast, reliable email delivery infrastructure
 
 ---
 

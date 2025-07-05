@@ -1,11 +1,21 @@
 /**
- * Resend Email Service for Quotation Management
+ * Resend Email Service - Universal Email Platform Integration
+ * file path: apps/api/src/services/resendEmailService.ts
  * 
- * This service handles quotation email sending using the Resend API.
- * It provides professional email templates and reliable delivery for:
- * - Client quotation sharing
- * - Consultant confirmation emails
- * - Quotation status updates
+ * This service handles ALL email sending using the Resend API.
+ * Replaces the old nodemailer-based emailService.ts for:
+ * - Quotation emails (client sharing, consultant confirmations)
+ * - Authentication emails (welcome, password reset, email verification)
+ * - Session emails (confirmations, reminders)
+ * - Admin notifications (new consultant registrations)
+ * - System emails (alerts, reports)
+ * 
+ * Benefits of Resend API:
+ * - Superior deliverability rates
+ * - Professional email tracking
+ * - Template management
+ * - Analytics and monitoring
+ * - Scalable infrastructure
  */
 
 import { Resend } from 'resend';
@@ -35,8 +45,10 @@ const resendConfig = {
 };
 
 /**
- * Interface for quotation email data
+ * Email data interfaces for all email types
  */
+
+// Quotation email data interface
 interface QuotationEmailData {
   // Quotation details
   quotationId: string;
@@ -63,6 +75,70 @@ interface QuotationEmailData {
   emailMessage?: string;
   viewQuotationUrl?: string;
   sentDate?: string;
+}
+
+// Authentication email data interface
+interface AuthEmailData {
+  firstName: string;
+  lastName?: string;
+  email: string;
+  verificationLink?: string;
+  resetLink?: string;
+  consultantName?: string;
+  signupDate?: string;
+  adminDashboardUrl?: string;
+}
+
+// Session email data interface
+interface SessionEmailData {
+  sessionId: string;
+  sessionTitle?: string;
+  sessionType: string;
+  clientName: string;
+  clientEmail: string;
+  consultantName: string;
+  consultantEmail: string;
+  sessionDate: string;
+  sessionTime: string;
+  amount: number;
+  currency: string;
+  meetingLink?: string;
+  meetingPlatform?: string;
+  sessionNotes?: string;
+}
+
+// Admin notification email data interface
+interface AdminEmailData {
+  consultantName: string;
+  consultantEmail: string;
+  consultantId: string;
+  signupDate: string;
+  adminDashboardUrl: string;
+  actionRequired?: string;
+}
+
+// Client email data interface
+interface ClientEmailData {
+  clientName: string;
+  clientEmail: string;
+  consultantName: string;
+  consultantEmail: string;
+  profileUrl?: string;
+}
+
+// Payment email data interface
+interface PaymentEmailData {
+  clientName?: string;
+  consultantName?: string;
+  clientEmail?: string;
+  consultantEmail?: string;
+  amount: number;
+  currency: string;
+  transactionId?: string;
+  paymentMethod?: string;
+  sessionTitle?: string;
+  sessionDate?: string;
+  refundReason?: string;
 }
 
 /**
@@ -297,6 +373,518 @@ const getConsultantConfirmationEmailHtml = (data: QuotationEmailData): string =>
 };
 
 /**
+ * Authentication Email Templates
+ */
+
+/**
+ * Consultant welcome email template with professional branding
+ */
+const getConsultantWelcomeEmailHtml = (data: AuthEmailData): string => {
+  const { firstName, verificationLink } = data;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Naksha</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #4F46E5 0%, #7C3AED 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .cta-button { display: inline-block; background: #4F46E5; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: 600; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Welcome to Naksha</h1>
+            <p>The Premier Consulting Platform</p>
+        </div>
+        
+        <div class="content">
+            <p>Hello ${firstName}!</p>
+            
+            <p>Welcome to Naksha! Please verify your email address to get started:</p>
+            
+            <div style="text-align: center;">
+                <a href="${verificationLink}" class="cta-button">Verify Email Address</a>
+            </div>
+            
+            <p><strong>Important:</strong> After email verification, your account will require admin approval before you can access the full consultant dashboard.</p>
+        </div>
+        
+        <div class="footer">
+            <p>The Naksha Team</p>
+            <p>© 2024 Naksha Consulting Platform. All rights reserved.</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Password reset email template
+ */
+const getPasswordResetEmailHtml = (data: AuthEmailData): string => {
+  const { firstName, resetLink } = data;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Reset Your Password</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #EF4444 0%, #DC2626 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .reset-button { display: inline-block; background: #EF4444; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: 600; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🔐 Password Reset Request</h1>
+        </div>
+        
+        <div class="content">
+            <p>Hi ${firstName},</p>
+            
+            <p>We received a request to reset your password. Click the button below to set a new password:</p>
+            
+            <div style="text-align: center;">
+                <a href="${resetLink}" class="reset-button">Reset My Password</a>
+            </div>
+            
+            <p><strong>Security Notice:</strong> This link expires in 1 hour. If you didn't request this reset, please ignore this email.</p>
+        </div>
+        
+        <div class="footer">
+            <p>This is an automated security email from Naksha Platform</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Consultant approval email template
+ */
+const getConsultantApprovedEmailHtml = (data: AuthEmailData): string => {
+  const { firstName, adminDashboardUrl } = data;
+  const dashboardUrl = adminDashboardUrl || process.env.CONSULTANT_DASHBOARD_URL || 'https://dashboard.naksha.com';
+  const loginUrl = `${dashboardUrl}/auth/login`;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Account Approved - Welcome to Naksha Platform</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .dashboard-button { display: inline-block; background: #10B981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: 600; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+        .celebration { font-size: 48px; text-align: center; margin: 20px 0; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Welcome to Naksha Platform!</h1>
+        </div>
+        
+        <div class="celebration">🚀✨🎊</div>
+        
+        <div class="content">
+            <p>Congratulations ${firstName}!</p>
+            
+            <p>We're thrilled to inform you that your consultant application has been <strong>approved</strong>! You're now part of the Naksha Platform family.</p>
+            
+            <div style="background: #F0FDF4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3>What's Next?</h3>
+                <ul>
+                    <li>Access your consultant dashboard</li>
+                    <li>Complete your profile setup</li>
+                    <li>Start accepting client sessions</li>
+                    <li>Create and share quotations</li>
+                </ul>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="${loginUrl}" class="dashboard-button">Access Your Dashboard</a>
+            </div>
+            
+            <p>If you have any questions or need assistance, our support team is here to help.</p>
+            
+            <p>Welcome aboard!</p>
+        </div>
+        
+        <div class="footer">
+            <p>Start building your consulting business with Naksha Platform</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Consultant rejection email template
+ */
+const getConsultantRejectedEmailHtml = (data: AuthEmailData & { reason?: string; supportEmail?: string }): string => {
+  const { firstName, reason, supportEmail } = data;
+  const defaultReason = 'Your application did not meet our current requirements';
+  const defaultSupportEmail = 'support@naksha.com';
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Update on Your Naksha Platform Application</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .support-button { display: inline-block; background: #F59E0B; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: 600; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📧 Application Update</h1>
+        </div>
+        
+        <div class="content">
+            <p>Dear ${firstName},</p>
+            
+            <p>Thank you for your interest in joining the Naksha Platform as a consultant.</p>
+            
+            <p>After careful review of your application, we regret to inform you that we are unable to approve your consultant account at this time.</p>
+            
+            <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Reason:</strong> ${reason || defaultReason}</p>
+            </div>
+            
+            <p>We encourage you to consider reapplying in the future as our requirements and opportunities may evolve.</p>
+            
+            <p>If you have any questions about this decision or would like feedback on your application, please don't hesitate to reach out to our support team.</p>
+            
+            <div style="text-align: center;">
+                <a href="mailto:${supportEmail || defaultSupportEmail}" class="support-button">Contact Support</a>
+            </div>
+            
+            <p>Thank you for considering Naksha Platform.</p>
+        </div>
+        
+        <div class="footer">
+            <p>We appreciate your interest in our platform</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Client welcome email template
+ */
+const getClientWelcomeEmailHtml = (data: ClientEmailData): string => {
+  const { clientName, consultantName, consultantEmail, profileUrl } = data;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Welcome to Naksha Platform</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .profile-button { display: inline-block; background: #3B82F6; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: 600; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎉 Welcome to Naksha Platform!</h1>
+        </div>
+        
+        <div class="content">
+            <p>Hello ${clientName},</p>
+            
+            <p>Welcome to Naksha Platform! You've been connected with <strong>${consultantName}</strong>, your dedicated consultant.</p>
+            
+            <div style="background: #EFF6FF; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3>Your Consultant Details:</h3>
+                <p><strong>Name:</strong> ${consultantName}</p>
+                <p><strong>Email:</strong> ${consultantEmail}</p>
+                ${profileUrl ? `<p><strong>Profile:</strong> <a href="${profileUrl}">View Profile</a></p>` : ''}
+            </div>
+            
+            <p>Your consultant will reach out to you soon to discuss your requirements and schedule sessions.</p>
+            
+            ${profileUrl ? `
+            <div style="text-align: center;">
+                <a href="${profileUrl}" class="profile-button">View Consultant Profile</a>
+            </div>
+            ` : ''}
+            
+            <p>If you have any questions, feel free to contact your consultant directly or reach out to our support team.</p>
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for choosing Naksha Platform for your consulting needs</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Payment confirmation email template
+ */
+const getPaymentConfirmationEmailHtml = (data: PaymentEmailData): string => {
+  const { clientName, consultantName, amount, currency, transactionId, paymentMethod, sessionTitle, sessionDate } = data;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Payment Confirmed</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Payment Confirmed</h1>
+        </div>
+        
+        <div class="content">
+            <p>Dear ${clientName || 'Client'},</p>
+            
+            <p>Your payment has been successfully processed!</p>
+            
+            <div style="background: #F0FDF4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3>Payment Details:</h3>
+                <p><strong>Amount:</strong> ${currency} ${amount.toLocaleString()}</p>
+                <p><strong>Transaction ID:</strong> ${transactionId || 'N/A'}</p>
+                <p><strong>Payment Method:</strong> ${paymentMethod || 'Online'}</p>
+                ${sessionTitle ? `<p><strong>Service:</strong> ${sessionTitle}</p>` : ''}
+                ${sessionDate ? `<p><strong>Session Date:</strong> ${sessionDate}</p>` : ''}
+                ${consultantName ? `<p><strong>Consultant:</strong> ${consultantName}</p>` : ''}
+            </div>
+            
+            <p>You will receive session details and meeting information separately.</p>
+            
+            <p>Thank you for your payment!</p>
+        </div>
+        
+        <div class="footer">
+            <p>This is a payment confirmation from Naksha Platform</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Refund notification email template
+ */
+const getRefundNotificationEmailHtml = (data: PaymentEmailData): string => {
+  const { clientName, consultantName, amount, currency, transactionId, refundReason, sessionTitle } = data;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Refund Processed</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #F59E0B 0%, #D97706 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>💰 Refund Processed</h1>
+        </div>
+        
+        <div class="content">
+            <p>Dear ${clientName || 'Client'},</p>
+            
+            <p>Your refund has been processed successfully.</p>
+            
+            <div style="background: #FEF3C7; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3>Refund Details:</h3>
+                <p><strong>Refund Amount:</strong> ${currency} ${amount.toLocaleString()}</p>
+                <p><strong>Original Transaction:</strong> ${transactionId || 'N/A'}</p>
+                ${sessionTitle ? `<p><strong>Service:</strong> ${sessionTitle}</p>` : ''}
+                ${consultantName ? `<p><strong>Consultant:</strong> ${consultantName}</p>` : ''}
+                ${refundReason ? `<p><strong>Reason:</strong> ${refundReason}</p>` : ''}
+            </div>
+            
+            <p>The refund will be credited to your original payment method within 5-7 business days.</p>
+            
+            <p>If you have any questions about this refund, please contact our support team.</p>
+        </div>
+        
+        <div class="footer">
+            <p>This is a refund notification from Naksha Platform</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Session confirmation email template
+ */
+const getSessionConfirmationEmailHtml = (data: SessionEmailData): string => {
+  const { sessionTitle, sessionType, clientName, consultantName, sessionDate, sessionTime, amount, currency, meetingLink } = data;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Session Confirmed</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #10B981 0%, #059669 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .meeting-button { display: inline-block; background: #10B981; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: 600; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>✅ Session Confirmed</h1>
+        </div>
+        
+        <div class="content">
+            <p>Dear ${clientName},</p>
+            
+            <p>Your session with <strong>${consultantName}</strong> has been confirmed!</p>
+            
+            <div style="background: #F0FDF4; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <h3>${sessionTitle || sessionType}</h3>
+                <p><strong>📅 Date:</strong> ${sessionDate}</p>
+                <p><strong>🕒 Time:</strong> ${sessionTime}</p>
+                <p><strong>💰 Amount:</strong> ${currency} ${amount.toLocaleString()}</p>
+            </div>
+            
+            ${meetingLink ? `
+            <div style="text-align: center;">
+                <a href="${meetingLink}" class="meeting-button">Join Meeting</a>
+            </div>
+            ` : ''}
+            
+            <p><strong>Important:</strong> Please join the meeting 5-10 minutes before the scheduled time.</p>
+        </div>
+        
+        <div class="footer">
+            <p>Thank you for choosing Naksha Consulting Platform</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+};
+
+/**
+ * Admin notification email template
+ */
+const getAdminNotificationEmailHtml = (data: AdminEmailData): string => {
+  const { consultantName, consultantEmail, signupDate, adminDashboardUrl } = data;
+
+  return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>New Consultant Registration</title>
+    <style>
+        body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; margin: 0; padding: 0; background-color: #f4f4f4; }
+        .container { max-width: 600px; margin: 20px auto; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .header { background: linear-gradient(135deg, #7C3AED 0%, #5B21B6 100%); color: white; padding: 30px 20px; text-align: center; }
+        .content { padding: 30px 20px; }
+        .action-button { display: inline-block; background: #7C3AED; color: white; padding: 15px 30px; text-decoration: none; border-radius: 5px; font-weight: 600; margin: 20px 0; }
+        .footer { background: #f8f9fa; padding: 20px; text-align: center; color: #666; font-size: 14px; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🆕 New Consultant Registration</h1>
+            <p>Admin Action Required</p>
+        </div>
+        
+        <div class="content">
+            <p>A new consultant has registered and requires approval:</p>
+            
+            <div style="background: #F8FAFC; padding: 20px; border-radius: 8px; margin: 20px 0;">
+                <p><strong>Name:</strong> ${consultantName}</p>
+                <p><strong>Email:</strong> ${consultantEmail}</p>
+                <p><strong>Registration Date:</strong> ${signupDate}</p>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="${adminDashboardUrl}" class="action-button">Review Application</a>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Naksha Admin System</p>
+        </div>
+    </div>
+</body>
+</html>
+  `;
+};
+
+/**
  * Send quotation email to client using Resend API
  */
 export const sendQuotationToClient = async (data: QuotationEmailData): Promise<EmailResponse> => {
@@ -439,17 +1027,32 @@ const logEmailToDatabase = async (logData: {
   type: string;
   recipient: string;
   status: string;
-  quotationId: string;
+  quotationId?: string;
+  sessionId?: string;
+  consultantId?: string;
   errorMessage?: string;
 }): Promise<void> => {
   try {
     const prisma = getPrismaClient();
 
+    // Generate subject based on email type
+    const getSubjectByType = (type: string): string => {
+      switch (type) {
+        case 'quotation_shared': return 'Quotation shared with client';
+        case 'quotation_confirmation': return 'Quotation sent confirmation';
+        case 'consultant_welcome': return 'Welcome to Naksha';
+        case 'password_reset': return 'Password reset request';
+        case 'session_confirmation': return 'Session confirmation';
+        case 'admin_notification': return 'New consultant registration';
+        default: return `Email - ${type}`;
+      }
+    };
+
     await prisma.emailLog.create({
       data: {
         to: logData.recipient,
         recipientEmail: logData.recipient,
-        subject: `Quotation - ${logData.type}`,
+        subject: getSubjectByType(logData.type),
         emailType: logData.type,
         status: logData.status as any,
         errorMessage: logData.errorMessage,
@@ -457,8 +1060,11 @@ const logEmailToDatabase = async (logData: {
       }
     });
 
+    console.log(`📧 Email log saved: ${logData.type} to ${logData.recipient} - ${logData.status}`);
+
   } catch (error) {
     console.error('❌ Failed to log email to database:', error);
+    // Don't throw error - logging should not break email sending
   }
 };
 
@@ -489,9 +1095,556 @@ export const validateResendConfig = (): { valid: boolean; errors: string[] } => 
   };
 };
 
+/**
+ * Authentication Email Functions
+ */
+
+/**
+ * Send welcome email to new consultant using Resend API
+ */
+export const sendConsultantWelcomeEmail = async (data: AuthEmailData): Promise<EmailResponse> => {
+  try {
+    console.log(`📧 Sending welcome email to consultant: ${data.email}`);
+
+    const emailResponse = await getResendClient().emails.send({
+      from: resendConfig.from,
+      to: data.email,
+      replyTo: resendConfig.replyTo,
+      subject: 'Welcome to Naksha - Verify Your Email',
+      html: getConsultantWelcomeEmailHtml(data),
+      tags: [
+        { name: 'type', value: 'consultant_welcome' },
+        { name: 'consultant_email', value: data.email }
+      ]
+    });
+
+    console.log(`✅ Welcome email sent successfully. Email ID: ${emailResponse.data?.id}`);
+
+    // Log to database
+    await logEmailToDatabase({
+      emailId: emailResponse.data?.id || '',
+      type: 'consultant_welcome',
+      recipient: data.email,
+      status: 'SENT'
+    });
+
+    return {
+      success: true,
+      emailId: emailResponse.data?.id,
+      details: emailResponse.data
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to send welcome email:', error);
+
+    // Log failed email to database
+    await logEmailToDatabase({
+      emailId: '',
+      type: 'consultant_welcome',
+      recipient: data.email,
+      status: 'FAILED',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send email'
+    };
+  }
+};
+
+/**
+ * Send password reset email using Resend API
+ */
+export const sendPasswordResetEmail = async (data: AuthEmailData): Promise<EmailResponse> => {
+  try {
+    console.log(`📧 Sending password reset email to: ${data.email}`);
+
+    const emailResponse = await getResendClient().emails.send({
+      from: resendConfig.from,
+      to: data.email,
+      replyTo: resendConfig.replyTo,
+      subject: 'Reset Your Password - Naksha',
+      html: getPasswordResetEmailHtml(data),
+      tags: [
+        { name: 'type', value: 'password_reset' },
+        { name: 'consultant_email', value: data.email }
+      ]
+    });
+
+    console.log(`✅ Password reset email sent successfully. Email ID: ${emailResponse.data?.id}`);
+
+    // Log to database
+    await logEmailToDatabase({
+      emailId: emailResponse.data?.id || '',
+      type: 'password_reset',
+      recipient: data.email,
+      status: 'SENT'
+    });
+
+    return {
+      success: true,
+      emailId: emailResponse.data?.id,
+      details: emailResponse.data
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to send password reset email:', error);
+
+    // Log failed email to database
+    await logEmailToDatabase({
+      emailId: '',
+      type: 'password_reset',
+      recipient: data.email,
+      status: 'FAILED',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send email'
+    };
+  }
+};
+
+/**
+ * Send session confirmation email using Resend API
+ */
+export const sendSessionConfirmationEmail = async (data: SessionEmailData): Promise<EmailResponse> => {
+  try {
+    console.log(`📧 Sending session confirmation email to client: ${data.clientEmail}`);
+
+    const emailResponse = await getResendClient().emails.send({
+      from: resendConfig.from,
+      to: data.clientEmail,
+      replyTo: data.consultantEmail,
+      subject: `Session Confirmed with ${data.consultantName}`,
+      html: getSessionConfirmationEmailHtml(data),
+      tags: [
+        { name: 'type', value: 'session_confirmation' },
+        { name: 'session_id', value: data.sessionId },
+        { name: 'consultant_email', value: data.consultantEmail }
+      ]
+    });
+
+    console.log(`✅ Session confirmation email sent successfully. Email ID: ${emailResponse.data?.id}`);
+
+    // Log to database
+    await logEmailToDatabase({
+      emailId: emailResponse.data?.id || '',
+      type: 'session_confirmation',
+      recipient: data.clientEmail,
+      status: 'SENT',
+      sessionId: data.sessionId
+    });
+
+    return {
+      success: true,
+      emailId: emailResponse.data?.id,
+      details: emailResponse.data
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to send session confirmation email:', error);
+
+    // Log failed email to database
+    await logEmailToDatabase({
+      emailId: '',
+      type: 'session_confirmation',
+      recipient: data.clientEmail,
+      status: 'FAILED',
+      sessionId: data.sessionId,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send email'
+    };
+  }
+};
+
+/**
+ * Send admin notification email using Resend API
+ */
+export const sendAdminNotificationEmail = async (data: AdminEmailData): Promise<EmailResponse> => {
+  try {
+    console.log(`📧 Sending admin notification email for consultant: ${data.consultantEmail}`);
+
+    // Get admin email from environment or use default
+    const adminEmail = process.env.ADMIN_EMAIL || 'admin@naksha.com';
+
+    const emailResponse = await getResendClient().emails.send({
+      from: resendConfig.from,
+      to: adminEmail,
+      replyTo: resendConfig.replyTo,
+      subject: 'New Consultant Registration - Approval Required',
+      html: getAdminNotificationEmailHtml(data),
+      tags: [
+        { name: 'type', value: 'admin_notification' },
+        { name: 'consultant_id', value: data.consultantId },
+        { name: 'consultant_email', value: data.consultantEmail }
+      ]
+    });
+
+    console.log(`✅ Admin notification email sent successfully. Email ID: ${emailResponse.data?.id}`);
+
+    // Log to database
+    await logEmailToDatabase({
+      emailId: emailResponse.data?.id || '',
+      type: 'admin_notification',
+      recipient: adminEmail,
+      status: 'SENT',
+      consultantId: data.consultantId
+    });
+
+    return {
+      success: true,
+      emailId: emailResponse.data?.id,
+      details: emailResponse.data
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to send admin notification email:', error);
+
+    // Log failed email to database
+    await logEmailToDatabase({
+      emailId: '',
+      type: 'admin_notification',
+      recipient: process.env.ADMIN_EMAIL || 'admin@naksha.com',
+      status: 'FAILED',
+      consultantId: data.consultantId,
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send email'
+    };
+  }
+};
+
+/**
+ * Send consultant approval email
+ * @param data - Consultant approval data
+ * @returns Promise<EmailResponse>
+ */
+export const sendConsultantApprovedEmail = async (data: AuthEmailData): Promise<EmailResponse> => {
+  try {
+    console.log(`📧 Sending consultant approval email to: ${data.email}`);
+
+    const emailResponse = await getResendClient().emails.send({
+      from: resendConfig.from,
+      to: data.email,
+      replyTo: resendConfig.replyTo,
+      subject: 'Welcome to Naksha Platform - Account Approved! 🎉',
+      html: getConsultantApprovedEmailHtml(data),
+      tags: [
+        { name: 'type', value: 'consultant_approved' },
+        { name: 'consultant_email', value: data.email }
+      ]
+    });
+
+    console.log(`✅ Consultant approval email sent successfully. Email ID: ${emailResponse.data?.id}`);
+
+    // Log to database
+    await logEmailToDatabase({
+      emailId: emailResponse.data?.id || '',
+      type: 'consultant_approved',
+      recipient: data.email,
+      status: 'SENT'
+    });
+
+    return {
+      success: true,
+      emailId: emailResponse.data?.id,
+      details: emailResponse.data
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to send consultant approval email:', error);
+
+    // Log failed email to database
+    await logEmailToDatabase({
+      emailId: '',
+      type: 'consultant_approved',
+      recipient: data.email,
+      status: 'FAILED',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send email'
+    };
+  }
+};
+
+/**
+ * Send consultant rejection email
+ * @param data - Consultant rejection data
+ * @returns Promise<EmailResponse>
+ */
+export const sendConsultantRejectedEmail = async (data: AuthEmailData & { 
+  reason?: string; 
+  supportEmail?: string; 
+}): Promise<EmailResponse> => {
+  try {
+    console.log(`📧 Sending consultant rejection email to: ${data.email}`);
+
+    const emailResponse = await getResendClient().emails.send({
+      from: resendConfig.from,
+      to: data.email,
+      replyTo: resendConfig.replyTo,
+      subject: 'Update on Your Naksha Platform Application',
+      html: getConsultantRejectedEmailHtml(data),
+      tags: [
+        { name: 'type', value: 'consultant_rejected' },
+        { name: 'consultant_email', value: data.email }
+      ]
+    });
+
+    console.log(`✅ Consultant rejection email sent successfully. Email ID: ${emailResponse.data?.id}`);
+
+    // Log to database
+    await logEmailToDatabase({
+      emailId: emailResponse.data?.id || '',
+      type: 'consultant_rejected',
+      recipient: data.email,
+      status: 'SENT'
+    });
+
+    return {
+      success: true,
+      emailId: emailResponse.data?.id,
+      details: emailResponse.data
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to send consultant rejection email:', error);
+
+    // Log failed email to database
+    await logEmailToDatabase({
+      emailId: '',
+      type: 'consultant_rejected',
+      recipient: data.email,
+      status: 'FAILED',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send email'
+    };
+  }
+};
+
+/**
+ * Send client welcome email
+ * @param data - Client welcome data
+ * @returns Promise<EmailResponse>
+ */
+export const sendClientWelcomeEmail = async (data: ClientEmailData): Promise<EmailResponse> => {
+  try {
+    console.log(`📧 Sending client welcome email to: ${data.clientEmail}`);
+
+    const emailResponse = await getResendClient().emails.send({
+      from: resendConfig.from,
+      to: data.clientEmail,
+      replyTo: resendConfig.replyTo,
+      subject: 'Welcome to Naksha Platform - You\'re All Set! 🎉',
+      html: getClientWelcomeEmailHtml(data),
+      tags: [
+        { name: 'type', value: 'client_welcome' },
+        { name: 'client_email', value: data.clientEmail },
+        { name: 'consultant_email', value: data.consultantEmail }
+      ]
+    });
+
+    console.log(`✅ Client welcome email sent successfully. Email ID: ${emailResponse.data?.id}`);
+
+    // Log to database
+    await logEmailToDatabase({
+      emailId: emailResponse.data?.id || '',
+      type: 'client_welcome',
+      recipient: data.clientEmail,
+      status: 'SENT'
+    });
+
+    return {
+      success: true,
+      emailId: emailResponse.data?.id,
+      details: emailResponse.data
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to send client welcome email:', error);
+
+    // Log failed email to database
+    await logEmailToDatabase({
+      emailId: '',
+      type: 'client_welcome',
+      recipient: data.clientEmail,
+      status: 'FAILED',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send email'
+    };
+  }
+};
+
+/**
+ * Send payment confirmation email
+ * @param data - Payment confirmation data
+ * @returns Promise<EmailResponse>
+ */
+export const sendPaymentConfirmationEmail = async (data: PaymentEmailData): Promise<EmailResponse> => {
+  try {
+    const recipient = data.clientEmail || data.consultantEmail;
+    if (!recipient) {
+      throw new Error('No recipient email provided');
+    }
+
+    console.log(`📧 Sending payment confirmation email to: ${recipient}`);
+
+    const emailResponse = await getResendClient().emails.send({
+      from: resendConfig.from,
+      to: recipient,
+      replyTo: resendConfig.replyTo,
+      subject: 'Payment Confirmed - Thank You! ✅',
+      html: getPaymentConfirmationEmailHtml(data),
+      tags: [
+        { name: 'type', value: 'payment_confirmation' },
+        { name: 'recipient', value: recipient },
+        { name: 'transaction_id', value: data.transactionId || '' }
+      ]
+    });
+
+    console.log(`✅ Payment confirmation email sent successfully. Email ID: ${emailResponse.data?.id}`);
+
+    // Log to database
+    await logEmailToDatabase({
+      emailId: emailResponse.data?.id || '',
+      type: 'payment_confirmation',
+      recipient: recipient,
+      status: 'SENT'
+    });
+
+    return {
+      success: true,
+      emailId: emailResponse.data?.id,
+      details: emailResponse.data
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to send payment confirmation email:', error);
+
+    // Log failed email to database
+    await logEmailToDatabase({
+      emailId: '',
+      type: 'payment_confirmation',
+      recipient: data.clientEmail || data.consultantEmail || '',
+      status: 'FAILED',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send email'
+    };
+  }
+};
+
+/**
+ * Send refund notification email
+ * @param data - Refund notification data
+ * @returns Promise<EmailResponse>
+ */
+export const sendRefundNotificationEmail = async (data: PaymentEmailData): Promise<EmailResponse> => {
+  try {
+    const recipient = data.clientEmail || data.consultantEmail;
+    if (!recipient) {
+      throw new Error('No recipient email provided');
+    }
+
+    console.log(`📧 Sending refund notification email to: ${recipient}`);
+
+    const emailResponse = await getResendClient().emails.send({
+      from: resendConfig.from,
+      to: recipient,
+      replyTo: resendConfig.replyTo,
+      subject: 'Refund Processed - Confirmation 💰',
+      html: getRefundNotificationEmailHtml(data),
+      tags: [
+        { name: 'type', value: 'refund_notification' },
+        { name: 'recipient', value: recipient },
+        { name: 'transaction_id', value: data.transactionId || '' }
+      ]
+    });
+
+    console.log(`✅ Refund notification email sent successfully. Email ID: ${emailResponse.data?.id}`);
+
+    // Log to database
+    await logEmailToDatabase({
+      emailId: emailResponse.data?.id || '',
+      type: 'refund_notification',
+      recipient: recipient,
+      status: 'SENT'
+    });
+
+    return {
+      success: true,
+      emailId: emailResponse.data?.id,
+      details: emailResponse.data
+    };
+
+  } catch (error) {
+    console.error('❌ Failed to send refund notification email:', error);
+
+    // Log failed email to database
+    await logEmailToDatabase({
+      emailId: '',
+      type: 'refund_notification',
+      recipient: data.clientEmail || data.consultantEmail || '',
+      status: 'FAILED',
+      errorMessage: error instanceof Error ? error.message : 'Unknown error'
+    });
+
+    return {
+      success: false,
+      error: error instanceof Error ? error.message : 'Failed to send email'
+    };
+  }
+};
+
 export default {
+  // Quotation emails (existing)
   sendQuotationToClient,
   sendQuotationConfirmationToConsultant,
   sendQuotationEmails,
+  
+  // Authentication emails (new)
+  sendConsultantWelcomeEmail,
+  sendPasswordResetEmail,
+  sendConsultantApprovedEmail,
+  sendConsultantRejectedEmail,
+  
+  // Session emails (new)
+  sendSessionConfirmationEmail,
+  
+  // Admin emails (new)
+  sendAdminNotificationEmail,
+  
+  // Client emails (new)
+  sendClientWelcomeEmail,
+  
+  // Payment emails (new)
+  sendPaymentConfirmationEmail,
+  sendRefundNotificationEmail,
+  
+  // Utility functions
   validateResendConfig
 };

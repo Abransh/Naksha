@@ -17,7 +17,7 @@ import { cacheUtils } from '../../config/redis';
 import { AuthenticatedRequest } from '../../middleware/auth';
 import { validateRequest, commonSchemas, validationUtils } from '../../middleware/validation';
 import { AppError, NotFoundError, ValidationError, ConflictError } from '../../middleware/errorHandler';
-import { sendEmail } from '../../services/emailService';
+import { sendClientWelcomeEmail } from '../../services/resendEmailService';
 import { generateClientInsights } from '../../utils/analytics';
 import { exportToCSV } from '../../utils/export';
 
@@ -379,16 +379,14 @@ router.post('/',
         }
       });
 
-      // Send welcome email to client
+      // Send welcome email to client via Resend
       try {
-        await sendEmail('client_welcome', {
-          to: client.email,
-          data: {
-            clientName: client.name,
-            consultantName: `${req.user!.slug || req.user!.email}`.trim(),
-            consultantEmail: req.user!.email,
-            profileUrl: `${process.env.FRONTEND_URL}/${req.user!.slug || ''}`
-          }
+        await sendClientWelcomeEmail({
+          clientName: client.name,
+          clientEmail: client.email,
+          consultantName: `${req.user!.slug || req.user!.email}`.trim(),
+          consultantEmail: req.user!.email,
+          profileUrl: `${process.env.FRONTEND_URL}/${req.user!.slug || ''}`
         });
       } catch (emailError) {
         console.error('❌ Welcome email failed:', emailError);

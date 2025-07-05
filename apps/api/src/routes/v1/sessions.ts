@@ -17,7 +17,7 @@ import { cacheUtils } from '../../config/redis';
 import { AuthenticatedRequest, optionalAuth } from '../../middleware/auth';
 import { validateRequest, commonSchemas } from '../../middleware/validation';
 import { AppError, NotFoundError, ValidationError } from '../../middleware/errorHandler';
-import { sendEmail } from '../../services/emailService';
+import { sendSessionConfirmationEmail } from '../../services/resendEmailService';
 import { generateMeetingLink } from '../../services/meetingService';
 import { calculateSessionMetrics } from '../../utils/analytics';
 
@@ -240,37 +240,32 @@ router.post('/book',
         return { client, session };
       });
 
-      // Send confirmation emails
-      try {
-        // Email to client
-        await sendEmail('session_booking_confirmation', {
-          to: result.client.email,
-          data: {
-            clientName: result.client.name,
-            consultantName: `${consultant.firstName} ${consultant.lastName}`,
-            sessionType: bookingData.sessionType,
-            sessionDate: bookingData.selectedDate,
-            sessionTime: bookingData.selectedTime,
-            sessionAmount: bookingData.amount,
-            sessionId: result.session.id,
-            paymentInstructions: 'Payment details will be sent separately.'
-          }
-        });
+      // Generate meeting link for session
+      const meetingLink = await generateMeetingLink({
+        sessionId: result.session.id,
+        sessionTitle: `${bookingData.sessionType} Session`,
+        scheduledDateTime: `${bookingData.selectedDate} ${bookingData.selectedTime}`,
+        duration: bookingData.duration,
+        consultantName: `${consultant.firstName} ${consultant.lastName}`,
+        clientName: result.client.name
+      });
 
-        // Email to consultant
-        await sendEmail('new_session_booking', {
-          to: consultant.email,
-          data: {
-            consultantName: consultant.firstName,
-            clientName: result.client.name,
-            clientEmail: result.client.email,
-            sessionType: bookingData.sessionType,
-            sessionDate: bookingData.selectedDate,
-            sessionTime: bookingData.selectedTime,
-            sessionAmount: bookingData.amount,
-            sessionId: result.session.id,
-            clientNotes: bookingData.clientNotes || 'No additional notes'
-          }
+      // Send confirmation email to client via Resend
+      try {
+        await sendSessionConfirmationEmail({
+          sessionId: result.session.id,
+          sessionTitle: `${bookingData.sessionType} Session`,
+          sessionType: bookingData.sessionType,
+          clientName: result.client.name,
+          clientEmail: result.client.email,
+          consultantName: `${consultant.firstName} ${consultant.lastName}`,
+          consultantEmail: consultant.email,
+          sessionDate: bookingData.selectedDate,
+          sessionTime: bookingData.selectedTime,
+          amount: bookingData.amount,
+          currency: 'INR',
+          meetingLink: meetingLink || '',
+          meetingPlatform: 'Zoom'
         });
 
         console.log('✅ Confirmation emails sent');
@@ -592,15 +587,15 @@ router.post('/',
         throw new ValidationError('You already have a session scheduled at this time');
       }
 
-      // Check if it's a repeat client
-      const clientSessionCount = await prisma.session.count({
-        where: {
-          clientId: sessionData.clientId,
-          status: 'COMPLETED'
-        }
-      });
+      // Check if it's a repeat client (commented out as not needed for Resend email)
+      // const clientSessionCount = await prisma.session.count({
+      //   where: {
+      //     clientId: sessionData.clientId,
+      //     status: 'COMPLETED'
+      //   }
+      // });
 
-      const isRepeatClient = clientSessionCount > 0;
+      // const isRepeatClient = clientSessionCount > 0; // Not used in Resend email
 
       // Generate meeting link based on platform
       const meetingDetails = await generateMeetingLink(
@@ -677,39 +672,23 @@ router.post('/',
         }
       });
 
-      // Send confirmation emails
+      // Send confirmation emails via Resend
       try {
-        // Email to client
-        await sendEmail('session_confirmation', {
-          to: client.email,
-          data: {
-            clientName: client.name,
-            consultantName: `${req.user!.slug || req.user!.email}`,
-            sessionTitle: session.title,
-            sessionDate: session.scheduledDate.toLocaleDateString(),
-            sessionTime: session.scheduledTime,
-            platform: session.platform,
-            meetingLink: session.meetingLink,
-            meetingPassword: session.meetingPassword,
-            amount: Number(session.amount),
-            currency: session.currency
-          }
-        });
-
-        // Email to consultant
-        await sendEmail('session_booked', {
-          to: req.user!.email,
-          data: {
-            consultantName: `${req.user!.slug} ${req.user!.email}`,
-            clientName: client.name,
-            clientEmail: client.email,
-            sessionTitle: session.title,
-            sessionDate: session.scheduledDate.toLocaleDateString(),
-            sessionTime: session.scheduledTime,
-            amount: Number(session.amount),
-            currency: session.currency,
-            isRepeatClient
-          }
+        // Email to client and consultant
+        await sendSessionConfirmationEmail({
+          sessionId: session.id,
+          sessionTitle: session.title,
+          sessionType: session.sessionType,
+          clientName: client.name,
+          clientEmail: client.email,
+          consultantName: req.user!.slug || req.user!.email,
+          consultantEmail: req.user!.email,
+          sessionDate: session.scheduledDate.toISOString().split('T')[0],
+          sessionTime: session.scheduledTime,
+          amount: Number(session.amount),
+          currency: session.currency || 'INR',
+          meetingLink: session.meetingLink || '',
+          meetingPlatform: (session.platform || 'ZOOM').toUpperCase()
         });
       } catch (emailError) {
         console.error('❌ Email sending failed:', emailError);
@@ -852,22 +831,23 @@ router.put('/:id',
         });
       }
 
-      // Send update notifications if significant changes
+      // Send update notifications if significant changes via Resend
       if (updates.scheduledDate || updates.scheduledTime || updates.status === 'CANCELLED') {
         try {
-          const emailType = updates.status === 'CANCELLED' ? 'session_cancelled' : 'session_rescheduled';
-          
-          await sendEmail(emailType, {
-            to: existingSession.client.email,
-            data: {
-              clientName: existingSession.client.name,
-              consultantName: `${req.user!.slug} ${req.user!.email}`,
-              sessionTitle: updatedSession.title,
-              sessionDate: updatedSession.scheduledDate.toLocaleDateString(),
-              sessionTime: updatedSession.scheduledTime,
-              meetingLink: updatedSession.meetingLink,
-              reason: updates.consultantNotes || 'Schedule change'
-            }
+          await sendSessionConfirmationEmail({
+            sessionId: updatedSession.id,
+            sessionTitle: `${updates.status === 'CANCELLED' ? 'CANCELLED: ' : 'UPDATED: '}${updatedSession.title}`,
+            sessionType: existingSession.sessionType,
+            clientName: existingSession.client.name,
+            clientEmail: existingSession.client.email,
+            consultantName: req.user!.slug || req.user!.email,
+            consultantEmail: req.user!.email,
+            sessionDate: updatedSession.scheduledDate.toISOString().split('T')[0],
+            sessionTime: updatedSession.scheduledTime,
+            amount: Number(updatedSession.amount),
+            currency: updatedSession.currency || 'INR',
+            meetingLink: updatedSession.meetingLink || '',
+            meetingPlatform: (existingSession.platform || 'ZOOM').toUpperCase()
           });
         } catch (emailError) {
           console.error('❌ Update notification email failed:', emailError);
@@ -954,18 +934,22 @@ router.delete('/:id',
         }
       });
 
-      // Send cancellation email
+      // Send cancellation email via Resend
       try {
-        await sendEmail('session_cancelled', {
-          to: session.client.email,
-          data: {
-            clientName: session.client.name,
-            consultantName: `${req.user!.slug} ${req.user!.email}`,
-            sessionTitle: session.title,
-            sessionDate: session.scheduledDate.toLocaleDateString(),
-            sessionTime: session.scheduledTime,
-            reason: 'Cancelled by consultant'
-          }
+        await sendSessionConfirmationEmail({
+          sessionId: session.id,
+          sessionTitle: `CANCELLED: ${session.title}`,
+          sessionType: session.sessionType,
+          clientName: session.client.name,
+          clientEmail: session.client.email,
+          consultantName: req.user!.slug || req.user!.email,
+          consultantEmail: req.user!.email,
+          sessionDate: session.scheduledDate.toISOString().split('T')[0],
+          sessionTime: session.scheduledTime,
+          amount: Number(session.amount),
+          currency: session.currency || 'INR',
+          meetingLink: session.meetingLink || '',
+          meetingPlatform: (session.platform || 'ZOOM').toUpperCase()
         });
       } catch (emailError) {
         console.error('❌ Cancellation email failed:', emailError);

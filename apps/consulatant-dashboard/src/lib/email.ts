@@ -1,28 +1,21 @@
 /**
- * Frontend Email Service
- * Provides interface for sending emails through the backend API
- * Integrates with the backend email service that uses Resend/SMTP
+ * Frontend Email Service - Resend Integration
+ * file path: apps/consultant-dashboard/src/lib/email.ts
+ * 
+ * IMPORTANT: Quotation emails are handled directly by backend endpoints:
+ * - POST /api/v1/quotations (create)
+ * - POST /api/v1/quotations/:id/send (send via Resend)
+ * 
+ * This service is for non-quotation email types only.
+ * All email services now use Resend API as the primary provider.
  */
 
-// Email template types supported by the backend
+// Email template types supported by the backend (excluding quotations)
 export type EmailTemplate = 
   | 'consultant_welcome'
   | 'password_reset' 
   | 'session_confirmation'
-  | 'quotation_shared'
-  | 'quotation_sent_confirmation'
   | 'admin_new_consultant';
-
-// Email sending interface
-export interface SendEmailRequest {
-  templateName: EmailTemplate;
-  to: string;
-  data: Record<string, any>;
-  from?: string;
-  replyTo?: string;
-  cc?: string[];
-  bcc?: string[];
-}
 
 // Email response interface
 export interface EmailResponse {
@@ -30,23 +23,6 @@ export interface EmailResponse {
   message: string;
   emailId?: string;
   error?: string;
-}
-
-// Quotation email data interface
-export interface QuotationEmailData {
-  clientName: string;
-  consultantName: string;
-  quotationName: string;
-  description?: string;
-  baseAmount: number;
-  discountPercentage: number;
-  finalAmount: number;
-  currency: string;
-  validUntil?: string;
-  quotationNumber: string;
-  emailMessage?: string;
-  viewQuotationUrl: string;
-  consultantEmail: string;
 }
 
 // Session confirmation email data interface
@@ -80,98 +56,52 @@ class EmailService {
   }
 
   /**
-   * Send email through backend API
-   * @param request Email request parameters
-   * @returns Promise<EmailResponse>
+   * NOTE: This method is temporarily disabled as we consolidate to Resend API.
+   * Session confirmation emails should be handled by backend endpoints directly.
+   * 
+   * For quotations, use: POST /api/v1/quotations/:id/send (already uses Resend)
+   * For sessions, use: POST /api/v1/sessions (backend handles email via Resend)
+   * 
+   * @deprecated Will be replaced with direct backend endpoint calls
    */
-  private async sendEmailRequest(request: SendEmailRequest): Promise<EmailResponse> {
-    try {
-      const token = this.getAuthToken();
-      
-      if (!token) {
-        throw new Error('Authentication token not found');
-      }
-
-      const response = await fetch(`${this.apiBaseUrl}/api/v1/email/send`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify(request),
-      });
-
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.message || `Email sending failed: ${response.status}`);
-      }
-
-      const result = await response.json();
-      
-      return {
-        success: true,
-        message: result.message || 'Email sent successfully',
-        emailId: result.data?.emailId,
-      };
-
-    } catch (error) {
-      console.error('❌ Email sending error:', error);
-      
-      return {
-        success: false,
-        message: 'Failed to send email',
-        error: error instanceof Error ? error.message : 'Unknown error occurred',
-      };
-    }
+  private async sendEmailRequest(): Promise<EmailResponse> {
+    console.warn('⚠️ Frontend email service is deprecated. Use backend endpoints directly.');
+    
+    return {
+      success: false,
+      message: 'Frontend email service is deprecated. Use backend endpoints directly.',
+      error: 'Service deprecated - use backend endpoints'
+    };
   }
 
   /**
-   * Send quotation to client
-   * @param quotationData Quotation details for email template
-   * @returns Promise<EmailResponse>
+   * DEPRECATED: Quotation emails are now handled by backend endpoints directly
+   * 
+   * Use these backend endpoints instead:
+   * - Create quotation: POST /api/v1/quotations
+   * - Send quotation: POST /api/v1/quotations/:id/send (uses Resend automatically)
+   * 
+   * @deprecated Use backend endpoints directly
    */
-  async sendQuotationToClient(quotationData: QuotationEmailData): Promise<EmailResponse> {
-    return this.sendEmailRequest({
-      templateName: 'quotation_shared',
-      to: quotationData.consultantEmail, // This will be overridden by backend with client email
-      data: {
-        clientName: quotationData.clientName,
-        consultantName: quotationData.consultantName,
-        quotationName: quotationData.quotationName,
-        description: quotationData.description,
-        baseAmount: quotationData.baseAmount,
-        discountPercentage: quotationData.discountPercentage,
-        finalAmount: quotationData.finalAmount,
-        currency: quotationData.currency,
-        validUntil: quotationData.validUntil,
-        quotationNumber: quotationData.quotationNumber,
-        emailMessage: quotationData.emailMessage || '',
-        viewQuotationUrl: quotationData.viewQuotationUrl,
-        consultantEmail: quotationData.consultantEmail,
-      },
-    });
+  async sendQuotationToClient(): Promise<EmailResponse> {
+    return {
+      success: false,
+      message: 'Quotation emails are handled by backend endpoints. Use POST /api/v1/quotations/:id/send',
+      error: 'Method deprecated - use backend endpoints'
+    };
   }
 
   /**
-   * Send quotation confirmation to consultant
-   * @param quotationData Quotation details for confirmation email
-   * @returns Promise<EmailResponse>
+   * DEPRECATED: Quotation confirmation emails are handled automatically by backend
+   * 
+   * @deprecated Use backend endpoints directly
    */
-  async sendQuotationConfirmation(quotationData: QuotationEmailData): Promise<EmailResponse> {
-    return this.sendEmailRequest({
-      templateName: 'quotation_sent_confirmation',
-      to: quotationData.consultantEmail,
-      data: {
-        consultantName: quotationData.consultantName,
-        clientName: quotationData.clientName,
-        clientEmail: quotationData.consultantEmail, // Client email will be provided by backend
-        quotationName: quotationData.quotationName,
-        finalAmount: quotationData.finalAmount,
-        currency: quotationData.currency,
-        quotationNumber: quotationData.quotationNumber,
-        sentDate: new Date().toLocaleDateString(),
-      },
-    });
+  async sendQuotationConfirmation(): Promise<EmailResponse> {
+    return {
+      success: false,
+      message: 'Quotation confirmations are handled automatically by backend when using POST /api/v1/quotations/:id/send',
+      error: 'Method deprecated - use backend endpoints'
+    };
   }
 
   /**
@@ -277,29 +207,16 @@ export const emailService = new EmailService();
  */
 
 /**
- * Format quotation data for email templates
- * @param quotation Raw quotation data
- * @param consultant Consultant data
- * @returns Formatted quotation email data
+ * DEPRECATED: Quotation formatting is handled by backend Resend service
+ * 
+ * The backend automatically formats quotation data when using:
+ * POST /api/v1/quotations/:id/send
+ * 
+ * @deprecated Use backend endpoints directly
  */
-export const formatQuotationForEmail = (
-  quotation: any,
-  consultant: any
-): QuotationEmailData => {
-  return {
-    clientName: quotation.clientName,
-    consultantName: `${consultant.firstName} ${consultant.lastName}`,
-    quotationName: quotation.quotationName,
-    description: quotation.description,
-    baseAmount: Number(quotation.baseAmount),
-    discountPercentage: Number(quotation.discountPercentage || 0),
-    finalAmount: Number(quotation.finalAmount),
-    currency: quotation.currency || 'INR',
-    validUntil: quotation.validUntil ? new Date(quotation.validUntil).toLocaleDateString() : undefined,
-    quotationNumber: quotation.quotationNumber,
-    viewQuotationUrl: `${window.location.origin}/quotation/${quotation.id}`,
-    consultantEmail: consultant.email,
-  };
+export const formatQuotationForEmail = (): any => {
+  console.warn('⚠️ formatQuotationForEmail is deprecated. Backend handles quotation formatting automatically.');
+  return null;
 };
 
 /**
@@ -325,19 +242,30 @@ export const formatSessionForEmail = (
 
 /**
  * Show email status toast notifications
+ * 
+ * NOTE: For quotations, use the response from backend endpoints directly:
+ * - POST /api/v1/quotations/:id/send returns emailStatus object with client/consultant results
+ * 
  * @param result Email sending result
  * @param action Description of the action performed
  */
 export const handleEmailResult = (result: EmailResponse, action: string = 'send email') => {
   if (result.success) {
-    console.log(`✅ Successfully ${action}:`, result.message);
+    console.log(`✅ Successfully ${action} via Resend:`, result.message);
     // You can integrate with a toast notification library here
     // Example: toast.success(result.message);
   } else {
-    console.error(`❌ Failed to ${action}:`, result.error);
+    console.error(`❌ Failed to ${action} via Resend:`, result.error);
     // Example: toast.error(result.error || `Failed to ${action}`);
   }
 };
 
-// Export default instance for convenience
+/**
+ * NOTE: This frontend email service is now primarily for documentation.
+ * 
+ * For actual email sending, use backend endpoints directly:
+ * - Quotations: POST /api/v1/quotations/:id/send (Resend integration complete)
+ * - Sessions: POST /api/v1/sessions (backend handles email via Resend)
+ * - Auth emails: Handled by backend auth routes (will be migrated to Resend in Phase 2)
+ */
 export default emailService;

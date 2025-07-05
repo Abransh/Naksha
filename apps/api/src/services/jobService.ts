@@ -15,7 +15,7 @@
 
 import cron from 'node-cron';
 import { getPrismaClient } from '../config/database';
-import { sendEmail} from './emailService';
+import { sendSessionConfirmationEmail } from './resendEmailService';
 import { cleanupTempFiles } from './uploadService';
 import { logger } from '../utils/logger';
 
@@ -99,19 +99,24 @@ const sessionReminderJob = async (): Promise<void> => {
 
     for (const session of upcomingSessions) {
       try {
-        // Send reminder to client
-        const reminderSent = await sendEmail('session_reminder', {
-          to: session.client.email,
-          data: {
-            clientName: session.client.name,
-            consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
-            sessionDate: session.scheduledDate.toLocaleDateString(),
-            sessionTime: session.scheduledDate.toLocaleTimeString(),
-            platform: session.platform,
-            meetingLink: session.meetingLink,
-            meetingPassword: session.meetingPassword
-          }
-        }, session.consultantId);
+        // Send reminder to client via Resend
+        const reminderResult = await sendSessionConfirmationEmail({
+          sessionId: session.id,
+          sessionTitle: `REMINDER: ${session.title}`,
+          sessionType: session.sessionType,
+          clientName: session.client.name,
+          clientEmail: session.client.email,
+          consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
+          consultantEmail: session.consultant.email,
+          sessionDate: session.scheduledDate.toISOString().split('T')[0],
+          sessionTime: session.scheduledTime || session.scheduledDate.toLocaleTimeString(),
+          amount: Number(session.amount),
+          currency: session.currency || 'INR',
+          meetingLink: session.meetingLink || '',
+          meetingPlatform: (session.platform || 'ZOOM').toUpperCase()
+        });
+        
+        const reminderSent = reminderResult.success;
 
         if (reminderSent) {
           // Mark reminder as sent

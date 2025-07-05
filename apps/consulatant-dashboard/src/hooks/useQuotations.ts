@@ -1,5 +1,6 @@
 /**
  * Quotations Management Hook
+ * file path: apps/consultant-dashboard/src/hooks/useQuotations.ts
  * Handles all quotation-related operations and state management
  */
 

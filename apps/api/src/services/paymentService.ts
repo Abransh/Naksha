@@ -17,7 +17,10 @@ import Razorpay from 'razorpay';
 import crypto from 'crypto';
 import { getPrismaClient } from '../config/database';
 import { cacheUtils } from '../config/redis';
-import { sendEmail } from './emailService';
+import { 
+  sendPaymentConfirmationEmail as sendPaymentConfirmationViaResend, 
+  sendRefundNotificationEmail as sendRefundNotificationViaResend 
+} from './resendEmailService';
 import { AppError, ValidationError } from '../middleware/errorHandler';
 
 /**
@@ -572,32 +575,32 @@ const sendPaymentConfirmationEmails = async (
   transaction: any
 ): Promise<void> => {
   try {
-    // Email to client
-    await sendEmail('payment_confirmation', {
-      to: session.client.email,
-      data: {
-        clientName: session.client.name,
-        consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
-        sessionTitle: session.title,
-        amount: Number(transaction.amount),
-        currency: transaction.currency,
-        paymentId: transaction.gatewayPaymentId,
-        sessionDate: session.scheduledDate.toLocaleDateString(),
-        sessionTime: session.scheduledTime
-      }
+    // Email to client via Resend
+    await sendPaymentConfirmationViaResend({
+      clientName: session.client.name,
+      clientEmail: session.client.email,
+      consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
+      consultantEmail: session.consultant.email,
+      amount: Number(transaction.amount),
+      currency: transaction.currency,
+      transactionId: transaction.gatewayPaymentId,
+      paymentMethod: transaction.paymentMethod || 'Online',
+      sessionTitle: session.title,
+      sessionDate: session.scheduledDate.toLocaleDateString()
     });
 
-    // Email to consultant
-    await sendEmail('payment_received', {
-      to: session.consultant.email,
-      data: {
-        consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
-        clientName: session.client.name,
-        sessionTitle: session.title,
-        amount: Number(transaction.amount),
-        currency: transaction.currency,
-        paymentId: transaction.gatewayPaymentId
-      }
+    // Email to consultant (payment received notification) via Resend
+    await sendPaymentConfirmationViaResend({
+      clientName: session.client.name,
+      clientEmail: session.client.email,
+      consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
+      consultantEmail: session.consultant.email,
+      amount: Number(transaction.amount),
+      currency: transaction.currency,
+      transactionId: transaction.gatewayPaymentId,
+      paymentMethod: transaction.paymentMethod || 'Online',
+      sessionTitle: session.title,
+      sessionDate: session.scheduledDate.toLocaleDateString()
     });
 
   } catch (error) {
@@ -614,17 +617,16 @@ const sendRefundNotificationEmail = async (
   reason?: string
 ): Promise<void> => {
   try {
-    await sendEmail('refund_notification', {
-      to: session.client.email,
-      data: {
-        clientName: session.client.name,
-        consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
-        sessionTitle: session.title,
-        refundAmount,
-        currency: 'INR',
-        reason: reason || 'Session cancelled',
-        processingTime: '5-7 business days'
-      }
+    await sendRefundNotificationViaResend({
+      clientName: session.client.name,
+      clientEmail: session.client.email,
+      consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
+      consultantEmail: session.consultant.email,
+      amount: refundAmount,
+      currency: 'INR',
+      sessionTitle: session.title,
+      refundReason: reason || 'Session cancelled',
+      transactionId: session.paymentTransactions?.[0]?.gatewayPaymentId || 'N/A'
     });
 
   } catch (error) {
