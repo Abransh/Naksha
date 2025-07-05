@@ -647,7 +647,7 @@ export const runJobManually = async (jobName: string): Promise<boolean> => {
  */
 export const stopBackgroundJobs = (): void => {
   try {
-    cron.getTasks().forEach((task, name) => {
+    cron.getTasks().forEach((task : any , name :any ) => {
       task.stop();
       console.log(`🛑 Stopped job: ${name}`);
     });

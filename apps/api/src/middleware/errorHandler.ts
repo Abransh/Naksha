@@ -17,6 +17,7 @@ import { Prisma } from '../../../../packages/database';
 import { JsonWebTokenError, TokenExpiredError } from 'jsonwebtoken';
 import { ZodError } from 'zod';
 
+
 /**
  * Custom error class for application-specific errors
  */
