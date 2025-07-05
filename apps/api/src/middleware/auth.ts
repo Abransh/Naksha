@@ -63,6 +63,28 @@ export const generateTokens = async (user: any, userType: 'consultant' | 'admin'
 
   while (retryCount < MAX_RETRIES) {
     try {
+      // Calculate token expiration based on environment variables
+      const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || '15m';
+      const JWT_REFRESH_EXPIRES_IN = process.env.JWT_REFRESH_EXPIRES_IN || '7d';
+      
+      // Parse expiration time (support formats like "15m", "1h", "7d")
+      const parseExpiration = (timeStr: string): number => {
+        const match = timeStr.match(/^(\d+)([mhd])$/);
+        if (!match) return 15 * 60; // Default 15 minutes
+        
+        const value = parseInt(match[1]);
+        const unit = match[2];
+        
+        switch (unit) {
+          case 'm': return value * 60;
+          case 'h': return value * 60 * 60;
+          case 'd': return value * 24 * 60 * 60;
+          default: return 15 * 60;
+        }
+      };
+      
+      const accessTokenExp = parseExpiration(JWT_EXPIRES_IN);
+
       // Access token payload
       const accessTokenPayload: ConsultantJWTPayload | AdminJWTPayload = 
         userType === 'consultant' 
@@ -73,14 +95,14 @@ export const generateTokens = async (user: any, userType: 'consultant' | 'admin'
               isApproved: user.isApprovedByAdmin,
               slug: user.slug,
               iat: Math.floor(Date.now() / 1000),
-              exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
+              exp: Math.floor(Date.now() / 1000) + accessTokenExp
             }
           : {
               sub: user.id,
               email: user.email,
               role: user.role.toLowerCase(),
               iat: Math.floor(Date.now() / 1000),
-              exp: Math.floor(Date.now() / 1000) + (15 * 60) // 15 minutes
+              exp: Math.floor(Date.now() / 1000) + accessTokenExp
             };
 
       // Generate tokens with additional randomness to prevent duplicates
