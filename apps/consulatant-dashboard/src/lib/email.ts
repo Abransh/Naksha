@@ -64,14 +64,48 @@ class EmailService {
    * 
    * @deprecated Will be replaced with direct backend endpoint calls
    */
-  private async sendEmailRequest(): Promise<EmailResponse> {
-    console.warn('⚠️ Frontend email service is deprecated. Use backend endpoints directly.');
-    
-    return {
-      success: false,
-      message: 'Frontend email service is deprecated. Use backend endpoints directly.',
-      error: 'Service deprecated - use backend endpoints'
-    };
+  private async sendEmailRequest(emailData: {
+      templateName: string;
+      to: string;
+      data: Record<string, any>;
+  }): Promise<EmailResponse> {
+      console.warn('⚠️ Frontend email service is deprecated. Use backend endpoints directly.');
+  
+      // Example implementation for sending email
+      try {
+          const token = this.getAuthToken();
+          if (!token) {
+              throw new Error('Authentication token is missing');
+          }
+  
+          const response = await fetch(`${this.apiBaseUrl}/api/v1/emails/send`, {
+              method: 'POST',
+              headers: {
+                  'Content-Type': 'application/json',
+                  'Authorization': `Bearer ${token}`,
+              },
+              body: JSON.stringify(emailData),
+          });
+  
+          if (!response.ok) {
+              const errorData = await response.json();
+              throw new Error(errorData.message || 'Failed to send email');
+          }
+  
+          const responseData = await response.json();
+          return {
+              success: true,
+              message: 'Email sent successfully',
+              emailId: responseData.emailId,
+          };
+      } catch (error: any) {
+          console.error('Error sending email:', error);
+          return {
+              success: false,
+              message: 'Failed to send email',
+              error: error.message,
+          };
+      }
   }
 
   /**
