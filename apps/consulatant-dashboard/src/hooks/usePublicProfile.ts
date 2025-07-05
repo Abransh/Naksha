@@ -130,7 +130,7 @@ export const useConsultantShowcase = (slug: string) => {
       id: 'personal',
       type: 'Personal Session',
       title: profile.consultant.personalSessionTitle || '1-on-1 Personal Session',
-      description: profile.consultant.description || 'Personalized consultation session',
+      description: profile.consultant.personalSessionDescription || 'Personalized consultation session',
       price: profile.consultant.personalSessionPrice || 200,
       currency: 'INR',
       available: true,
@@ -141,7 +141,7 @@ export const useConsultantShowcase = (slug: string) => {
       id: 'webinar',
       type: 'Webinar',
       title: profile.consultant.webinarSessionTitle || 'Group Webinar Session',
-      description: profile.consultant.description || 'Group learning session',
+      description: profile.consultant.webinarSessionDescription || 'Group learning session',
       price: profile.consultant.webinarSessionPrice || 150,
       currency: 'INR',
       available: profile.availableSlots.some(slot => slot.sessionType === 'WEBINAR'),
@@ -182,6 +182,8 @@ export const useConsultantShowcase = (slug: string) => {
     completedSessions: profile.consultant.stats.completedSessions || 0,
     profilePhoto: profile.consultant.profilePhotoUrl,
     verified: true, // Assuming verified if profile exists
+    personalSessionDescription: profile.consultant.personalSessionDescription,
+    webinarSessionDescription: profile.consultant.webinarSessionDescription,
   } : null;
 
   return {

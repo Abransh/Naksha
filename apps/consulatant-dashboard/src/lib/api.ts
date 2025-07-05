@@ -383,7 +383,9 @@ export interface ConsultantProfile {
   accountNumber?: string;
   ifscCode?: string;
   personalSessionTitle?: string;
+  personalSessionDescription?: string;
   webinarSessionTitle?: string;
+  webinarSessionDescription?: string;
   description?: string;
   experienceMonths: number;
   personalSessionPrice?: number;
@@ -414,7 +416,9 @@ export interface PublicConsultantProfile {
     lastName: string;
     consultancySector?: string;
     personalSessionTitle?: string;
+    personalSessionDescription?: string;
     webinarSessionTitle?: string;
+    webinarSessionDescription?: string;
     description?: string;
     experienceMonths: number;
     personalSessionPrice?: number;
@@ -449,7 +453,9 @@ export interface UpdateProfileData {
   accountNumber?: string;
   ifscCode?: string;
   personalSessionTitle?: string;
+  personalSessionDescription?: string;
   webinarSessionTitle?: string;
+  webinarSessionDescription?: string;
   description?: string;
   experienceMonths?: number;
   personalSessionPrice?: number;
@@ -497,32 +503,32 @@ export const consultantApi = {
   },
 
   /**
-   * Upload profile photo
+   * Upload profile photo to Cloudinary and update profile
    */
   async uploadPhoto(file: File): Promise<{ profilePhotoUrl: string }> {
-    const formData = new FormData();
-    formData.append('photo', file);
-
-    const response = await fetch(`${API_URL}/consultant/upload-photo`, {
-      method: 'POST',
-      headers: {
-        'Authorization': `Bearer ${localStorage.getItem('accessToken')}`,
-      },
-      credentials: 'include',
-      body: formData,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json();
+    // Import Cloudinary upload function dynamically to avoid SSR issues
+    const { uploadToCloudinary } = await import('../lib/cloudinary');
+    
+    try {
+      // Upload to Cloudinary
+      const cloudinaryResponse = await uploadToCloudinary(file);
+      
+      // Update profile with new photo URL via API
+      const response = await apiRequest<ApiResponse<{ consultant: ConsultantProfile }>>('/consultant/profile', {
+        method: 'PUT',
+        body: { profilePhotoUrl: cloudinaryResponse.secure_url },
+        requireAuth: true,
+      });
+      
+      return { profilePhotoUrl: cloudinaryResponse.secure_url };
+    } catch (error) {
+      console.error('Photo upload failed:', error);
       throw new ApiError(
-        response.status,
-        errorData.code || 'UPLOAD_ERROR',
-        errorData.message || 'Failed to upload photo'
+        500,
+        'UPLOAD_ERROR',
+        error instanceof Error ? error.message : 'Failed to upload photo'
       );
     }
-
-    const data = await response.json();
-    return data.data;
   },
 
   /**

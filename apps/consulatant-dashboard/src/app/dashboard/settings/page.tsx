@@ -3,6 +3,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -31,6 +32,7 @@ import Navigator from "@/components/navigation/Navigator";
 // Removed SidebarContent - now using Navigator component
 
 export default function SettingsPage() {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState("account");
  // const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -94,6 +96,16 @@ export default function SettingsPage() {
   const handlePhotoDelete = () => {
     // Handle photo deletion logic
     toast.success("Profile photo removed");
+  };
+
+  const handlePreviewPage = () => {
+    if (profile?.slug) {
+      // Open the consultant's public profile page in a new tab
+      const profileUrl = `/${profile.slug}`;
+      window.open(profileUrl, '_blank');
+    } else {
+      toast.error("Please save your profile first to generate a preview page");
+    }
   };
 
   // Show loading state
@@ -295,7 +307,7 @@ export default function SettingsPage() {
                           <span className="text-base text-[var(--black-2)] font-inter">
                             {formData.phoneCountryCode || '+91'}
                           </span>
-                          <ChevronDown size={16} className="text-black" />
+                         
                         </div>
                         <Input
                           placeholder="Phone Number"
@@ -418,13 +430,43 @@ export default function SettingsPage() {
                       />
                     </div>
 
-                    {/* Description */}
+                    {/* Personal Session Description */}
                     <div className="flex flex-col gap-2">
                       <label className="text-xs text-[var(--black-4)] font-inter px-1">
-                        Description
+                        Personal Session Description
                       </label>
                       <Input
-                        placeholder="Details about you in simple English"
+                        placeholder="Describe your 1-on-1 consultation service"
+                        value={formData.personalSessionDescription || ''}
+                        onChange={(e) =>
+                          handleInputChange("personalSessionDescription", e.target.value)
+                        }
+                        className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg text-base text-[var(--black-4)] font-inter"
+                      />
+                    </div>
+
+                    {/* Webinar Description */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs text-[var(--black-4)] font-inter px-1">
+                        Webinar Description
+                      </label>
+                      <Input
+                        placeholder="Describe your webinar sessions"
+                        value={formData.webinarSessionDescription || ''}
+                        onChange={(e) =>
+                          handleInputChange("webinarSessionDescription", e.target.value)
+                        }
+                        className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg text-base text-[var(--black-4)] font-inter"
+                      />
+                    </div>
+
+                    {/* General Description */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs text-[var(--black-4)] font-inter px-1">
+                        General Bio Description
+                      </label>
+                      <Input
+                        placeholder="General details about you in simple English"
                         value={formData.description || ''}
                         onChange={(e) =>
                           handleInputChange("description", e.target.value)
@@ -565,7 +607,10 @@ export default function SettingsPage() {
                     Webinar Date
                   </Button>
 
-                  <Button className="w-[172px] h-[37px] rounded-xl bg-[var(--primary-100)] text-white text-[15px] font-inter">
+                  <Button 
+                    onClick={handlePreviewPage}
+                    className="w-[172px] h-[37px] rounded-xl bg-[var(--primary-100)] text-white text-[15px] font-inter"
+                  >
                     Preview Page
                   </Button>
 

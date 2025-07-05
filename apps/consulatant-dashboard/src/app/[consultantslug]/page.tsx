@@ -167,7 +167,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
 
                 {/* Description */}
                 <p className="text-base text-[#5C5C5C] leading-[20.8px] mb-6 font-inter">
-                  {services.find(s => s.type === 'Webinar')?.description || 'Join our group learning session'}
+                  {summary.webinarSessionDescription || services.find(s => s.type === 'Webinar')?.description || 'Join our group learning session with expert guidance'}
                 </p>
 
                 {/* Event Details */}
@@ -239,7 +239,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
 
                 {/* Description */}
                 <p className="text-base text-[#5C5C5C] leading-[20.8px] mb-6 font-inter">
-                  {services.find(s => s.type === 'Personal Session')?.description || 'Personalized one-on-one consultation'}
+                  {summary.personalSessionDescription || services.find(s => s.type === 'Personal Session')?.description || 'Personalized one-on-one consultation tailored to your needs'}
                 </p>
 
                 {/* Session Details */}

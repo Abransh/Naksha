@@ -36,10 +36,12 @@ model Consultant {
   ifscCode              String?  @map("ifsc_code")
   
   // Service Configuration
-  personalSessionTitle String?  @map("personal_session_title")
-  webinarSessionTitle   String?  @map("webinar_session_title")
-  description           String?
-  experienceMonths      Int      @default(0) @map("experience_months")
+  personalSessionTitle       String?  @map("personal_session_title")
+  personalSessionDescription  String?  @map("personal_session_description")
+  webinarSessionTitle         String?  @map("webinar_session_title") 
+  webinarSessionDescription   String?  @map("webinar_session_description")
+  description                 String?  // General bio description
+  experienceMonths            Int      @default(0) @map("experience_months")
   personalSessionPrice Decimal? @map("personal_session_price") @db.Decimal(10,2)
   webinarSessionPrice  Decimal? @map("webinar_session_price") @db.Decimal(10,2)
   
