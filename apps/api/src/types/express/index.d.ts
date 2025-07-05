@@ -1,15 +1,13 @@
-import multer from "multer";
+// src/types/express/index.d.ts
+import * as multer from 'multer';
 
 declare global {
   namespace Express {
-    // Single-file uploads
     interface Request {
+      /** single-file upload */
       file?: multer.File;
-      // Multi-file or fields uploads
+      /** multi-file or fields upload */
       files?: multer.File[] | { [fieldname: string]: multer.File[] };
     }
-
-    // If you reference Express.Multer anywhere, e.g. for typing storage engines:
-    interface Multer {} 
   }
 }
