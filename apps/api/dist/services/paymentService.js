@@ -22,7 +22,7 @@ const razorpay_1 = __importDefault(require("razorpay"));
 const crypto_1 = __importDefault(require("crypto"));
 const database_1 = require("../config/database");
 const redis_1 = require("../config/redis");
-const emailService_1 = require("./emailService");
+const resendEmailService_1 = require("./resendEmailService");
 const errorHandler_1 = require("../middleware/errorHandler");
 /**
  * Payment configuration
@@ -462,31 +462,31 @@ const getDailyPaymentAmount = async (consultantId) => {
  */
 const sendPaymentConfirmationEmails = async (session, transaction) => {
     try {
-        // Email to client
-        await (0, emailService_1.sendEmail)('payment_confirmation', {
-            to: session.client.email,
-            data: {
-                clientName: session.client.name,
-                consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
-                sessionTitle: session.title,
-                amount: Number(transaction.amount),
-                currency: transaction.currency,
-                paymentId: transaction.gatewayPaymentId,
-                sessionDate: session.scheduledDate.toLocaleDateString(),
-                sessionTime: session.scheduledTime
-            }
+        // Email to client via Resend
+        await (0, resendEmailService_1.sendPaymentConfirmationEmail)({
+            clientName: session.client.name,
+            clientEmail: session.client.email,
+            consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
+            consultantEmail: session.consultant.email,
+            amount: Number(transaction.amount),
+            currency: transaction.currency,
+            transactionId: transaction.gatewayPaymentId,
+            paymentMethod: transaction.paymentMethod || 'Online',
+            sessionTitle: session.title,
+            sessionDate: session.scheduledDate.toLocaleDateString()
         });
-        // Email to consultant
-        await (0, emailService_1.sendEmail)('payment_received', {
-            to: session.consultant.email,
-            data: {
-                consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
-                clientName: session.client.name,
-                sessionTitle: session.title,
-                amount: Number(transaction.amount),
-                currency: transaction.currency,
-                paymentId: transaction.gatewayPaymentId
-            }
+        // Email to consultant (payment received notification) via Resend
+        await (0, resendEmailService_1.sendPaymentConfirmationEmail)({
+            clientName: session.client.name,
+            clientEmail: session.client.email,
+            consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
+            consultantEmail: session.consultant.email,
+            amount: Number(transaction.amount),
+            currency: transaction.currency,
+            transactionId: transaction.gatewayPaymentId,
+            paymentMethod: transaction.paymentMethod || 'Online',
+            sessionTitle: session.title,
+            sessionDate: session.scheduledDate.toLocaleDateString()
         });
     }
     catch (error) {
@@ -498,17 +498,16 @@ const sendPaymentConfirmationEmails = async (session, transaction) => {
  */
 const sendRefundNotificationEmail = async (session, refundAmount, reason) => {
     try {
-        await (0, emailService_1.sendEmail)('refund_notification', {
-            to: session.client.email,
-            data: {
-                clientName: session.client.name,
-                consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
-                sessionTitle: session.title,
-                refundAmount,
-                currency: 'INR',
-                reason: reason || 'Session cancelled',
-                processingTime: '5-7 business days'
-            }
+        await (0, resendEmailService_1.sendRefundNotificationEmail)({
+            clientName: session.client.name,
+            clientEmail: session.client.email,
+            consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
+            consultantEmail: session.consultant.email,
+            amount: refundAmount,
+            currency: 'INR',
+            sessionTitle: session.title,
+            refundReason: reason || 'Session cancelled',
+            transactionId: session.paymentTransactions?.[0]?.gatewayPaymentId || 'N/A'
         });
     }
     catch (error) {

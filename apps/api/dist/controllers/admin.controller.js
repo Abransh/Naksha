@@ -12,7 +12,7 @@ const zod_1 = require("zod");
 const database_1 = require("@nakksha/database");
 const logger_1 = require("../utils/logger");
 const appError_1 = require("../utils/appError");
-const emailService_1 = require("../services/emailService");
+const resendEmailService_1 = require("../services/resendEmailService");
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 // Using shared prisma instance from @nakksha/database
 // ============================================================================
@@ -317,27 +317,22 @@ const approveConsultant = async (req, res) => {
                 isActive: true
             }
         });
-        // Send appropriate email notification
+        // Send appropriate email notification via Resend
         if (approved) {
             // Send approval email
-            await (0, emailService_1.sendEmail)('consultant_approved', {
-                to: consultant.email,
-                data: {
-                    firstName: consultant.firstName,
-                    dashboardUrl: process.env.CONSULTANT_DASHBOARD_URL || 'https://dashboard.nakksha.com',
-                    loginUrl: `${process.env.CONSULTANT_DASHBOARD_URL}/auth/login`
-                }
+            await (0, resendEmailService_1.sendConsultantApprovedEmail)({
+                firstName: consultant.firstName,
+                email: consultant.email,
+                adminDashboardUrl: process.env.CONSULTANT_DASHBOARD_URL || 'https://dashboard.nakksha.com'
             });
         }
         else {
             // Send rejection email
-            await (0, emailService_1.sendEmail)('consultant_rejected', {
-                to: consultant.email,
-                data: {
-                    firstName: consultant.firstName,
-                    reason: adminNotes || 'Your application did not meet our current requirements',
-                    supportEmail: process.env.SUPPORT_EMAIL || 'support@nakksha.com'
-                }
+            await (0, resendEmailService_1.sendConsultantRejectedEmail)({
+                firstName: consultant.firstName,
+                email: consultant.email,
+                reason: adminNotes || 'Your application did not meet our current requirements',
+                supportEmail: process.env.SUPPORT_EMAIL || 'support@nakksha.com'
             });
         }
         // Log the admin action

@@ -17,7 +17,7 @@ const database_1 = require("../../config/database");
 const redis_1 = require("../../config/redis");
 const validation_1 = require("../../middleware/validation");
 const errorHandler_1 = require("../../middleware/errorHandler");
-const emailService_1 = require("../../services/emailService");
+const resendEmailService_1 = require("../../services/resendEmailService");
 const analytics_1 = require("../../utils/analytics");
 const export_1 = require("../../utils/export");
 const router = (0, express_1.Router)();
@@ -336,16 +336,14 @@ router.post('/', (0, validation_1.validateRequest)(createClientSchema), async (r
                 totalAmountPaid: 0
             }
         });
-        // Send welcome email to client
+        // Send welcome email to client via Resend
         try {
-            await (0, emailService_1.sendEmail)('client_welcome', {
-                to: client.email,
-                data: {
-                    clientName: client.name,
-                    consultantName: `${req.user.slug || req.user.email}`.trim(),
-                    consultantEmail: req.user.email,
-                    profileUrl: `${process.env.FRONTEND_URL}/${req.user.slug || ''}`
-                }
+            await (0, resendEmailService_1.sendClientWelcomeEmail)({
+                clientName: client.name,
+                clientEmail: client.email,
+                consultantName: `${req.user.slug || req.user.email}`.trim(),
+                consultantEmail: req.user.email,
+                profileUrl: `${process.env.FRONTEND_URL}/${req.user.slug || ''}`
             });
         }
         catch (emailError) {

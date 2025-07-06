@@ -98,7 +98,8 @@ class EmailService {
               message: 'Email sent successfully',
               emailId: responseData.emailId,
           };
-      } catch (error: any) {
+      } 
+      catch (error: any) {
           console.error('Error sending email:', error);
           return {
               success: false,

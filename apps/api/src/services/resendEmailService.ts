@@ -39,8 +39,8 @@ const getResendClient = (): Resend => {
  * Email configuration for Resend
  */
 const resendConfig = {
-  from: process.env.EMAIL_FROM || 'Naksha Platform <noreply@naksha.com>',
-  replyTo: process.env.EMAIL_REPLY_TO || 'support@naksha.com',
+  from: process.env.EMAIL_FROM || 'Naksha Platform <noreply@nakksha.in>',
+  replyTo: process.env.EMAIL_REPLY_TO || 'support@nakksha.in',
   baseUrl: process.env.FRONTEND_URL || 'https://dashboard.naksha.com'
 };
 
@@ -890,6 +890,8 @@ const getAdminNotificationEmailHtml = (data: AdminEmailData): string => {
 export const sendQuotationToClient = async (data: QuotationEmailData): Promise<EmailResponse> => {
   try {
     console.log(`📧 Sending quotation email to client: ${data.clientEmail}`);
+    console.log(`📧 Using FROM email: ${resendConfig.from}`);
+    console.log(`📧 Using REPLY-TO email: ${data.consultantEmail}`);
 
     const emailResponse = await getResendClient().emails.send({
       from: resendConfig.from,
@@ -947,6 +949,8 @@ export const sendQuotationToClient = async (data: QuotationEmailData): Promise<E
 export const sendQuotationConfirmationToConsultant = async (data: QuotationEmailData): Promise<EmailResponse> => {
   try {
     console.log(`📧 Sending quotation confirmation to consultant: ${data.consultantEmail}`);
+    console.log(`📧 Using FROM email: ${resendConfig.from}`);
+    console.log(`📧 Using REPLY-TO email: ${resendConfig.replyTo}`);
 
     const emailResponse = await getResendClient().emails.send({
       from: resendConfig.from,
@@ -1082,6 +1086,10 @@ export const validateResendConfig = (): { valid: boolean; errors: string[] } => 
     errors.push('EMAIL_FROM environment variable is required');
   }
 
+  if (!resendConfig.replyTo) {
+    errors.push('EMAIL_REPLY_TO environment variable is required');
+  }
+
   // Test Resend client initialization
   try {
     getResendClient();
@@ -1093,6 +1101,23 @@ export const validateResendConfig = (): { valid: boolean; errors: string[] } => 
     valid: errors.length === 0,
     errors
   };
+};
+
+/**
+ * Log Resend configuration status on startup
+ */
+export const logResendConfigStatus = (): void => {
+  const validation = validateResendConfig();
+  
+  if (validation.valid) {
+    console.log('✅ Resend email service configured successfully');
+    console.log(`📧 FROM email: ${resendConfig.from}`);
+    console.log(`📧 REPLY-TO email: ${resendConfig.replyTo}`);
+    console.log(`🌐 Frontend URL: ${resendConfig.baseUrl}`);
+  } else {
+    console.error('❌ Resend email service configuration errors:');
+    validation.errors.forEach(error => console.error(`   • ${error}`));
+  }
 };
 
 /**
@@ -1646,5 +1671,6 @@ export default {
   sendRefundNotificationEmail,
   
   // Utility functions
-  validateResendConfig
+  validateResendConfig,
+  logResendConfigStatus
 };

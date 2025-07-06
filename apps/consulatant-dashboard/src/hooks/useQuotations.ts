@@ -291,7 +291,7 @@ export const useQuotations = (initialFilters: QuotationFilters = {}): UseQuotati
   useEffect(() => {
     const interval = setInterval(() => {
       fetchQuotations(currentPage);
-    }, 60000);
+    }, 1200000);
 
     return () => clearInterval(interval);
   }, [fetchQuotations, currentPage]);

@@ -22,7 +22,7 @@ const database_1 = require("../../config/database");
 const redis_1 = require("../../config/redis");
 const auth_1 = require("../../middleware/auth");
 const validation_1 = require("../../middleware/validation");
-const emailService_1 = require("../../services/emailService");
+const resendEmailService_1 = require("../../services/resendEmailService");
 const helpers_1 = require("../../utils/helpers");
 const router = (0, express_1.Router)();
 /**
@@ -129,13 +129,20 @@ router.post('/signup', auth_1.authRateLimit, (0, validation_1.validateRequest)(s
         const verificationToken = (0, uuid_1.v4)();
         await redis_1.cacheUtils.setWithAutoTTL(`email_verification:${verificationToken}`, { userId: user.id, email: user.email }, 'mediumCache' // 30 minutes
         );
-        // Send verification email
-        await (0, emailService_1.sendEmail)('email_verification', {
-            to: user.email,
-            data: {
-                firstName: user.firstName,
-                verificationLink: `${process.env.FRONTEND_URL}/auth/verify-email?token=${verificationToken}`
-            }
+        // Send welcome email with verification link via Resend
+        await (0, resendEmailService_1.sendConsultantWelcomeEmail)({
+            firstName: user.firstName,
+            lastName: user.lastName,
+            email: user.email,
+            verificationLink: `${process.env.FRONTEND_URL}/auth/verify-email?token=${verificationToken}`
+        });
+        // Send admin notification email via Resend
+        await (0, resendEmailService_1.sendAdminNotificationEmail)({
+            consultantName: `${user.firstName} ${user.lastName}`,
+            consultantEmail: user.email,
+            consultantId: user.id,
+            signupDate: new Date().toLocaleDateString(),
+            adminDashboardUrl: `${process.env.FRONTEND_URL}/admin/consultants`
         });
         console.log(`✅ New user registered: ${user.email}`);
         res.status(201).json({
@@ -401,13 +408,11 @@ router.post('/forgot-password', auth_1.authRateLimit, (0, validation_1.validateR
             const resetToken = (0, uuid_1.v4)();
             await redis_1.cacheUtils.setWithAutoTTL(`password_reset:${resetToken}`, { userId: user.id, email: user.email }, 'mediumCache' // 30 minutes
             );
-            // Send password reset email
-            await (0, emailService_1.sendEmail)('password_reset', {
-                to: user.email,
-                data: {
-                    firstName: user.firstName,
-                    resetLink: `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`
-                }
+            // Send password reset email via Resend
+            await (0, resendEmailService_1.sendPasswordResetEmail)({
+                firstName: user.firstName,
+                email: user.email,
+                resetLink: `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`
             });
         }
         // Always return success to prevent email enumeration

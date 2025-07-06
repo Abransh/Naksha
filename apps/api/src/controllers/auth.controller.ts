@@ -12,7 +12,15 @@ import { logger } from '../utils/logger';
 import { AppError } from '../utils/appError';
 import { generateTokens } from '../middleware/auth';
 import { CacheManager } from '../config/redis';
-import { sendEmail } from '../services/emailService';
+import {sendQuotationToClient,
+  sendQuotationConfirmationToConsultant,
+  sendQuotationEmails,
+  sendConsultantWelcomeEmail,
+  sendPasswordResetEmail,
+  sendConsultantApprovedEmail,
+  sendConsultantRejectedEmail,
+  sendSessionConfirmationEmail,
+ } from '../services/resendEmailService';
 import { generateSlug } from '../utils/helpers';
 
 // Using shared prisma instance from @nakksha/database
@@ -177,25 +185,25 @@ export const consultantSignup = async (req: Request, res: Response): Promise<voi
     );
 
     // Send welcome email with verification link
-    await sendEmail('consultant_welcome', {
-      to: consultant.email,
-      data: {
-        firstName: consultant.firstName,
-        verificationLink: `${process.env.CONSULTANT_DASHBOARD_URL}/auth/verify-email?token=${verificationToken}`,
-        dashboardUrl: process.env.CONSULTANT_DASHBOARD_URL
-      }
-    });
+    // await sendEmail('consultant_welcome', {
+    //   to: consultant.email,
+    //   data: {
+    //     firstName: consultant.firstName,
+    //     verificationLink: `${process.env.CONSULTANT_DASHBOARD_URL}/auth/verify-email?token=${verificationToken}`,
+    //     dashboardUrl: process.env.CONSULTANT_DASHBOARD_URL
+    //   }
+    // });
 
-    // Notify admins about new consultant signup
-    await sendEmail('admin_new_consultant', {
-      to: process.env.ADMIN_EMAIL || 'admin@nakksha.com',
-      data: {
-        consultantName: `${consultant.firstName} ${consultant.lastName}`,
-        consultantEmail: consultant.email,
-        adminDashboardUrl: `${process.env.ADMIN_DASHBOARD_URL}/consultants/${consultant.id}`,
-        signupDate: consultant.createdAt.toDateString()
-      }
-    });
+    // // Notify admins about new consultant signup
+    // await sendEmail('admin_new_consultant', {
+    //   to: process.env.ADMIN_EMAIL || 'admin@nakksha.com',
+    //   data: {
+    //     consultantName: `${consultant.firstName} ${consultant.lastName}`,
+    //     consultantEmail: consultant.email,
+    //     adminDashboardUrl: `${process.env.ADMIN_DASHBOARD_URL}/consultants/${consultant.id}`,
+    //     signupDate: consultant.createdAt.toDateString()
+    //   }
+    // });
 
     // Log successful signup
     logger.info(`New consultant signup: ${consultant.email} (ID: ${consultant.id})`);
@@ -577,13 +585,13 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
     );
 
     // Send password reset email
-    await sendEmail('password_reset', {
-      to: consultant.email,
-      data: {
-        firstName: consultant.firstName,
-        resetLink: `${process.env.CONSULTANT_DASHBOARD_URL}/auth/reset-password?token=${resetToken}`
-      }
-    });
+    // await sendEmail('password_reset', {
+    //   to: consultant.email,
+    //   data: {
+    //     firstName: consultant.firstName,
+    //     resetLink: `${process.env.CONSULTANT_DASHBOARD_URL}/auth/reset-password?token=${resetToken}`
+    //   }
+    // });
 
     logger.info(`Password reset requested for: ${consultant.email}`);
 

@@ -15,6 +15,7 @@ export default function LoginPage() {
     email: "",
     password: "",
   });
+  
   const [isLoading, setIsLoading] = useState(false);
   
   const { login, error, clearError, user, isAuthenticated } = useAuth();

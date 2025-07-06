@@ -59,7 +59,7 @@ export default function Dashboard() {
   };
 
   return (
-    <ProtectedRoute requireAdminApproval={true}>
+    <ProtectedRoute requireAdminApproval={false}>
       <div className="min-h-screen bg-[var(--main-background)] flex">
         {/* Loading State */}
         {isLoading && (

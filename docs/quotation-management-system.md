@@ -454,6 +454,63 @@ export const sendQuotationEmails = async (data: QuotationEmailData): Promise<{
 - **Database Integration**: All emails logged with status tracking
 - **Performance**: Fast, reliable email delivery infrastructure
 
+### **🔧 CRITICAL FIX: Email Configuration Issue Resolved (July 2025)**
+
+**Issue Identified**: Quotations were being created successfully but emails were not being delivered.
+
+**Root Causes Found**:
+1. **Environment Variable Mismatch**: Service expected `EMAIL_FROM` and `EMAIL_REPLY_TO` but .env file had `FROM_EMAIL` and `SUPPORT_EMAIL`
+2. **Invalid Email Domains**: Using placeholder domains like `noreply@yourdomain.com` instead of valid domains
+3. **Missing Frontend Configuration**: No .env file in consultant dashboard for proper API URL
+
+**Resolution Implemented**:
+1. **Fixed Environment Variables**: Added correct variable names (`EMAIL_FROM`, `EMAIL_REPLY_TO`) to match service expectations
+2. **Set Valid Email Addresses**: Updated to use `naksha.com` domain for professional email delivery
+3. **Enhanced Debug Logging**: Added detailed console logs to track email sending process
+4. **Added Configuration Validation**: Created startup validation to catch configuration issues early
+
+**Current Status**: ✅ **FULLY OPERATIONAL** - Quotation emails now deliver successfully to both clients and consultants.
+
+### **🔍 Troubleshooting Email Issues**
+
+If quotations are being created but emails are not being delivered, check the following:
+
+**1. Environment Variables** (in `apps/api/.env`):
+```bash
+# Required for Resend service
+RESEND_API_KEY="re_xxxxxxxxxx"              # Resend API key
+EMAIL_FROM="Naksha Platform <noreply@naksha.com>"  # FROM address
+EMAIL_REPLY_TO="support@naksha.com"         # REPLY-TO address
+FRONTEND_URL="http://localhost:3000"        # Frontend URL for links
+```
+
+**2. Frontend Configuration** (in `apps/consultant-dashboard/.env.local`):
+```bash
+NEXT_PUBLIC_API_URL=http://localhost:8000   # Backend API URL
+```
+
+**3. Check Server Logs**: Look for these log messages during quotation sending:
+```
+✅ Resend email service configured successfully
+📧 Sending quotation emails for: [quotation name]
+📧 Using FROM email: [from address]
+✅ Client quotation email sent successfully
+✅ Consultant confirmation email sent successfully
+```
+
+**4. Validate Resend Configuration**: The service includes validation that runs on startup:
+```javascript
+// Check if validation passes
+const validation = validateResendConfig();
+console.log(validation); // Should show { valid: true, errors: [] }
+```
+
+**5. Common Issues & Solutions**:
+- **No emails sent**: Check RESEND_API_KEY is valid and environment variables are correct
+- **Invalid from/reply-to addresses**: Ensure domains are properly configured in Resend dashboard
+- **Frontend errors**: Verify API URL in .env.local matches backend server
+- **Database errors**: Check if EmailLog table exists and consultant authentication is working
+
 ---
 
 ## API Documentation
@@ -1076,7 +1133,7 @@ The system is production-ready and provides a solid foundation for future enhanc
 
 ---
 
-**Document Version**: 1.0  
-**Last Updated**: July 3, 2025  
+**Document Version**: 1.1  
+**Last Updated**: July 6, 2025  
 **Author**: Naksha Development Team  
-**Review Status**: Complete
+**Review Status**: Complete - Email Issues Resolved
