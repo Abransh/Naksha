@@ -241,14 +241,14 @@ router.post('/book',
       });
 
       // Generate meeting link for session
-      const meetingLink = await generateMeetingLink({
-        sessionId: result.session.id,
-        sessionTitle: `${bookingData.sessionType} Session`,
-        scheduledDateTime: `${bookingData.selectedDate} ${bookingData.selectedTime}`,
-        duration: bookingData.duration,
-        consultantName: `${consultant.firstName} ${consultant.lastName}`,
-        clientName: result.client.name
-      });
+      // const meetingLink = await generateMeetingLink({
+      //   sessionId: result.session.id,
+      //   sessionTitle: `${bookingData.sessionType} Session`,
+      //   scheduledDateTime: `${bookingData.selectedDate} ${bookingData.selectedTime}`,
+      //   duration: bookingData.duration,
+      //   consultantName: `${consultant.firstName} ${consultant.lastName}`,
+      //   clientName: result.client.name
+      // });
 
       // Send confirmation email to client via Resend
       try {
@@ -264,7 +264,7 @@ router.post('/book',
           sessionTime: bookingData.selectedTime,
           amount: bookingData.amount,
           currency: 'INR',
-          meetingLink: meetingLink || '',
+          //meetingLink: meetingLink || '',
           meetingPlatform: 'Zoom'
         });
 
