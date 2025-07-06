@@ -55,7 +55,7 @@ import { refreshTokens, logout } from './middleware/auth';
 // Service imports
 //import { setupSocketHandlers } from './services/socketService';
 import { startBackgroundJobs } from './services/jobService';
-import { setupEmailTemplates } from './services/emailService';
+//import { setupEmailTemplates } from './services/emailService';
 
 // Load environment variables
 dotenv.config();
@@ -354,7 +354,7 @@ class App {
 
       // Setup email templates
       console.log('📧 Setting up email templates...');
-      await setupEmailTemplates();
+     // await setupEmailTemplates();
       console.log('✅ Email templates ready');
 
       // Start background jobs
