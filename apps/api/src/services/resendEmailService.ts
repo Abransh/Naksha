@@ -152,6 +152,19 @@ interface EmailResponse {
 }
 
 /**
+ * Sanitize email address for use in Resend tags
+ * Converts email to format that only contains ASCII letters, numbers, underscores, or dashes
+ * @param email - Email address to sanitize
+ * @returns Sanitized string safe for use in Resend tags
+ */
+const sanitizeEmailForTag = (email: string): string => {
+  return email
+    .replace('@', '_at_')
+    .replace(/\./g, '_dot_')
+    .replace(/[^a-zA-Z0-9_-]/g, '_');
+};
+
+/**
  * Professional quotation email template for clients
  */
 const getClientQuotationEmailHtml = (data: QuotationEmailData): string => {
@@ -902,7 +915,7 @@ export const sendQuotationToClient = async (data: QuotationEmailData): Promise<E
       tags: [
         { name: 'type', value: 'quotation_shared' },
         { name: 'quotation_id', value: data.quotationId },
-        { name: 'consultant_email', value: data.consultantEmail }
+        { name: 'consultant_email', value: sanitizeEmailForTag(data.consultantEmail) }
       ]
     });
 
@@ -961,7 +974,7 @@ export const sendQuotationConfirmationToConsultant = async (data: QuotationEmail
       tags: [
         { name: 'type', value: 'quotation_confirmation' },
         { name: 'quotation_id', value: data.quotationId },
-        { name: 'consultant_email', value: data.consultantEmail }
+        { name: 'consultant_email', value: sanitizeEmailForTag(data.consultantEmail) }
       ]
     });
 
@@ -1139,7 +1152,7 @@ export const sendConsultantWelcomeEmail = async (data: AuthEmailData): Promise<E
       html: getConsultantWelcomeEmailHtml(data),
       tags: [
         { name: 'type', value: 'consultant_welcome' },
-        { name: 'consultant_email', value: data.email }
+        { name: 'consultant_email', value: sanitizeEmailForTag(data.email) }
       ]
     });
 
@@ -1193,7 +1206,7 @@ export const sendPasswordResetEmail = async (data: AuthEmailData): Promise<Email
       html: getPasswordResetEmailHtml(data),
       tags: [
         { name: 'type', value: 'password_reset' },
-        { name: 'consultant_email', value: data.email }
+        { name: 'consultant_email', value: sanitizeEmailForTag(data.email) }
       ]
     });
 
@@ -1248,7 +1261,7 @@ export const sendSessionConfirmationEmail = async (data: SessionEmailData): Prom
       tags: [
         { name: 'type', value: 'session_confirmation' },
         { name: 'session_id', value: data.sessionId },
-        { name: 'consultant_email', value: data.consultantEmail }
+        { name: 'consultant_email', value: sanitizeEmailForTag(data.consultantEmail) }
       ]
     });
 
@@ -1308,7 +1321,7 @@ export const sendAdminNotificationEmail = async (data: AdminEmailData): Promise<
       tags: [
         { name: 'type', value: 'admin_notification' },
         { name: 'consultant_id', value: data.consultantId },
-        { name: 'consultant_email', value: data.consultantEmail }
+        { name: 'consultant_email', value: sanitizeEmailForTag(data.consultantEmail) }
       ]
     });
 
@@ -1366,7 +1379,7 @@ export const sendConsultantApprovedEmail = async (data: AuthEmailData): Promise<
       html: getConsultantApprovedEmailHtml(data),
       tags: [
         { name: 'type', value: 'consultant_approved' },
-        { name: 'consultant_email', value: data.email }
+        { name: 'consultant_email', value: sanitizeEmailForTag(data.email) }
       ]
     });
 
@@ -1425,7 +1438,7 @@ export const sendConsultantRejectedEmail = async (data: AuthEmailData & {
       html: getConsultantRejectedEmailHtml(data),
       tags: [
         { name: 'type', value: 'consultant_rejected' },
-        { name: 'consultant_email', value: data.email }
+        { name: 'consultant_email', value: sanitizeEmailForTag(data.email) }
       ]
     });
 
@@ -1481,8 +1494,8 @@ export const sendClientWelcomeEmail = async (data: ClientEmailData): Promise<Ema
       html: getClientWelcomeEmailHtml(data),
       tags: [
         { name: 'type', value: 'client_welcome' },
-        { name: 'client_email', value: data.clientEmail },
-        { name: 'consultant_email', value: data.consultantEmail }
+        { name: 'client_email', value: sanitizeEmailForTag(data.clientEmail) },
+        { name: 'consultant_email', value: sanitizeEmailForTag(data.consultantEmail) }
       ]
     });
 
@@ -1543,7 +1556,7 @@ export const sendPaymentConfirmationEmail = async (data: PaymentEmailData): Prom
       html: getPaymentConfirmationEmailHtml(data),
       tags: [
         { name: 'type', value: 'payment_confirmation' },
-        { name: 'recipient', value: recipient },
+        { name: 'recipient', value: sanitizeEmailForTag(recipient) },
         { name: 'transaction_id', value: data.transactionId || '' }
       ]
     });
@@ -1605,7 +1618,7 @@ export const sendRefundNotificationEmail = async (data: PaymentEmailData): Promi
       html: getRefundNotificationEmailHtml(data),
       tags: [
         { name: 'type', value: 'refund_notification' },
-        { name: 'recipient', value: recipient },
+        { name: 'recipient', value: sanitizeEmailForTag(recipient) },
         { name: 'transaction_id', value: data.transactionId || '' }
       ]
     });

@@ -3,7 +3,7 @@
 const axios = require("axios");
 
 // Grab your API key from the environment
-const API_KEY = "YOUR-KEY";
+const API_KEY = process.env.RESEND_API_KEY;
 if (!API_KEY) {
   console.error("Error: Please set the RESEND_API_KEY environment variable");
   process.exit(1);
