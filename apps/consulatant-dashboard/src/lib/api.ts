@@ -822,4 +822,72 @@ export const sessionApi = {
   },
 };
 
+// Teams API methods
+export const teamsApi = {
+  /**
+   * Get Teams OAuth URL
+   */
+  async getOAuthUrl(): Promise<{ oauthUrl: string }> {
+    const response = await apiRequest<ApiResponse<{ oauthUrl: string }>>('/teams/oauth-url', {
+      requireAuth: true,
+    });
+    return response.data!;
+  },
+
+  /**
+   * Handle OAuth callback
+   */
+  async handleOAuthCallback(code: string, redirectUri: string): Promise<{ userEmail: string; displayName: string; connectedAt: string }> {
+    const response = await apiRequest<ApiResponse<{ userEmail: string; displayName: string; connectedAt: string }>>('/teams/oauth-callback', {
+      method: 'POST',
+      body: { code, redirectUri },
+      requireAuth: true,
+    });
+    return response.data!;
+  },
+
+  /**
+   * Get Teams integration status
+   */
+  async getStatus(): Promise<{
+    isConnected: boolean;
+    isExpired: boolean | null;
+    userEmail: string | null;
+    connectedAt: string | null;
+    needsReconnection: boolean;
+  }> {
+    const response = await apiRequest<ApiResponse<{
+      isConnected: boolean;
+      isExpired: boolean | null;
+      userEmail: string | null;
+      connectedAt: string | null;
+      needsReconnection: boolean;
+    }>>('/teams/status', {
+      requireAuth: true,
+    });
+    return response.data!;
+  },
+
+  /**
+   * Disconnect Teams integration
+   */
+  async disconnect(): Promise<void> {
+    await apiRequest('/teams/disconnect', {
+      method: 'DELETE',
+      requireAuth: true,
+    });
+  },
+
+  /**
+   * Refresh Teams access token
+   */
+  async refreshToken(): Promise<{ expiresAt: string }> {
+    const response = await apiRequest<ApiResponse<{ expiresAt: string }>>('/teams/refresh-token', {
+      method: 'POST',
+      requireAuth: true,
+    });
+    return response.data!;
+  },
+};
+
 export default api;

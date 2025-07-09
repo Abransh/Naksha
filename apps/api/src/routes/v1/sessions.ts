@@ -597,6 +597,28 @@ router.post('/',
 
       // const isRepeatClient = clientSessionCount > 0; // Not used in Resend email
 
+      // Get consultant's Teams access token if needed
+      let consultantAccessToken: string | undefined;
+      if (sessionData.platform === 'TEAMS') {
+        const consultant = await prisma.consultant.findUnique({
+          where: { id: consultantId },
+          select: { 
+            teamsAccessToken: true,
+            teamsTokenExpiresAt: true
+          }
+        });
+
+        if (!consultant?.teamsAccessToken || !consultant?.teamsTokenExpiresAt) {
+          throw new ValidationError('Microsoft Teams integration is not connected. Please connect your Microsoft account in Settings.');
+        }
+
+        if (consultant.teamsTokenExpiresAt < new Date()) {
+          throw new ValidationError('Microsoft Teams access token has expired. Please reconnect your Microsoft account in Settings.');
+        }
+
+        consultantAccessToken = consultant.teamsAccessToken;
+      }
+
       // Generate meeting link based on platform
       const meetingDetails = await generateMeetingLink(
         sessionData.platform,
@@ -606,7 +628,8 @@ router.post('/',
           duration: sessionData.durationMinutes,
           consultantEmail: req.user!.email,
           clientEmail: client.email
-        }
+        },
+        consultantAccessToken
       );
 
       // Create session
@@ -782,15 +805,40 @@ router.put('/:id',
           `${updates.scheduledDate || existingSession.scheduledDate.toISOString().split('T')[0]}T${updates.scheduledTime || existingSession.scheduledTime}`
         );
 
+        // Get consultant's Teams access token if needed
+        let consultantAccessToken: string | undefined;
+        const newPlatform = updates.platform || existingSession.platform;
+        
+        if (newPlatform === 'TEAMS') {
+          const consultant = await prisma.consultant.findUnique({
+            where: { id: consultantId },
+            select: { 
+              teamsAccessToken: true,
+              teamsTokenExpiresAt: true
+            }
+          });
+
+          if (!consultant?.teamsAccessToken || !consultant?.teamsTokenExpiresAt) {
+            throw new ValidationError('Microsoft Teams integration is not connected. Please connect your Microsoft account in Settings.');
+          }
+
+          if (consultant.teamsTokenExpiresAt < new Date()) {
+            throw new ValidationError('Microsoft Teams access token has expired. Please reconnect your Microsoft account in Settings.');
+          }
+
+          consultantAccessToken = consultant.teamsAccessToken;
+        }
+
         meetingDetails = await generateMeetingLink(
-          updates.platform || existingSession.platform,
+          newPlatform,
           {
             title: existingSession.title,
             startTime: scheduledDateTime,
             duration: updates.durationMinutes || existingSession.durationMinutes,
             consultantEmail: req.user!.email,
             clientEmail: existingSession.client.email
-          }
+          },
+          consultantAccessToken
         );
       }
 

@@ -28,6 +28,7 @@ import {
 import { useSettingsForm, useProfileCompletion } from "@/hooks/useConsultantProfile";
 import { toast } from "react-hot-toast";
 import Navigator from "@/components/navigation/Navigator";
+import { TeamsIntegration } from "@/components/settings/TeamsIntegration";
 
 // Removed SidebarContent - now using Navigator component
 
@@ -599,6 +600,11 @@ export default function SettingsPage() {
                       )}
                     </div>
                   </Card>
+
+                  {/* Teams Integration Section */}
+                  <div className="w-full mt-8">
+                    <TeamsIntegration />
+                  </div>
 
                   <Button
                     variant="outline"

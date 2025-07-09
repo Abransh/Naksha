@@ -38,6 +38,7 @@ import sessionRoutes from './routes/v1/sessions';
 import clientRoutes from './routes/v1/clients';
 import quotationRoutes from './routes/v1/quotations';
 import adminRoutes from './routes/v1/admin';
+import teamsRoutes from './routes/v1/teams';
 
 // Controller imports for direct routing
 import { 
@@ -224,6 +225,7 @@ class App {
     this.app.use('/api/v1/sessions', authenticateConsultant, sessionRoutes);
     this.app.use('/api/v1/clients', authenticateConsultant, clientRoutes);
     this.app.use('/api/v1/quotations', authenticateConsultant, quotationRoutes);
+    this.app.use('/api/v1/teams', authenticateConsultant, teamsRoutes);
 
     // Admin routes (admin authentication required)
     this.app.use('/api/v1/admin', authenticateAdmin, adminRoutes);

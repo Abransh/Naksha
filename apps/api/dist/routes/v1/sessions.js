@@ -531,6 +531,24 @@ router.post('/', (0, validation_1.validateRequest)(createSessionSchema), async (
         //   }
         // });
         // const isRepeatClient = clientSessionCount > 0; // Not used in Resend email
+        // Get consultant's Teams access token if needed
+        let consultantAccessToken;
+        if (sessionData.platform === 'TEAMS') {
+            const consultant = await prisma.consultant.findUnique({
+                where: { id: consultantId },
+                select: {
+                    teamsAccessToken: true,
+                    teamsTokenExpiresAt: true
+                }
+            });
+            if (!consultant?.teamsAccessToken || !consultant?.teamsTokenExpiresAt) {
+                throw new errorHandler_1.ValidationError('Microsoft Teams integration is not connected. Please connect your Microsoft account in Settings.');
+            }
+            if (consultant.teamsTokenExpiresAt < new Date()) {
+                throw new errorHandler_1.ValidationError('Microsoft Teams access token has expired. Please reconnect your Microsoft account in Settings.');
+            }
+            consultantAccessToken = consultant.teamsAccessToken;
+        }
         // Generate meeting link based on platform
         const meetingDetails = await (0, meetingService_1.generateMeetingLink)(sessionData.platform, {
             title: sessionData.title,
@@ -538,7 +556,7 @@ router.post('/', (0, validation_1.validateRequest)(createSessionSchema), async (
             duration: sessionData.durationMinutes,
             consultantEmail: req.user.email,
             clientEmail: client.email
-        });
+        }, consultantAccessToken);
         // Create session
         const session = await prisma.session.create({
             data: {
@@ -692,13 +710,32 @@ router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.
         let meetingDetails = null;
         if (updates.platform || updates.scheduledDate || updates.scheduledTime) {
             const scheduledDateTime = new Date(`${updates.scheduledDate || existingSession.scheduledDate.toISOString().split('T')[0]}T${updates.scheduledTime || existingSession.scheduledTime}`);
-            meetingDetails = await (0, meetingService_1.generateMeetingLink)(updates.platform || existingSession.platform, {
+            // Get consultant's Teams access token if needed
+            let consultantAccessToken;
+            const newPlatform = updates.platform || existingSession.platform;
+            if (newPlatform === 'TEAMS') {
+                const consultant = await prisma.consultant.findUnique({
+                    where: { id: consultantId },
+                    select: {
+                        teamsAccessToken: true,
+                        teamsTokenExpiresAt: true
+                    }
+                });
+                if (!consultant?.teamsAccessToken || !consultant?.teamsTokenExpiresAt) {
+                    throw new errorHandler_1.ValidationError('Microsoft Teams integration is not connected. Please connect your Microsoft account in Settings.');
+                }
+                if (consultant.teamsTokenExpiresAt < new Date()) {
+                    throw new errorHandler_1.ValidationError('Microsoft Teams access token has expired. Please reconnect your Microsoft account in Settings.');
+                }
+                consultantAccessToken = consultant.teamsAccessToken;
+            }
+            meetingDetails = await (0, meetingService_1.generateMeetingLink)(newPlatform, {
                 title: existingSession.title,
                 startTime: scheduledDateTime,
                 duration: updates.durationMinutes || existingSession.durationMinutes,
                 consultantEmail: req.user.email,
                 clientEmail: existingSession.client.email
-            });
+            }, consultantAccessToken);
         }
         // Update session
         const updatedSession = await prisma.session.update({
