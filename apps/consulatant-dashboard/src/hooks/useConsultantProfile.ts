@@ -97,14 +97,14 @@ export const useConsultantProfile = (
       setIsSaving(true);
       setError(null);
 
+      console.log('Starting photo upload...');
       const { profilePhotoUrl } = await consultantApi.uploadPhoto(file);
+      console.log('Photo uploaded successfully, URL:', profilePhotoUrl);
       
-      // Update the profile with new photo URL
-      if (profile) {
-        const updatedProfile = { ...profile, profilePhotoUrl };
-        setProfile(updatedProfile);
-        setLastUpdated(new Date());
-      }
+      // Refetch the complete profile data to ensure we have the latest state
+      console.log('Refetching profile data...');
+      await fetchProfile();
+      console.log('Profile refetched successfully');
       
       return profilePhotoUrl;
     } catch (err) {
@@ -114,7 +114,7 @@ export const useConsultantProfile = (
     } finally {
       setIsSaving(false);
     }
-  }, [profile]);
+  }, [fetchProfile]);
 
   const checkSlugAvailability = useCallback(async (
     slug: string

@@ -214,14 +214,14 @@ router.post('/book', auth_1.optionalAuth, // Allow both authenticated and unauth
             return { client, session };
         });
         // Generate meeting link for session
-        const meetingLink = await (0, meetingService_1.generateMeetingLink)({
-            sessionId: result.session.id,
-            sessionTitle: `${bookingData.sessionType} Session`,
-            scheduledDateTime: `${bookingData.selectedDate} ${bookingData.selectedTime}`,
-            duration: bookingData.duration,
-            consultantName: `${consultant.firstName} ${consultant.lastName}`,
-            clientName: result.client.name
-        });
+        // const meetingLink = await generateMeetingLink({
+        //   sessionId: result.session.id,
+        //   sessionTitle: `${bookingData.sessionType} Session`,
+        //   scheduledDateTime: `${bookingData.selectedDate} ${bookingData.selectedTime}`,
+        //   duration: bookingData.duration,
+        //   consultantName: `${consultant.firstName} ${consultant.lastName}`,
+        //   clientName: result.client.name
+        // });
         // Send confirmation email to client via Resend
         try {
             await (0, resendEmailService_1.sendSessionConfirmationEmail)({
@@ -236,7 +236,7 @@ router.post('/book', auth_1.optionalAuth, // Allow both authenticated and unauth
                 sessionTime: bookingData.selectedTime,
                 amount: bookingData.amount,
                 currency: 'INR',
-                meetingLink: meetingLink || '',
+                //meetingLink: meetingLink || '',
                 meetingPlatform: 'Zoom'
             });
             console.log('✅ Confirmation emails sent');

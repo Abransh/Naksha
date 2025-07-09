@@ -126,6 +126,10 @@ export declare const validateResendConfig: () => {
     errors: string[];
 };
 /**
+ * Log Resend configuration status on startup
+ */
+export declare const logResendConfigStatus: () => void;
+/**
  * Authentication Email Functions
  */
 /**
@@ -200,6 +204,7 @@ declare const _default: {
         valid: boolean;
         errors: string[];
     };
+    logResendConfigStatus: () => void;
 };
 export default _default;
 //# sourceMappingURL=resendEmailService.d.ts.map

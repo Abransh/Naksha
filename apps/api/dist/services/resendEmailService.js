@@ -19,7 +19,7 @@
  * - Scalable infrastructure
  */
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.sendRefundNotificationEmail = exports.sendPaymentConfirmationEmail = exports.sendClientWelcomeEmail = exports.sendConsultantRejectedEmail = exports.sendConsultantApprovedEmail = exports.sendAdminNotificationEmail = exports.sendSessionConfirmationEmail = exports.sendPasswordResetEmail = exports.sendConsultantWelcomeEmail = exports.validateResendConfig = exports.sendQuotationEmails = exports.sendQuotationConfirmationToConsultant = exports.sendQuotationToClient = void 0;
+exports.sendRefundNotificationEmail = exports.sendPaymentConfirmationEmail = exports.sendClientWelcomeEmail = exports.sendConsultantRejectedEmail = exports.sendConsultantApprovedEmail = exports.sendAdminNotificationEmail = exports.sendSessionConfirmationEmail = exports.sendPasswordResetEmail = exports.sendConsultantWelcomeEmail = exports.logResendConfigStatus = exports.validateResendConfig = exports.sendQuotationEmails = exports.sendQuotationConfirmationToConsultant = exports.sendQuotationToClient = void 0;
 const resend_1 = require("resend");
 const database_1 = require("../config/database");
 // Initialize Resend client lazily
@@ -38,9 +38,21 @@ const getResendClient = () => {
  * Email configuration for Resend
  */
 const resendConfig = {
-    from: process.env.EMAIL_FROM || 'Naksha Platform <noreply@naksha.com>',
-    replyTo: process.env.EMAIL_REPLY_TO || 'support@naksha.com',
+    from: process.env.EMAIL_FROM || 'Naksha Platform <noreply@nakksha.in>',
+    replyTo: process.env.EMAIL_REPLY_TO || 'support@nakksha.in',
     baseUrl: process.env.FRONTEND_URL || 'https://dashboard.naksha.com'
+};
+/**
+ * Sanitize email address for use in Resend tags
+ * Converts email to format that only contains ASCII letters, numbers, underscores, or dashes
+ * @param email - Email address to sanitize
+ * @returns Sanitized string safe for use in Resend tags
+ */
+const sanitizeEmailForTag = (email) => {
+    return email
+        .replace('@', '_at_')
+        .replace(/\./g, '_dot_')
+        .replace(/[^a-zA-Z0-9_-]/g, '_');
 };
 /**
  * Professional quotation email template for clients
@@ -736,6 +748,8 @@ const getAdminNotificationEmailHtml = (data) => {
 const sendQuotationToClient = async (data) => {
     try {
         console.log(`📧 Sending quotation email to client: ${data.clientEmail}`);
+        console.log(`📧 Using FROM email: ${resendConfig.from}`);
+        console.log(`📧 Using REPLY-TO email: ${data.consultantEmail}`);
         const emailResponse = await getResendClient().emails.send({
             from: resendConfig.from,
             to: data.clientEmail,
@@ -745,7 +759,7 @@ const sendQuotationToClient = async (data) => {
             tags: [
                 { name: 'type', value: 'quotation_shared' },
                 { name: 'quotation_id', value: data.quotationId },
-                { name: 'consultant_email', value: data.consultantEmail }
+                { name: 'consultant_email', value: sanitizeEmailForTag(data.consultantEmail) }
             ]
         });
         console.log(`✅ Client quotation email sent successfully. Email ID: ${emailResponse.data?.id}`);
@@ -787,6 +801,8 @@ exports.sendQuotationToClient = sendQuotationToClient;
 const sendQuotationConfirmationToConsultant = async (data) => {
     try {
         console.log(`📧 Sending quotation confirmation to consultant: ${data.consultantEmail}`);
+        console.log(`📧 Using FROM email: ${resendConfig.from}`);
+        console.log(`📧 Using REPLY-TO email: ${resendConfig.replyTo}`);
         const emailResponse = await getResendClient().emails.send({
             from: resendConfig.from,
             to: data.consultantEmail,
@@ -796,7 +812,7 @@ const sendQuotationConfirmationToConsultant = async (data) => {
             tags: [
                 { name: 'type', value: 'quotation_confirmation' },
                 { name: 'quotation_id', value: data.quotationId },
-                { name: 'consultant_email', value: data.consultantEmail }
+                { name: 'consultant_email', value: sanitizeEmailForTag(data.consultantEmail) }
             ]
         });
         console.log(`✅ Consultant confirmation email sent successfully. Email ID: ${emailResponse.data?.id}`);
@@ -895,6 +911,9 @@ const validateResendConfig = () => {
     if (!resendConfig.from) {
         errors.push('EMAIL_FROM environment variable is required');
     }
+    if (!resendConfig.replyTo) {
+        errors.push('EMAIL_REPLY_TO environment variable is required');
+    }
     // Test Resend client initialization
     try {
         getResendClient();
@@ -908,6 +927,23 @@ const validateResendConfig = () => {
     };
 };
 exports.validateResendConfig = validateResendConfig;
+/**
+ * Log Resend configuration status on startup
+ */
+const logResendConfigStatus = () => {
+    const validation = (0, exports.validateResendConfig)();
+    if (validation.valid) {
+        console.log('✅ Resend email service configured successfully');
+        console.log(`📧 FROM email: ${resendConfig.from}`);
+        console.log(`📧 REPLY-TO email: ${resendConfig.replyTo}`);
+        console.log(`🌐 Frontend URL: ${resendConfig.baseUrl}`);
+    }
+    else {
+        console.error('❌ Resend email service configuration errors:');
+        validation.errors.forEach(error => console.error(`   • ${error}`));
+    }
+};
+exports.logResendConfigStatus = logResendConfigStatus;
 /**
  * Authentication Email Functions
  */
@@ -925,7 +961,7 @@ const sendConsultantWelcomeEmail = async (data) => {
             html: getConsultantWelcomeEmailHtml(data),
             tags: [
                 { name: 'type', value: 'consultant_welcome' },
-                { name: 'consultant_email', value: data.email }
+                { name: 'consultant_email', value: sanitizeEmailForTag(data.email) }
             ]
         });
         console.log(`✅ Welcome email sent successfully. Email ID: ${emailResponse.data?.id}`);
@@ -973,7 +1009,7 @@ const sendPasswordResetEmail = async (data) => {
             html: getPasswordResetEmailHtml(data),
             tags: [
                 { name: 'type', value: 'password_reset' },
-                { name: 'consultant_email', value: data.email }
+                { name: 'consultant_email', value: sanitizeEmailForTag(data.email) }
             ]
         });
         console.log(`✅ Password reset email sent successfully. Email ID: ${emailResponse.data?.id}`);
@@ -1022,7 +1058,7 @@ const sendSessionConfirmationEmail = async (data) => {
             tags: [
                 { name: 'type', value: 'session_confirmation' },
                 { name: 'session_id', value: data.sessionId },
-                { name: 'consultant_email', value: data.consultantEmail }
+                { name: 'consultant_email', value: sanitizeEmailForTag(data.consultantEmail) }
             ]
         });
         console.log(`✅ Session confirmation email sent successfully. Email ID: ${emailResponse.data?.id}`);
@@ -1075,7 +1111,7 @@ const sendAdminNotificationEmail = async (data) => {
             tags: [
                 { name: 'type', value: 'admin_notification' },
                 { name: 'consultant_id', value: data.consultantId },
-                { name: 'consultant_email', value: data.consultantEmail }
+                { name: 'consultant_email', value: sanitizeEmailForTag(data.consultantEmail) }
             ]
         });
         console.log(`✅ Admin notification email sent successfully. Email ID: ${emailResponse.data?.id}`);
@@ -1127,7 +1163,7 @@ const sendConsultantApprovedEmail = async (data) => {
             html: getConsultantApprovedEmailHtml(data),
             tags: [
                 { name: 'type', value: 'consultant_approved' },
-                { name: 'consultant_email', value: data.email }
+                { name: 'consultant_email', value: sanitizeEmailForTag(data.email) }
             ]
         });
         console.log(`✅ Consultant approval email sent successfully. Email ID: ${emailResponse.data?.id}`);
@@ -1177,7 +1213,7 @@ const sendConsultantRejectedEmail = async (data) => {
             html: getConsultantRejectedEmailHtml(data),
             tags: [
                 { name: 'type', value: 'consultant_rejected' },
-                { name: 'consultant_email', value: data.email }
+                { name: 'consultant_email', value: sanitizeEmailForTag(data.email) }
             ]
         });
         console.log(`✅ Consultant rejection email sent successfully. Email ID: ${emailResponse.data?.id}`);
@@ -1227,8 +1263,8 @@ const sendClientWelcomeEmail = async (data) => {
             html: getClientWelcomeEmailHtml(data),
             tags: [
                 { name: 'type', value: 'client_welcome' },
-                { name: 'client_email', value: data.clientEmail },
-                { name: 'consultant_email', value: data.consultantEmail }
+                { name: 'client_email', value: sanitizeEmailForTag(data.clientEmail) },
+                { name: 'consultant_email', value: sanitizeEmailForTag(data.consultantEmail) }
             ]
         });
         console.log(`✅ Client welcome email sent successfully. Email ID: ${emailResponse.data?.id}`);
@@ -1282,7 +1318,7 @@ const sendPaymentConfirmationEmail = async (data) => {
             html: getPaymentConfirmationEmailHtml(data),
             tags: [
                 { name: 'type', value: 'payment_confirmation' },
-                { name: 'recipient', value: recipient },
+                { name: 'recipient', value: sanitizeEmailForTag(recipient) },
                 { name: 'transaction_id', value: data.transactionId || '' }
             ]
         });
@@ -1337,7 +1373,7 @@ const sendRefundNotificationEmail = async (data) => {
             html: getRefundNotificationEmailHtml(data),
             tags: [
                 { name: 'type', value: 'refund_notification' },
-                { name: 'recipient', value: recipient },
+                { name: 'recipient', value: sanitizeEmailForTag(recipient) },
                 { name: 'transaction_id', value: data.transactionId || '' }
             ]
         });
@@ -1392,6 +1428,7 @@ exports.default = {
     sendPaymentConfirmationEmail: exports.sendPaymentConfirmationEmail,
     sendRefundNotificationEmail: exports.sendRefundNotificationEmail,
     // Utility functions
-    validateResendConfig: exports.validateResendConfig
+    validateResendConfig: exports.validateResendConfig,
+    logResendConfigStatus: exports.logResendConfigStatus
 };
 //# sourceMappingURL=resendEmailService.js.map

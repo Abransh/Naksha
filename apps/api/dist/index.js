@@ -45,7 +45,7 @@ const auth_2 = require("./middleware/auth");
 // Service imports
 //import { setupSocketHandlers } from './services/socketService';
 const jobService_1 = require("./services/jobService");
-const emailService_1 = require("./services/emailService");
+//import { setupEmailTemplates } from './services/emailService';
 // Load environment variables
 dotenv_1.default.config();
 /**
@@ -314,7 +314,7 @@ class App {
             console.log('✅ Redis connected successfully');
             // Setup email templates
             console.log('📧 Setting up email templates...');
-            await (0, emailService_1.setupEmailTemplates)();
+            // await setupEmailTemplates();
             console.log('✅ Email templates ready');
             // Start background jobs
             console.log('⚙️ Starting background jobs...');
