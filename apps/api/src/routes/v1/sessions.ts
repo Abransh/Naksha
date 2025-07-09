@@ -603,6 +603,7 @@ router.post('/',
         const consultant = await prisma.consultant.findUnique({
           where: { id: consultantId },
           select: { 
+            id: true,
             teamsAccessToken: true,
             teamsTokenExpiresAt: true
           }
@@ -813,6 +814,7 @@ router.put('/:id',
           const consultant = await prisma.consultant.findUnique({
             where: { id: consultantId },
             select: { 
+              id: true,
               teamsAccessToken: true,
               teamsTokenExpiresAt: true
             }

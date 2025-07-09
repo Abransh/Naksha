@@ -1,22 +1,22 @@
 /**
  * Microsoft Teams OAuth Callback Handler
- * 
- * This page handles the OAuth callback from Microsoft and exchanges
- * the authorization code for access tokens
+ * Handles the OAuth callback from Microsoft and completes the integration
  */
 
-"use client";
+'use client';
 
 import { useEffect, useState, Suspense } from 'react';
-import { useRouter, useSearchParams } from 'next/navigation';
-import { Loader2, CheckCircle, AlertCircle } from 'lucide-react';
-import { teamsApi } from '@/lib/api';
+import { useSearchParams } from 'next/navigation';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 
-function TeamsCallbackContent() {
-  const router = useRouter();
+// Callback handler component
+const TeamsCallbackHandler = () => {
   const searchParams = useSearchParams();
   const [status, setStatus] = useState<'loading' | 'success' | 'error'>('loading');
-  const [message, setMessage] = useState('Processing Microsoft Teams connection...');
+  const [message, setMessage] = useState<string>('');
+  const [userInfo, setUserInfo] = useState<any>(null);
 
   useEffect(() => {
     const handleCallback = async () => {
@@ -26,168 +26,190 @@ function TeamsCallbackContent() {
         const error = searchParams.get('error');
         const errorDescription = searchParams.get('error_description');
 
-        // Check for OAuth errors
+        // Handle OAuth error
         if (error) {
-          console.error('OAuth error:', error, errorDescription);
           setStatus('error');
-          setMessage(errorDescription || 'Microsoft OAuth authorization failed');
+          setMessage(errorDescription || error || 'OAuth authorization failed');
           
-          // Send error to parent window
-          if (window.opener) {
-            window.opener.postMessage({
-              type: 'TEAMS_OAUTH_ERROR',
-              error: errorDescription || 'Authorization failed'
-            }, window.location.origin);
-          }
+          // Notify parent window
+          window.parent.postMessage({
+            type: 'TEAMS_OAUTH_ERROR',
+            error: errorDescription || error || 'OAuth authorization failed'
+          }, window.location.origin);
           return;
         }
 
-        // Check for required parameters
-        if (!code) {
+        // Validate required parameters
+        if (!code || !state) {
           setStatus('error');
-          setMessage('Missing authorization code from Microsoft');
+          setMessage('Missing required OAuth parameters');
           
-          if (window.opener) {
-            window.opener.postMessage({
-              type: 'TEAMS_OAUTH_ERROR',
-              error: 'Missing authorization code'
-            }, window.location.origin);
-          }
+          // Notify parent window
+          window.parent.postMessage({
+            type: 'TEAMS_OAUTH_ERROR',
+            error: 'Missing required OAuth parameters'
+          }, window.location.origin);
           return;
         }
 
         // Exchange code for tokens
-        const redirectUri = `${window.location.origin}/auth/teams/callback`;
-        
-        console.log('Exchanging code for tokens...');
-        const result = await teamsApi.handleOAuthCallback(code, redirectUri);
-        
-        console.log('Teams OAuth successful:', result);
+        const token = localStorage.getItem('token');
+        if (!token) {
+          setStatus('error');
+          setMessage('Authentication token not found');
+          
+          // Notify parent window
+          window.parent.postMessage({
+            type: 'TEAMS_OAUTH_ERROR',
+            error: 'Authentication token not found'
+          }, window.location.origin);
+          return;
+        }
+
+        const response = await fetch('/api/v1/teams/oauth-callback', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`,
+          },
+          body: JSON.stringify({
+            code,
+            redirectUri: window.location.origin + '/auth/teams/callback',
+          }),
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json();
+          throw new Error(errorData.error?.message || 'Failed to complete OAuth flow');
+        }
+
+        const data = await response.json();
         
         setStatus('success');
-        setMessage(`Successfully connected to Microsoft Teams as ${result.userEmail}`);
-        
-        // Send success message to parent window
-        if (window.opener) {
-          window.opener.postMessage({
-            type: 'TEAMS_OAUTH_SUCCESS',
-            data: result
-          }, window.location.origin);
-        }
-        
-        // Close the popup after a short delay
+        setMessage('Microsoft Teams integration connected successfully!');
+        setUserInfo(data.data);
+
+        // Notify parent window
+        window.parent.postMessage({
+          type: 'TEAMS_OAUTH_SUCCESS',
+          data: data.data
+        }, window.location.origin);
+
+        // Close popup after short delay
         setTimeout(() => {
-          if (window.opener) {
-            window.close();
-          } else {
-            // If not in popup, redirect to settings
-            router.push('/dashboard/settings');
-          }
+          window.close();
         }, 2000);
 
-      } catch (error) {
-        console.error('Teams callback error:', error);
+      } catch (err) {
+        console.error('Teams OAuth callback error:', err);
+        const errorMessage = err instanceof Error ? err.message : 'Failed to complete OAuth flow';
         
-        const errorMessage = error instanceof Error ? error.message : 'Failed to connect Microsoft Teams';
         setStatus('error');
         setMessage(errorMessage);
         
-        if (window.opener) {
-          window.opener.postMessage({
-            type: 'TEAMS_OAUTH_ERROR',
-            error: errorMessage
-          }, window.location.origin);
-        }
+        // Notify parent window
+        window.parent.postMessage({
+          type: 'TEAMS_OAUTH_ERROR',
+          error: errorMessage
+        }, window.location.origin);
       }
     };
 
     handleCallback();
-  }, [searchParams, router]);
+  }, [searchParams]);
 
-  const getStatusIcon = () => {
+  const renderContent = () => {
     switch (status) {
       case 'loading':
-        return <Loader2 className="h-8 w-8 animate-spin text-[var(--primary-100)]" />;
+        return (
+          <div className="text-center space-y-4">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
+            <p className="text-gray-600">Connecting to Microsoft Teams...</p>
+          </div>
+        );
+
       case 'success':
-        return <CheckCircle className="h-8 w-8 text-green-500" />;
+        return (
+          <div className="text-center space-y-4">
+            <CheckCircle className="w-12 h-12 mx-auto text-green-600" />
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-green-800">Success!</h3>
+              <p className="text-gray-600">{message}</p>
+              {userInfo && (
+                <div className="text-sm text-gray-500">
+                  <p>Connected account: {userInfo.userEmail}</p>
+                  {userInfo.displayName && (
+                    <p>Display name: {userInfo.displayName}</p>
+                  )}
+                </div>
+              )}
+            </div>
+            <Alert>
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                This window will close automatically in a few seconds.
+              </AlertDescription>
+            </Alert>
+          </div>
+        );
+
       case 'error':
-        return <AlertCircle className="h-8 w-8 text-red-500" />;
+        return (
+          <div className="text-center space-y-4">
+            <XCircle className="w-12 h-12 mx-auto text-red-600" />
+            <div className="space-y-2">
+              <h3 className="text-lg font-semibold text-red-800">Connection Failed</h3>
+              <p className="text-gray-600">{message}</p>
+            </div>
+            <Alert variant="destructive">
+              <AlertCircle className="h-4 w-4" />
+              <AlertDescription>
+                Please close this window and try again.
+              </AlertDescription>
+            </Alert>
+          </div>
+        );
+
       default:
         return null;
     }
   };
 
-  const getStatusColor = () => {
-    switch (status) {
-      case 'loading':
-        return 'text-[var(--primary-100)]';
-      case 'success':
-        return 'text-green-600';
-      case 'error':
-        return 'text-red-600';
-      default:
-        return 'text-gray-600';
-    }
-  };
-
   return (
-    <div className="min-h-screen bg-[var(--main-background)] flex items-center justify-center p-4">
-      <div className="bg-white rounded-xl shadow-lg p-8 max-w-md w-full text-center">
-        <div className="flex justify-center mb-6">
-          {getStatusIcon()}
-        </div>
-        
-        <h1 className="text-2xl font-bold text-[var(--black-80)] mb-4">
-          Microsoft Teams Integration
-        </h1>
-        
-        <p className={`text-lg ${getStatusColor()} mb-6`}>
-          {message}
-        </p>
-        
-        {status === 'loading' && (
-          <div className="flex items-center justify-center gap-2">
-            <div className="w-2 h-2 bg-[var(--primary-100)] rounded-full animate-pulse"></div>
-            <div className="w-2 h-2 bg-[var(--primary-100)] rounded-full animate-pulse delay-100"></div>
-            <div className="w-2 h-2 bg-[var(--primary-100)] rounded-full animate-pulse delay-200"></div>
-          </div>
-        )}
-        
-        {status === 'success' && (
-          <div className="text-sm text-[var(--black-60)]">
-            This window will close automatically...
-          </div>
-        )}
-        
-        {status === 'error' && (
-          <div className="space-y-4">
-            <div className="text-sm text-[var(--black-60)]">
-              Please try again or contact support if the issue persists.
-            </div>
-            <button
-              onClick={() => window.close()}
-              className="px-4 py-2 bg-[var(--primary-100)] text-white rounded-lg hover:bg-[var(--primary-100)]/90 transition-colors"
-            >
-              Close Window
-            </button>
-          </div>
-        )}
-      </div>
+    <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+      <Card className="w-full max-w-md">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 0H3C1.3 0 0 1.3 0 3v18c0 1.7 1.3 3 3 3h18c1.7 0 3-1.3 3-3V3c0-1.7-1.3-3-3-3zM10 17H7v-7h3v7zm0-8H7V6h3v3zm7 8h-3v-7h3v7zm0-8h-3V6h3v3z"/>
+            </svg>
+            Microsoft Teams Integration
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          {renderContent()}
+        </CardContent>
+      </Card>
     </div>
   );
-}
+};
 
-export default function TeamsCallbackPage() {
+// Main page component with Suspense boundary
+const TeamsCallbackPage = () => {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[var(--main-background)] flex items-center justify-center">
-        <div className="flex items-center gap-2">
-          <Loader2 className="h-6 w-6 animate-spin text-[var(--primary-100)]" />
-          <span className="text-[var(--black-60)]">Loading...</span>
-        </div>
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center p-4">
+        <Card className="w-full max-w-md">
+          <CardContent className="text-center space-y-4 py-8">
+            <Loader2 className="w-8 h-8 animate-spin mx-auto text-blue-600" />
+            <p className="text-gray-600">Loading...</p>
+          </CardContent>
+        </Card>
       </div>
     }>
-      <TeamsCallbackContent />
+      <TeamsCallbackHandler />
     </Suspense>
   );
-}
+};
+
+export default TeamsCallbackPage;

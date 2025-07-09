@@ -1,68 +1,82 @@
 /**
  * Microsoft Teams Integration Component
- * 
- * Handles OAuth flow for connecting consultant's Microsoft account
- * for Teams meeting integration
+ * Handles OAuth connection for Teams meeting integration
  */
 
-"use client";
+'use client';
 
-import { useState, useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
-import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { 
-  CheckCircle, 
-  AlertCircle, 
-  ExternalLink, 
-  Loader2, 
-  RefreshCw,
-  Unplug
-} from 'lucide-react';
-import { teamsApi } from '@/lib/api';
-import { toast } from 'react-hot-toast';
+import { Alert, AlertDescription } from '@/components/ui/alert';
+import { Loader2, ExternalLink, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
+import { toast } from 'sonner';
 
+// Teams Integration Status Type
 interface TeamsStatus {
   isConnected: boolean;
-  isExpired: boolean | null;
-  userEmail: string | null;
-  connectedAt: string | null;
+  isExpired: boolean;
+  userEmail?: string;
+  expiresAt?: string;
   needsReconnection: boolean;
 }
 
-export function TeamsIntegration() {
+// Teams Integration Component
+export const TeamsIntegration: React.FC = () => {
   const [status, setStatus] = useState<TeamsStatus | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
+  const [isLoading, setIsLoading] = useState(false);
   const [isConnecting, setIsConnecting] = useState(false);
-  const [isDisconnecting, setIsDisconnecting] = useState(false);
-  const [isRefreshing, setIsRefreshing] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  // Load Teams integration status
-  useEffect(() => {
-    loadStatus();
-  }, []);
-
-  const loadStatus = async () => {
+  // Fetch Teams integration status
+  const fetchStatus = async () => {
     try {
       setIsLoading(true);
-      const teamsStatus = await teamsApi.getStatus();
-      setStatus(teamsStatus);
-    } catch (error) {
-      console.error('Failed to load Teams status:', error);
-      toast.error('Failed to load Teams integration status');
+      setError(null);
+
+      const response = await fetch('/api/v1/teams/status', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch Teams integration status');
+      }
+
+      const data = await response.json();
+      setStatus(data.data);
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to fetch status';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
       setIsLoading(false);
     }
   };
 
-  const handleConnect = async () => {
+  // Connect to Microsoft Teams
+  const connectTeams = async () => {
     try {
       setIsConnecting(true);
-      
+      setError(null);
+
       // Get OAuth URL
-      const { oauthUrl } = await teamsApi.getOAuthUrl();
-      
-      // Open OAuth flow in a popup
+      const response = await fetch('/api/v1/teams/oauth-url', {
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to generate OAuth URL');
+      }
+
+      const data = await response.json();
+      const oauthUrl = data.data.oauthUrl;
+
+      // Open OAuth popup
       const popup = window.open(
         oauthUrl,
         'teams-oauth',
@@ -70,81 +84,126 @@ export function TeamsIntegration() {
       );
 
       if (!popup) {
-        throw new Error('Failed to open OAuth popup. Please disable popup blockers.');
+        throw new Error('Failed to open OAuth popup. Please check your popup blocker.');
       }
 
-      // Listen for OAuth callback
-      const handleCallback = (event: MessageEvent) => {
-        if (event.origin !== window.location.origin) return;
-        
-        if (event.data.type === 'TEAMS_OAUTH_SUCCESS') {
-          popup.close();
-          window.removeEventListener('message', handleCallback);
-          
-          toast.success('Microsoft Teams connected successfully!');
-          loadStatus(); // Reload status
-        } else if (event.data.type === 'TEAMS_OAUTH_ERROR') {
-          popup.close();
-          window.removeEventListener('message', handleCallback);
-          
-          toast.error(event.data.error || 'Failed to connect Microsoft Teams');
-        }
-      };
-
-      window.addEventListener('message', handleCallback);
-
-      // Check if popup was closed manually
+      // Listen for OAuth completion
       const checkClosed = setInterval(() => {
         if (popup.closed) {
           clearInterval(checkClosed);
-          window.removeEventListener('message', handleCallback);
           setIsConnecting(false);
+          fetchStatus(); // Refresh status after OAuth attempt
         }
       }, 1000);
 
-    } catch (error) {
-      console.error('Teams connection error:', error);
-      toast.error(error instanceof Error ? error.message : 'Failed to connect Microsoft Teams');
-    } finally {
+      // Handle OAuth callback message
+      const handleMessage = (event: MessageEvent) => {
+        if (event.origin !== window.location.origin) return;
+
+        if (event.data.type === 'TEAMS_OAUTH_SUCCESS') {
+          clearInterval(checkClosed);
+          popup.close();
+          setIsConnecting(false);
+          toast.success('Microsoft Teams connected successfully!');
+          fetchStatus();
+        } else if (event.data.type === 'TEAMS_OAUTH_ERROR') {
+          clearInterval(checkClosed);
+          popup.close();
+          setIsConnecting(false);
+          const errorMessage = event.data.error || 'Failed to connect Microsoft Teams';
+          setError(errorMessage);
+          toast.error(errorMessage);
+        }
+      };
+
+      window.addEventListener('message', handleMessage);
+
+      // Cleanup
+      setTimeout(() => {
+        window.removeEventListener('message', handleMessage);
+        if (!popup.closed) {
+          popup.close();
+          setIsConnecting(false);
+        }
+      }, 300000); // 5 minutes timeout
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to connect Teams';
+      setError(errorMessage);
+      toast.error(errorMessage);
       setIsConnecting(false);
     }
   };
 
-  const handleDisconnect = async () => {
+  // Disconnect Teams integration
+  const disconnectTeams = async () => {
     try {
-      setIsDisconnecting(true);
-      await teamsApi.disconnect();
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/v1/teams/disconnect', {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to disconnect Teams integration');
+      }
+
       toast.success('Microsoft Teams disconnected successfully');
-      loadStatus(); // Reload status
-    } catch (error) {
-      console.error('Teams disconnection error:', error);
-      toast.error('Failed to disconnect Microsoft Teams');
+      fetchStatus();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to disconnect Teams';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
-      setIsDisconnecting(false);
+      setIsLoading(false);
     }
   };
 
-  const handleRefreshToken = async () => {
+  // Refresh expired token
+  const refreshToken = async () => {
     try {
-      setIsRefreshing(true);
-      await teamsApi.refreshToken();
-      toast.success('Teams access token refreshed successfully');
-      loadStatus(); // Reload status
-    } catch (error) {
-      console.error('Teams token refresh error:', error);
-      toast.error('Failed to refresh Teams token. Please reconnect your account.');
+      setIsLoading(true);
+      setError(null);
+
+      const response = await fetch('/api/v1/teams/refresh-token', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to refresh Teams token');
+      }
+
+      toast.success('Teams token refreshed successfully');
+      fetchStatus();
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh token';
+      setError(errorMessage);
+      toast.error(errorMessage);
     } finally {
-      setIsRefreshing(false);
+      setIsLoading(false);
     }
   };
 
-  const getStatusBadge = () => {
+  // Load status on component mount
+  useEffect(() => {
+    fetchStatus();
+  }, []);
+
+  // Render connection status badge
+  const renderStatusBadge = () => {
     if (!status) return null;
 
     if (status.isConnected && !status.isExpired) {
       return (
-        <Badge variant="default" className="bg-green-100 text-green-800 border-green-200">
-          <CheckCircle className="h-3 w-3 mr-1" />
+        <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
+          <CheckCircle className="w-3 h-3 mr-1" />
           Connected
         </Badge>
       );
@@ -152,188 +211,173 @@ export function TeamsIntegration() {
 
     if (status.isConnected && status.isExpired) {
       return (
-        <Badge variant="destructive" className="bg-yellow-100 text-yellow-800 border-yellow-200">
-          <AlertCircle className="h-3 w-3 mr-1" />
-          Token Expired
+        <Badge variant="destructive" className="bg-orange-100 text-orange-800 border-orange-300">
+          <AlertCircle className="w-3 h-3 mr-1" />
+          Expired
         </Badge>
       );
     }
 
     return (
-      <Badge variant="secondary" className="bg-gray-100 text-gray-800 border-gray-200">
-        <AlertCircle className="h-3 w-3 mr-1" />
+      <Badge variant="secondary" className="bg-gray-100 text-gray-800 border-gray-300">
+        <XCircle className="w-3 h-3 mr-1" />
         Not Connected
       </Badge>
     );
   };
 
-  const getActionButton = () => {
-    if (!status) return null;
-
-    if (!status.isConnected) {
-      return (
-        <Button
-          onClick={handleConnect}
-          disabled={isConnecting}
-          className="bg-[#464EB8] hover:bg-[#464EB8]/90 text-white"
-        >
-          {isConnecting ? (
-            <>
-              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-              Connecting...
-            </>
-          ) : (
-            <>
-              <ExternalLink className="h-4 w-4 mr-2" />
-              Connect Microsoft Teams
-            </>
-          )}
-        </Button>
-      );
-    }
-
-    if (status.needsReconnection) {
-      return (
-        <div className="flex gap-2">
-          <Button
-            onClick={handleRefreshToken}
-            disabled={isRefreshing}
-            variant="outline"
-            className="border-[#464EB8] text-[#464EB8] hover:bg-[#464EB8]/10"
-          >
-            {isRefreshing ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Refreshing...
-              </>
-            ) : (
-              <>
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh Token
-              </>
-            )}
-          </Button>
-          <Button
-            onClick={handleConnect}
-            disabled={isConnecting}
-            className="bg-[#464EB8] hover:bg-[#464EB8]/90 text-white"
-          >
-            {isConnecting ? (
-              <>
-                <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-                Reconnecting...
-              </>
-            ) : (
-              <>
-                <ExternalLink className="h-4 w-4 mr-2" />
-                Reconnect
-              </>
-            )}
-          </Button>
-        </div>
-      );
-    }
-
-    return (
-      <Button
-        onClick={handleDisconnect}
-        disabled={isDisconnecting}
-        variant="outline"
-        className="border-red-500 text-red-500 hover:bg-red-50"
-      >
-        {isDisconnecting ? (
-          <>
-            <Loader2 className="h-4 w-4 mr-2 animate-spin" />
-            Disconnecting...
-          </>
-        ) : (
-          <>
-            <Unplug className="h-4 w-4 mr-2" />
-            Disconnect
-          </>
-        )}
-      </Button>
-    );
-  };
-
-  if (isLoading) {
-    return (
-      <Card className="bg-white rounded-xl border-0 shadow-sm">
-        <CardContent className="p-6">
-          <div className="flex items-center justify-center py-8">
-            <Loader2 className="h-6 w-6 animate-spin text-[var(--primary-100)]" />
-            <span className="ml-2 text-[var(--black-60)]">Loading Teams integration...</span>
-          </div>
-        </CardContent>
-      </Card>
-    );
-  }
-
   return (
-    <Card className="bg-white rounded-xl border-0 shadow-sm">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between mb-6">
-          <div>
-            <h3 className="text-lg font-medium text-[var(--black-80)] mb-2">
-              Microsoft Teams Integration
-            </h3>
-            <p className="text-sm text-[var(--black-60)] mb-3">
-              Connect your Microsoft account to create Teams meetings for your sessions
-            </p>
-            {getStatusBadge()}
-          </div>
-          <div className="flex items-center gap-2">
-            <img 
-              src="https://img.icons8.com/color/48/microsoft-teams-2019.png" 
-              alt="Microsoft Teams" 
-              className="h-8 w-8"
-            />
-          </div>
-        </div>
+    <Card className="w-full max-w-2xl">
+      <CardHeader>
+        <CardTitle className="flex items-center justify-between">
+          <span className="flex items-center gap-2">
+            <svg className="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+              <path d="M21 0H3C1.3 0 0 1.3 0 3v18c0 1.7 1.3 3 3 3h18c1.7 0 3-1.3 3-3V3c0-1.7-1.3-3-3-3zM10 17H7v-7h3v7zm0-8H7V6h3v3zm7 8h-3v-7h3v7zm0-8h-3V6h3v3z"/>
+            </svg>
+            Microsoft Teams Integration
+          </span>
+          {renderStatusBadge()}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {/* Error Alert */}
+        {error && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        )}
 
+        {/* Connection Status */}
         {status && (
-          <div className="bg-[var(--secondary-10)] rounded-lg p-4 mb-6">
-            <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
-                <span className="text-[var(--black-60)]">Status:</span>
-                <span className="text-[var(--black-80)]">
-                  {status.isConnected ? 'Connected' : 'Not Connected'}
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <span className="text-sm font-medium">Status</span>
+              {renderStatusBadge()}
+            </div>
+            
+            {status.userEmail && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Connected Account</span>
+                <span className="text-sm text-gray-600">{status.userEmail}</span>
+              </div>
+            )}
+
+            {status.expiresAt && (
+              <div className="flex items-center justify-between">
+                <span className="text-sm font-medium">Token Expires</span>
+                <span className="text-sm text-gray-600">
+                  {new Date(status.expiresAt).toLocaleDateString()}
                 </span>
               </div>
-              {status.userEmail && (
-                <div className="flex justify-between">
-                  <span className="text-[var(--black-60)]">Microsoft Account:</span>
-                  <span className="text-[var(--black-80)]">{status.userEmail}</span>
-                </div>
-              )}
-              {status.connectedAt && (
-                <div className="flex justify-between">
-                  <span className="text-[var(--black-60)]">Connected:</span>
-                  <span className="text-[var(--black-80)]">
-                    {new Date(status.connectedAt).toLocaleDateString()}
-                  </span>
-                </div>
-              )}
-              {status.needsReconnection && (
-                <div className="flex justify-between">
-                  <span className="text-[var(--black-60)]">Action Required:</span>
-                  <span className="text-red-600">Token expired, please reconnect</span>
-                </div>
-              )}
-            </div>
+            )}
           </div>
         )}
 
-        <div className="flex items-center justify-between">
-          <div className="text-sm text-[var(--black-60)]">
-            {status?.isConnected && !status.needsReconnection
-              ? 'Teams meetings will be created automatically for your sessions'
-              : 'Connect your Microsoft account to enable Teams meeting creation'
-            }
-          </div>
-          {getActionButton()}
+        {/* Action Buttons */}
+        <div className="flex flex-col gap-2">
+          {!status?.isConnected && (
+            <Button
+              onClick={connectTeams}
+              disabled={isConnecting || isLoading}
+              className="w-full"
+              size="lg"
+            >
+              {isConnecting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Connecting...
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Connect Microsoft Teams
+                </>
+              )}
+            </Button>
+          )}
+
+          {status?.isConnected && !status?.isExpired && (
+            <Button
+              onClick={disconnectTeams}
+              disabled={isLoading}
+              variant="destructive"
+              className="w-full"
+              size="lg"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Disconnecting...
+                </>
+              ) : (
+                <>
+                  <XCircle className="w-4 h-4 mr-2" />
+                  Disconnect Teams
+                </>
+              )}
+            </Button>
+          )}
+
+          {status?.needsReconnection && (
+            <div className="space-y-2">
+              <Button
+                onClick={refreshToken}
+                disabled={isLoading}
+                variant="outline"
+                className="w-full"
+                size="lg"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Refreshing...
+                  </>
+                ) : (
+                  <>
+                    <AlertCircle className="w-4 h-4 mr-2" />
+                    Refresh Token
+                  </>
+                )}
+              </Button>
+              
+              <Button
+                onClick={connectTeams}
+                disabled={isConnecting || isLoading}
+                className="w-full"
+                size="lg"
+              >
+                {isConnecting ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Reconnecting...
+                  </>
+                ) : (
+                  <>
+                    <ExternalLink className="w-4 h-4 mr-2" />
+                    Reconnect Teams
+                  </>
+                )}
+              </Button>
+            </div>
+          )}
+        </div>
+
+        {/* Help Text */}
+        <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
+          <p className="mb-2">
+            <strong>Microsoft Teams Integration</strong> allows you to automatically create Teams meetings when clients book sessions.
+          </p>
+          <ul className="list-disc list-inside space-y-1 text-xs">
+            <li>Connect your Microsoft account to enable Teams meetings</li>
+            <li>Meetings are automatically created when you select Teams as the platform</li>
+            <li>Meeting links are included in confirmation emails</li>
+            <li>You can disconnect at any time in your settings</li>
+          </ul>
         </div>
       </CardContent>
     </Card>
   );
-}
+};
+
+export default TeamsIntegration;

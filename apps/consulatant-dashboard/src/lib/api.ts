@@ -540,6 +540,84 @@ export const consultantApi = {
     });
     return response.data!;
   },
+
+  /**
+   * Teams Integration API methods
+   */
+  teams: {
+    /**
+     * Get Teams integration status
+     */
+    async getStatus(): Promise<{
+      isConnected: boolean;
+      isExpired: boolean;
+      userEmail?: string;
+      expiresAt?: string;
+      needsReconnection: boolean;
+    }> {
+      const response = await apiRequest<ApiResponse<{
+        isConnected: boolean;
+        isExpired: boolean;
+        userEmail?: string;
+        expiresAt?: string;
+        needsReconnection: boolean;
+      }>>('/teams/status', {
+        requireAuth: true,
+      });
+      return response.data!;
+    },
+
+    /**
+     * Get Teams OAuth URL
+     */
+    async getOAuthUrl(): Promise<{ oauthUrl: string }> {
+      const response = await apiRequest<ApiResponse<{ oauthUrl: string }>>('/teams/oauth-url', {
+        requireAuth: true,
+      });
+      return response.data!;
+    },
+
+    /**
+     * Complete Teams OAuth callback
+     */
+    async completeOAuth(code: string, redirectUri: string): Promise<{
+      userEmail: string;
+      displayName?: string;
+      connectedAt: string;
+    }> {
+      const response = await apiRequest<ApiResponse<{
+        userEmail: string;
+        displayName?: string;
+        connectedAt: string;
+      }>>('/teams/oauth-callback', {
+        method: 'POST',
+        body: { code, redirectUri },
+        requireAuth: true,
+      });
+      return response.data!;
+    },
+
+    /**
+     * Refresh Teams access token
+     */
+    async refreshToken(): Promise<{ expiresAt: string }> {
+      const response = await apiRequest<ApiResponse<{ expiresAt: string }>>('/teams/refresh-token', {
+        method: 'POST',
+        requireAuth: true,
+      });
+      return response.data!;
+    },
+
+    /**
+     * Disconnect Teams integration
+     */
+    async disconnect(): Promise<void> {
+      await apiRequest('/teams/disconnect', {
+        method: 'DELETE',
+        requireAuth: true,
+      });
+    },
+  },
 };
 
 // Export the main API object

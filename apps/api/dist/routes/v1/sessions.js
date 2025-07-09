@@ -537,6 +537,7 @@ router.post('/', (0, validation_1.validateRequest)(createSessionSchema), async (
             const consultant = await prisma.consultant.findUnique({
                 where: { id: consultantId },
                 select: {
+                    id: true,
                     teamsAccessToken: true,
                     teamsTokenExpiresAt: true
                 }
@@ -717,6 +718,7 @@ router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: zod_1.
                 const consultant = await prisma.consultant.findUnique({
                     where: { id: consultantId },
                     select: {
+                        id: true,
                         teamsAccessToken: true,
                         teamsTokenExpiresAt: true
                     }
