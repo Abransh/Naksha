@@ -40,6 +40,7 @@ const clients_1 = __importDefault(require("./routes/v1/clients"));
 const quotations_1 = __importDefault(require("./routes/v1/quotations"));
 const admin_1 = __importDefault(require("./routes/v1/admin"));
 const teams_1 = __importDefault(require("./routes/v1/teams"));
+const availability_1 = __importDefault(require("./routes/v1/availability"));
 // Controller imports for direct routing
 const auth_controller_1 = require("./controllers/auth.controller");
 const auth_2 = require("./middleware/auth");
@@ -195,6 +196,7 @@ class App {
         this.app.use('/api/v1/clients', auth_1.authenticateConsultant, clients_1.default);
         this.app.use('/api/v1/quotations', auth_1.authenticateConsultant, quotations_1.default);
         this.app.use('/api/v1/teams', auth_1.authenticateConsultant, teams_1.default);
+        this.app.use('/api/v1/availability', availability_1.default);
         // Admin routes (admin authentication required)
         this.app.use('/api/v1/admin', auth_1.authenticateAdmin, admin_1.default);
         // API documentation (if in development)

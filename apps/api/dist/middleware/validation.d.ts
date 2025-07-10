@@ -70,13 +70,13 @@ export declare const commonSchemas: {
         sortBy: z.ZodOptional<z.ZodString>;
         sortOrder: z.ZodDefault<z.ZodOptional<z.ZodEnum<["asc", "desc"]>>>;
     }, "strip", z.ZodTypeAny, {
-        page: number;
         limit: number;
+        page: number;
         sortOrder: "asc" | "desc";
         sortBy?: string | undefined;
     }, {
-        page?: number | undefined;
         limit?: number | undefined;
+        page?: number | undefined;
         sortBy?: string | undefined;
         sortOrder?: "asc" | "desc" | undefined;
     }>;

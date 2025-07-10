@@ -78,7 +78,7 @@ const generateDateRange = (startDate: string, endDate: string): Date[] => {
 router.get('/patterns', authenticateConsultant, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const prisma = getPrismaClient();
-    const consultantId = req.consultant!.id;
+    const consultantId = req.user!.id;
 
     const patterns = await prisma.weeklyAvailabilityPattern.findMany({
       where: { consultantId },
@@ -109,7 +109,7 @@ router.post('/patterns',
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const prisma = getPrismaClient();
-      const consultantId = req.consultant!.id;
+      const consultantId = req.user!.id;
       const { sessionType, dayOfWeek, startTime, endTime, isActive, timezone } = req.body;
 
       // Validate time range
@@ -155,7 +155,7 @@ router.post('/patterns',
       });
 
       // Clear availability cache
-      await cacheUtils.del(`availability:${consultantId}`);
+      await cacheUtils.delete(`availability:${consultantId}`);
 
       res.status(201).json({
         message: 'Weekly availability pattern created successfully',
@@ -179,7 +179,7 @@ router.put('/patterns/:id',
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const prisma = getPrismaClient();
-      const consultantId = req.consultant!.id;
+      const consultantId = req.user!.id;
       const patternId = req.params.id;
       const updateData = req.body;
 
@@ -203,7 +203,7 @@ router.put('/patterns/:id',
       });
 
       // Clear availability cache
-      await cacheUtils.del(`availability:${consultantId}`);
+      await cacheUtils.delete(`availability:${consultantId}`);
 
       res.json({
         message: 'Weekly availability pattern updated successfully',
@@ -224,7 +224,7 @@ router.put('/patterns/:id',
 router.delete('/patterns/:id', authenticateConsultant, async (req: AuthenticatedRequest, res: Response) => {
   try {
     const prisma = getPrismaClient();
-    const consultantId = req.consultant!.id;
+    const consultantId = req.user!.id;
     const patternId = req.params.id;
 
     // Verify pattern ownership
@@ -241,7 +241,7 @@ router.delete('/patterns/:id', authenticateConsultant, async (req: Authenticated
     });
 
     // Clear availability cache
-    await cacheUtils.del(`availability:${consultantId}`);
+    await cacheUtils.delete(`availability:${consultantId}`);
 
     res.json({
       message: 'Weekly availability pattern deleted successfully'
@@ -263,7 +263,7 @@ router.post('/patterns/bulk',
   async (req: AuthenticatedRequest, res: Response) => {
     try {
       const prisma = getPrismaClient();
-      const consultantId = req.consultant!.id;
+      const consultantId = req.user!.id;
       const { patterns } = req.body;
 
       // Validate all patterns
@@ -278,7 +278,14 @@ router.post('/patterns/bulk',
 
       // Create new patterns
       const createdPatterns = await prisma.$transaction(
-        patterns.map(pattern => 
+        patterns.map((pattern: {
+          sessionType: 'PERSONAL' | 'WEBINAR';
+          dayOfWeek: number;
+          startTime: string;
+          endTime: string;
+          isActive: boolean;
+          timezone: string;
+        }) => 
           prisma.weeklyAvailabilityPattern.create({
             data: {
               consultantId,
@@ -289,7 +296,7 @@ router.post('/patterns/bulk',
       );
 
       // Clear availability cache
-      await cacheUtils.del(`availability:${consultantId}`);
+      await cacheUtils.delete(`availability:${consultantId}`);
 
       res.json({
         message: 'Weekly availability patterns updated successfully',
@@ -310,10 +317,10 @@ router.post('/patterns/bulk',
 router.post('/generate-slots',
   authenticateConsultant,
   validateRequest(generateSlotsSchema),
-  async (req: AuthenticatedRequest, res: Response) => {
+  async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const prisma = getPrismaClient();
-      const consultantId = req.consultant!.id;
+      const consultantId = req.user!.id;
       const { startDate, endDate, sessionType } = req.body;
 
       // Get weekly patterns
@@ -326,15 +333,24 @@ router.post('/generate-slots',
       });
 
       if (patterns.length === 0) {
-        return res.json({
+        res.json({
           message: 'No active patterns found',
           data: { slotsCreated: 0 }
         });
+        return;
       }
 
       // Generate date range
       const dates = generateDateRange(startDate, endDate);
-      const slotsToCreate: any[] = [];
+      const slotsToCreate: Array<{
+        consultantId: string;
+        sessionType: 'PERSONAL' | 'WEBINAR';
+        date: Date;
+        startTime: string;
+        endTime: string;
+        isBooked: boolean;
+        isBlocked: boolean;
+      }> = [];
 
       for (const date of dates) {
         const dayOfWeek = date.getDay(); // 0 = Sunday, 6 = Saturday
@@ -368,13 +384,21 @@ router.post('/generate-slots',
 
       // Create slots in batch
       const createdSlots = await prisma.$transaction(
-        slotsToCreate.map(slot => 
+        slotsToCreate.map((slot: {
+          consultantId: string;
+          sessionType: 'PERSONAL' | 'WEBINAR';
+          date: Date;
+          startTime: string;
+          endTime: string;
+          isBooked: boolean;
+          isBlocked: boolean;
+        }) => 
           prisma.availabilitySlot.create({ data: slot })
         )
       );
 
       // Clear availability cache
-      await cacheUtils.del(`availability:${consultantId}`);
+      await cacheUtils.delete(`availability:${consultantId}`);
 
       res.json({
         message: 'Availability slots generated successfully',
@@ -431,12 +455,12 @@ router.get('/slots/:consultantSlug', async (req, res: Response) => {
       dateFilter.lte = next30Days;
     }
 
-    const whereClause: any = {
+    const whereClause = {
       consultantId,
       isBooked: false,
       isBlocked: false,
       ...(Object.keys(dateFilter).length > 0 && { date: dateFilter }),
-      ...(sessionType && { sessionType })
+      ...(sessionType && typeof sessionType === 'string' && { sessionType: sessionType as 'PERSONAL' | 'WEBINAR' })
     };
 
     const availableSlots = await prisma.availabilitySlot.findMany({
@@ -462,7 +486,7 @@ router.get('/slots/:consultantSlug', async (req, res: Response) => {
       }
       acc[dateKey].push(slot);
       return acc;
-    }, {} as Record<string, any[]>);
+    }, {} as Record<string, typeof availableSlots>);
 
     res.json({
       message: 'Available slots retrieved successfully',

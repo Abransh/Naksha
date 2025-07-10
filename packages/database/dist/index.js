@@ -26,7 +26,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.default = exports.prisma = exports.PrismaClient = void 0;
+exports.default = exports.PrismaClient = void 0;
 // Re-export everything from Prisma client
 __exportStar(require("@prisma/client"), exports);
 var client_1 = require("@prisma/client");
@@ -36,10 +36,10 @@ __exportStar(require("./client"), exports);
 __exportStar(require("./types"), exports);
 // export * from './utils';
 const client_2 = require("@prisma/client");
+const extension_optimize_1 = require("@prisma/extension-optimize");
 const prisma = new client_2.PrismaClient({
     log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-});
-exports.prisma = prisma;
+}).$extends((0, extension_optimize_1.withOptimize)({ apiKey: process.env.OPTIMIZE_API_KEY || 'default-api-key' }));
 // Default export for convenience
 var client_3 = require("./client");
 Object.defineProperty(exports, "default", { enumerable: true, get: function () { return __importDefault(client_3).default; } });

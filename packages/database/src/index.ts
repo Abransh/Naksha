@@ -24,7 +24,7 @@ import { withOptimize } from '@prisma/extension-optimize';
 const prisma = new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 }).$extends(
-  withOptimize({ apiKey: process.env.OPTIMIZE_API_KEY })
+  withOptimize({ apiKey: process.env.OPTIMIZE_API_KEY || 'default-api-key' })
 );
 
 
