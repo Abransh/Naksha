@@ -17,15 +17,8 @@ export * from './client';
 export * from './types';
 // export * from './utils';
 
-import { PrismaClient } from '@prisma/client';
-import { withOptimize } from '@prisma/extension-optimize';
-
-
-const prisma = new PrismaClient({
-  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-}).$extends(
-  withOptimize({ apiKey: process.env.OPTIMIZE_API_KEY || 'default-api-key' })
-);
+// Remove the problematic Prisma client instantiation from here
+// The client should be imported from ./client.ts which has proper validation
 
 
 // Default export for convenience

@@ -14,9 +14,26 @@ declare global {
 }
 
 /**
+ * Validate required environment variables
+ */
+const validateEnvironment = () => {
+  if (!process.env.DATABASE_URL) {
+    throw new Error(
+      '❌ DATABASE_URL environment variable is required but not found.\n' +
+      'Please ensure your .env file contains:\n' +
+      'DATABASE_URL="your-database-connection-string"\n' +
+      '\nFor DigitalOcean deployment, make sure to set environment variables in your app settings.'
+    );
+  }
+};
+
+/**
  * Create Prisma client with optimal configuration
  */
 const createPrismaClient = () => {
+  // Validate environment first
+  validateEnvironment();
+  
   return new PrismaClient({
     log: process.env.NODE_ENV === 'development' 
       ? ['query', 'info', 'warn', 'error']

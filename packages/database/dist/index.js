@@ -35,11 +35,8 @@ Object.defineProperty(exports, "PrismaClient", { enumerable: true, get: function
 __exportStar(require("./client"), exports);
 __exportStar(require("./types"), exports);
 // export * from './utils';
-const client_2 = require("@prisma/client");
-const extension_optimize_1 = require("@prisma/extension-optimize");
-const prisma = new client_2.PrismaClient({
-    log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
-}).$extends((0, extension_optimize_1.withOptimize)({ apiKey: process.env.OPTIMIZE_API_KEY || 'default-api-key' }));
+// Remove the problematic Prisma client instantiation from here
+// The client should be imported from ./client.ts which has proper validation
 // Default export for convenience
-var client_3 = require("./client");
-Object.defineProperty(exports, "default", { enumerable: true, get: function () { return __importDefault(client_3).default; } });
+var client_2 = require("./client");
+Object.defineProperty(exports, "default", { enumerable: true, get: function () { return __importDefault(client_2).default; } });
