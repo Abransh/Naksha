@@ -405,11 +405,19 @@ router.post('/upload-photo', authenticateConsultantBasic, async (req: Authentica
 });
 
 /**
+ * GET /api/consultant/test-route
+ * Simple test route
+ */
+router.get('/test-route', (req: any, res: any) => {
+  res.json({ message: 'Test route works!', slug: req.params.slug });
+});
+
+/**
  * GET /api/consultant/:slug
  * Get public consultant profile by slug (for client booking page)
  */
 router.get('/:slug',
-  optionalAuth, // Allow both authenticated and unauthenticated access
+  // optionalAuth, // TEMPORARILY DISABLED FOR DEBUGGING
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const { slug } = req.params;

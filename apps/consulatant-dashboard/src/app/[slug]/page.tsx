@@ -1,4 +1,4 @@
-// /apps/consulatant-dashboard/src/app/[consultantname]/page.tsx
+// apps/consulatant-dashboard/src/app/[slug]/page.tsx
 
 "use client";
 
@@ -21,7 +21,7 @@ import { BookSessionModal } from "@/components/modals/book-session-modal";
 
 interface ConsultantProfileProps {
   params: Promise<{
-    consultantname: string;
+    slug: string;
   }>;
 }
 
@@ -33,7 +33,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
   // Resolve params asynchronously
   useEffect(() => {
     params.then((resolvedParams) => {
-      setConsultantSlug(resolvedParams.consultantname);
+      setConsultantSlug(resolvedParams.slug);
     });
   }, [params]);
 
@@ -49,16 +49,16 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
   } = useConsultantShowcase(consultantSlug || '');
 
   // Show loading state
-  if (!consultantSlug || isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-[var(--primary-100)]">
-        <div className="flex items-center gap-3 text-white">
-          <Loader2 className="h-8 w-8 animate-spin" />
-          <span className="text-xl">Loading consultant profile...</span>
-        </div>
-      </div>
-    );
-  }
+  // if (!consultantSlug || isLoading) {
+  //   return (
+  //     <div className="min-h-screen flex items-center justify-center bg-[var(--primary-100)]">
+  //       <div className="flex items-center gap-3 text-white">
+  //         <Loader2 className="h-8 w-8 animate-spin" />
+  //         <span className="text-xl">Loading consultant profile...</span>
+  //       </div>
+  //     </div>
+  //   );
+  // }
 
   // Show error state
   if (error || !summary) {

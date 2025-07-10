@@ -86,6 +86,7 @@ model Consultant {
   clients               Client[]
   quotations            Quotation[]
   availabilitySlots     AvailabilitySlot[]
+  weeklyAvailabilityPatterns WeeklyAvailabilityPattern[]
   refreshTokens         RefreshToken[]
   paymentTransactions   PaymentTransaction[]
   
@@ -306,6 +307,35 @@ model AvailabilitySlot {
   @@index([date])
   @@index([sessionType])
   @@index([isBooked])
+}
+
+// Weekly Availability Patterns - Recurring availability schedules
+model WeeklyAvailabilityPattern {
+  id           String      @id @default(cuid())
+  
+  consultantId String      @map("consultant_id")
+  consultant   Consultant  @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+  
+  // Pattern Details
+  sessionType  SessionType @map("session_type")
+  dayOfWeek    Int         @map("day_of_week") // 0 = Sunday, 1 = Monday, ..., 6 = Saturday
+  startTime    String      @map("start_time") // Format: "HH:MM"
+  endTime      String      @map("end_time")   // Format: "HH:MM"
+  
+  // Pattern Status
+  isActive     Boolean     @default(true) @map("is_active")
+  timezone     String      @default("Asia/Kolkata")
+  
+  // Metadata
+  createdAt    DateTime    @default(now()) @map("created_at")
+  updatedAt    DateTime    @updatedAt @map("updated_at")
+  
+  @@map("weekly_availability_patterns")
+  @@unique([consultantId, sessionType, dayOfWeek, startTime]) // Prevent duplicate patterns
+  @@index([consultantId])
+  @@index([sessionType])
+  @@index([dayOfWeek])
+  @@index([isActive])
 }
 
 // ============================================================================

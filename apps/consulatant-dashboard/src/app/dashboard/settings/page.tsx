@@ -1,4 +1,4 @@
-// /apps/consulatant-dashboard/src/app/dashboard/settings/page.tsx
+// apps/consulatant-dashboard/src/app/dashboard/settings/page.tsx
 
 "use client";
 
@@ -29,6 +29,7 @@ import { useSettingsForm, useProfileCompletion } from "@/hooks/useConsultantProf
 import { toast } from "react-hot-toast";
 import Navigator from "@/components/navigation/Navigator";
 import { TeamsIntegration } from "@/components/settings/TeamsIntegration";
+import { AvailabilityModal } from "@/components/modals/availability-modal";
 
 // Removed SidebarContent - now using Navigator component
 
@@ -37,6 +38,7 @@ export default function SettingsPage() {
   const [activeTab, setActiveTab] = useState("account");
  // const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
+  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
   
   const {
     profile,
@@ -554,6 +556,7 @@ export default function SettingsPage() {
                   <div className="flex flex-col gap-3">
                     <Button
                       variant="outline"
+                      onClick={() => setIsAvailabilityModalOpen(true)}
                       className="w-[180px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
                     >
                       1-on-1 Slots
@@ -629,6 +632,12 @@ export default function SettingsPage() {
           </Card>
         </div>
       </div>
+
+      {/* Availability Modal */}
+      <AvailabilityModal
+        open={isAvailabilityModalOpen}
+        onOpenChange={setIsAvailabilityModalOpen}
+      />
     </div>
   );
 }

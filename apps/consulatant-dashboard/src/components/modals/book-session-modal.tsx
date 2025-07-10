@@ -236,7 +236,7 @@ export function BookSessionModal({
                   placeholder="Full Name *"
                   value={formData.fullName}
                   onChange={(e) => handleInputChange("fullName", e.target.value)}
-                  className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
+                  className="h-[52px] bg-[var(--input-defaultBackground)] text-black border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 />
 
@@ -245,7 +245,7 @@ export function BookSessionModal({
                   type="email"
                   value={formData.email}
                   onChange={(e) => handleInputChange("email", e.target.value)}
-                  className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
+                  className="h-[52px] bg-[var(--input-defaultBackground)] text-black border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 />
 
@@ -254,7 +254,7 @@ export function BookSessionModal({
                   type="tel"
                   value={formData.phone}
                   onChange={(e) => handleInputChange("phone", e.target.value)}
-                  className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
+                  className="h-[52px] bg-[var(--input-defaultBackground)] text-black border-0 rounded-lg px-4 text-base placeholder:text-[var(--black-2)]"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 />
               </div>
@@ -270,14 +270,14 @@ export function BookSessionModal({
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--black-60)] mb-2">
+                  <label className="block text-sm text-black font-medium text-[var(--black-60)] mb-2">
                     Select Date *
                   </label>
                   <Select
                     value={formData.selectedDate}
                     onValueChange={(value) => handleInputChange("selectedDate", value)}
                   >
-                    <SelectTrigger className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg">
+                    <SelectTrigger className="h-[52px] text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg">
                       <SelectValue placeholder="Choose a date" />
                     </SelectTrigger>
                     <SelectContent>
@@ -303,7 +303,7 @@ export function BookSessionModal({
                     value={formData.selectedTime}
                     onValueChange={(value) => handleInputChange("selectedTime", value)}
                   >
-                    <SelectTrigger className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg">
+                    <SelectTrigger className="h-[52px] text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg">
                       <SelectValue placeholder="Choose a time" />
                     </SelectTrigger>
                     <SelectContent>
