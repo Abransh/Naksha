@@ -11,6 +11,7 @@ interface UseAvailableSlotsResult {
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
+  retry: () => Promise<void>;
 }
 
 /**
@@ -25,10 +26,27 @@ export const useAvailableSlots = (
   const [slotsByDate, setSlotsByDate] = useState<Record<string, AvailabilitySlot[]>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  
+  // Timeout protection to prevent stuck loading states
+  // useEffect(() => {
+  //   if (isLoading) {
+  //     const timeout = setTimeout(() => {
+  //       console.warn('⚠️ useAvailableSlots: Loading timeout reached, forcing completion');
+  //       setIsLoading(false);
+  //       setError('Loading timeout - please try again');
+  //     }, 15000); // 15 second timeout
+
+  //     return () => clearTimeout(timeout);
+  //   }
+  // }, [isLoading]);
 
   const fetchAvailableSlots = async () => {
-    if (!consultantSlug) return;
+    if (!consultantSlug) {
+      console.log('🔍 useAvailableSlots: No consultantSlug provided, skipping fetch');
+      return;
+    }
 
+    console.log('🔍 useAvailableSlots: Starting fetch for:', { consultantSlug, sessionType });
     setIsLoading(true);
     setError(null);
 
@@ -41,26 +59,56 @@ export const useAvailableSlots = (
       const startDateStr = today.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
+      console.log('🔍 useAvailableSlots: Fetching with params:', {
+        consultantSlug,
+        sessionType,
+        startDate: startDateStr,
+        endDate: endDateStr
+      });
+
       const response = await availabilityApi.getAvailableSlots(consultantSlug, {
         sessionType,
         startDate: startDateStr,
         endDate: endDateStr
       });
 
-      setSlots(response.slots);
-      setSlotsByDate(response.slotsByDate);
+      console.log('🔍 useAvailableSlots: Raw API response:', response);
+      console.log('🔍 useAvailableSlots: Response structure:', {
+        hasSlots: Array.isArray(response?.slots),
+        slotsLength: response?.slots?.length || 0,
+        hasSlotsByDate: typeof response?.slotsByDate === 'object',
+        slotsByDateKeys: Object.keys(response?.slotsByDate || {}),
+        totalSlots: response?.totalSlots
+      });
+
+      // Ensure we have valid data structure
+      const slots = Array.isArray(response?.slots) ? response.slots : [];
+      const slotsByDate = response?.slotsByDate && typeof response.slotsByDate === 'object' 
+        ? response.slotsByDate 
+        : {};
+
+      console.log('🔍 useAvailableSlots: Processed data:', {
+        slotsCount: slots.length,
+        dateCount: Object.keys(slotsByDate).length,
+        availableDates: Object.keys(slotsByDate)
+      });
+
+      setSlots(slots);
+      setSlotsByDate(slotsByDate);
     } catch (err) {
-      console.error('Failed to fetch available slots:', err);
+      console.error('❌ useAvailableSlots: Failed to fetch available slots:', err);
       setError(err instanceof Error ? err.message : 'Failed to load availability');
       setSlots([]);
       setSlotsByDate({});
     } finally {
+      console.log('🔍 useAvailableSlots: Fetch complete, setting loading to false');
       setIsLoading(false);
     }
   };
 
   // Fetch slots when consultant or session type changes
   useEffect(() => {
+    console.log('🔄 useAvailableSlots: useEffect triggered', { consultantSlug, sessionType });
     fetchAvailableSlots();
   }, [consultantSlug, sessionType]);
 
@@ -75,6 +123,12 @@ export const useAvailableSlots = (
       .sort();
   };
 
+  // Retry mechanism for failed requests
+  const retryFetch = async () => {
+    console.log('🔄 useAvailableSlots: Retrying fetch...');
+    await fetchAvailableSlots();
+  };
+
   return {
     slots,
     slotsByDate,
@@ -82,7 +136,8 @@ export const useAvailableSlots = (
     availableTimesForDate,
     isLoading,
     error,
-    refetch: fetchAvailableSlots
+    refetch: fetchAvailableSlots,
+    retry: retryFetch
   };
 };
 

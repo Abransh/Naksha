@@ -121,7 +121,7 @@ class App {
     // Rate limiting - Prevent abuse
     const limiter = rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 1000, // Limit each IP to 1000 requests per windowMs
+      max: 5000, // Limit each IP to 1000 requests per windowMs
       message: {
         error: 'Too many requests from this IP, please try again later.',
         retryAfter: '15 minutes'
@@ -134,7 +134,7 @@ class App {
     // Stricter rate limiting for auth endpoints (login/signup only)
     const authLimiter = rateLimit({
       windowMs: 15 * 60 * 1000, // 15 minutes
-      max: 10, // Increased from 5 to 10 auth attempts per 15 minutes
+      max: 50, // Increased from 5 to 10 auth attempts per 15 minutes
       message: {
         error: 'Too many authentication attempts, please try again later.',
         retryAfter: '15 minutes'

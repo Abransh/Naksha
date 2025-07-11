@@ -71,7 +71,8 @@ export function BookSessionModal({
     availableTimesForDate, 
     isLoading: availabilityLoading, 
     error: availabilityError,
-    refetch: refetchAvailability
+    refetch: refetchAvailability,
+    retry: retryAvailability
   } = useAvailableSlots(consultantSlug, sessionType);
 
   const { formatDate, formatTime } = useAvailabilityFormatter();
@@ -94,6 +95,22 @@ export function BookSessionModal({
 
   const handleNext = () => {
     if (currentStep < 3) {
+      // Special handling for step 1 -> 2 transition
+      if (currentStep === 1 && availabilityLoading) {
+        console.log('🔍 BookSessionModal: Cannot proceed to step 2 - still loading availability');
+        return;
+      }
+      
+      if (currentStep === 1 && availabilityError) {
+        console.log('🔍 BookSessionModal: Cannot proceed to step 2 - availability error');
+        return;
+      }
+      
+      if (currentStep === 1 && availableDates.length === 0) {
+        console.log('🔍 BookSessionModal: Cannot proceed to step 2 - no availability');
+        return;
+      }
+      
       setCurrentStep(currentStep + 1);
     }
   };
@@ -174,7 +191,12 @@ export function BookSessionModal({
       case 1:
         return formData.fullName && formData.email && formData.phone;
       case 2:
-        return formData.selectedDate && formData.selectedTime && !availabilityLoading;
+        // Can only proceed if we have availability data loaded and a selection is made
+        return !availabilityLoading && 
+               !availabilityError && 
+               availableDates.length > 0 && 
+               formData.selectedDate && 
+               formData.selectedTime;
       case 3:
         return true;
       default:
@@ -182,10 +204,17 @@ export function BookSessionModal({
     }
   };
 
-  // Check if we can proceed to step 2 (has availability)
-  const canProceedToScheduling = () => {
-    return !availabilityLoading && !availabilityError && availableDates.length > 0;
-  };
+  // Debug logging for availability states
+  useEffect(() => {
+    console.log('🔍 BookSessionModal: Availability state update', {
+      availabilityLoading,
+      availabilityError,
+      availableDatesCount: availableDates.length,
+      availableDates: availableDates.slice(0, 3), // First 3 dates for debugging
+      consultantSlug,
+      sessionType
+    });
+  }, [availabilityLoading, availabilityError, availableDates, consultantSlug, sessionType]);
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -311,12 +340,22 @@ export function BookSessionModal({
                   <div>
                     <p className="text-sm font-medium text-red-800">Failed to load availability</p>
                     <p className="text-sm text-red-600">{availabilityError}</p>
-                    <button 
-                      onClick={refetchAvailability}
-                      className="text-sm text-red-700 underline hover:no-underline mt-1"
-                    >
-                      Try again
-                    </button>
+                    <div className="flex gap-2 mt-2">
+                      <button 
+                        onClick={retryAvailability}
+                        className="text-sm text-red-700 underline hover:no-underline"
+                        disabled={availabilityLoading}
+                      >
+                        {availabilityLoading ? 'Retrying...' : 'Retry'}
+                      </button>
+                      <button 
+                        onClick={refetchAvailability}
+                        className="text-sm text-red-700 underline hover:no-underline"
+                        disabled={availabilityLoading}
+                      >
+                        Refresh
+                      </button>
+                    </div>
                   </div>
                 </div>
               )}
@@ -330,6 +369,12 @@ export function BookSessionModal({
                     <p className="text-sm text-[var(--black-40)] mt-1">
                       This consultant hasn't set up availability for {sessionType.toLowerCase()} sessions yet.
                     </p>
+                    <button 
+                      onClick={refetchAvailability}
+                      className="text-sm text-[var(--primary-100)] underline hover:no-underline mt-2"
+                    >
+                      Check again
+                    </button>
                   </div>
                 </div>
               )}
@@ -465,8 +510,21 @@ export function BookSessionModal({
                 disabled={!isStepValid()}
                 className="flex-1 h-12 bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white rounded-xl disabled:opacity-50"
                 style={{ fontFamily: "Inter, sans-serif" }}
+                title={
+                  currentStep === 1 && availabilityLoading ? "Loading availability..." :
+                  currentStep === 1 && availabilityError ? "Please resolve availability error first" :
+                  currentStep === 1 && availableDates.length === 0 ? "No availability found for this session type" :
+                  !isStepValid() ? "Please complete all required fields" : ""
+                }
               >
-                Next
+                {currentStep === 1 && availabilityLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  'Next'
+                )}
               </Button>
             ) : (
               <Button
