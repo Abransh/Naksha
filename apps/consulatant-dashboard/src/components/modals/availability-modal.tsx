@@ -29,6 +29,7 @@ import {
   Save,
   Calendar,
 } from "lucide-react";
+import { availabilityApi, WeeklyAvailabilityPattern } from "@/lib/api";
 
 interface AvailabilityModalProps {
   open: boolean;
@@ -94,9 +95,23 @@ export function AvailabilityModal({
   const loadExistingPatterns = async () => {
     try {
       setIsLoading(true);
-      // TODO: API call to load existing patterns
-      // const response = await availabilityApi.getPatterns();
-      // setPatterns(response.patterns);
+      const existingPatterns = await availabilityApi.getPatterns();
+      
+      // Convert API patterns to internal format
+      const convertedPatterns = DAYS_OF_WEEK.map(day => ({
+        dayOfWeek: day.value,
+        sessionType: selectedSessionType,
+        slots: existingPatterns
+          .filter(pattern => pattern.dayOfWeek === day.value && pattern.sessionType === selectedSessionType)
+          .map(pattern => ({
+            id: pattern.id || `slot_${Date.now()}_${Math.random()}`,
+            startTime: pattern.startTime,
+            endTime: pattern.endTime,
+            isActive: pattern.isActive,
+          }))
+      }));
+      
+      setPatterns(convertedPatterns);
     } catch (error) {
       console.error('Failed to load patterns:', error);
       toast.error('Failed to load existing availability patterns');
@@ -202,10 +217,30 @@ export function AvailabilityModal({
             }))
         );
 
-      // TODO: API call to save patterns
-      // await availabilityApi.saveBulkPatterns({ patterns: patternsToSave });
+      // Save patterns to API
+      await availabilityApi.saveBulkPatterns(patternsToSave);
       
-      toast.success('Availability schedule saved successfully!');
+      // Generate slots for the next 30 days from patterns
+      const today = new Date();
+      const endDate = new Date();
+      endDate.setDate(today.getDate() + 30);
+      
+      const startDateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
+      const endDateStr = endDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      
+      try {
+        const slotsResult = await availabilityApi.generateSlots({
+          startDate: startDateStr,
+          endDate: endDateStr,
+          sessionType: selectedSessionType
+        });
+        
+        toast.success(`Availability schedule saved! Generated ${slotsResult.slotsCreated} bookable slots.`);
+      } catch (slotsError) {
+        console.warn('Patterns saved but slot generation failed:', slotsError);
+        toast.success('Availability schedule saved! Note: Automatic slot generation failed - you may need to generate slots manually.');
+      }
+      
       onOpenChange(false);
     } catch (error) {
       console.error('Failed to save patterns:', error);
@@ -229,7 +264,7 @@ export function AvailabilityModal({
       <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
-            <DialogTitle className="text-xl font-semibold text-[var(--black-60)]">
+            <DialogTitle className="text-xl text-white font-semibold text-[var(--black-60)]">
               Set Your Availability Schedule
             </DialogTitle>
             <Button

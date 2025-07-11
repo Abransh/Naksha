@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -13,8 +13,9 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2 } from "lucide-react";
+import { Loader2, Calendar, Clock, AlertCircle } from "lucide-react";
 import { bookSession } from "@/lib/api";
+import { useAvailableSlots, useAvailabilityFormatter } from "@/hooks/useAvailableSlots";
 
 interface SessionBookingData {
   // Client Information
@@ -64,11 +65,31 @@ export function BookSessionModal({
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
 
+  // Fetch real availability data
+  const { 
+    availableDates, 
+    availableTimesForDate, 
+    isLoading: availabilityLoading, 
+    error: availabilityError,
+    refetch: refetchAvailability
+  } = useAvailableSlots(consultantSlug, sessionType);
+
+  const { formatDate, formatTime } = useAvailabilityFormatter();
+
   const handleInputChange = (field: keyof SessionBookingData, value: string | number) => {
-    setFormData((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+    setFormData((prev) => {
+      const updated = {
+        ...prev,
+        [field]: value,
+      };
+      
+      // Clear selected time when date changes (new date might have different available times)
+      if (field === 'selectedDate') {
+        updated.selectedTime = '';
+      }
+      
+      return updated;
+    });
   };
 
   const handleNext = () => {
@@ -136,29 +157,34 @@ export function BookSessionModal({
     resetForm();
   };
 
-  // Generate time slots (example implementation)
-  const timeSlots = [
-    "09:00", "10:00", "11:00", "14:00", "15:00", "16:00", "17:00"
-  ];
+  // Get available time slots for the selected date
+  const availableTimesForSelectedDate = formData.selectedDate 
+    ? availableTimesForDate(formData.selectedDate) 
+    : [];
 
-  // Generate next 30 days for date selection
-  const availableDates = Array.from({ length: 30 }, (_, i) => {
-    const date = new Date();
-    date.setDate(date.getDate() + i + 1);
-    return date.toISOString().split('T')[0];
-  });
+  // Refresh availability when modal opens
+  useEffect(() => {
+    if (isOpen && consultantSlug) {
+      refetchAvailability();
+    }
+  }, [isOpen, consultantSlug, refetchAvailability]);
 
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
         return formData.fullName && formData.email && formData.phone;
       case 2:
-        return formData.selectedDate && formData.selectedTime;
+        return formData.selectedDate && formData.selectedTime && !availabilityLoading;
       case 3:
         return true;
       default:
         return false;
     }
+  };
+
+  // Check if we can proceed to step 2 (has availability)
+  const canProceedToScheduling = () => {
+    return !availabilityLoading && !availabilityError && availableDates.length > 0;
   };
 
   return (
@@ -268,54 +294,117 @@ export function BookSessionModal({
                 Schedule Your Session
               </h3>
 
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-sm text-black font-medium text-[var(--black-60)] mb-2">
-                    Select Date *
-                  </label>
-                  <Select
-                    value={formData.selectedDate}
-                    onValueChange={(value) => handleInputChange("selectedDate", value)}
-                  >
-                    <SelectTrigger className="h-[52px] text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg">
-                      <SelectValue placeholder="Choose a date" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {availableDates.map((date) => (
-                        <SelectItem key={date} value={date}>
-                          {new Date(date).toLocaleDateString('en-US', {
-                            weekday: 'long',
-                            year: 'numeric',
-                            month: 'long',
-                            day: 'numeric'
-                          })}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {/* Loading State */}
+              {availabilityLoading && (
+                <div className="flex items-center justify-center py-8">
+                  <div className="flex items-center gap-3 text-[var(--black-40)]">
+                    <Loader2 className="h-5 w-5 animate-spin" />
+                    <span className="text-sm">Loading availability...</span>
+                  </div>
                 </div>
+              )}
 
-                <div>
-                  <label className="block text-sm font-medium text-[var(--black-60)] mb-2">
-                    Select Time *
-                  </label>
-                  <Select
-                    value={formData.selectedTime}
-                    onValueChange={(value) => handleInputChange("selectedTime", value)}
-                  >
-                    <SelectTrigger className="h-[52px] text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg">
-                      <SelectValue placeholder="Choose a time" />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {timeSlots.map((time) => (
-                        <SelectItem key={time} value={time}>
-                          {time}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+              {/* Error State */}
+              {availabilityError && (
+                <div className="flex items-center gap-3 p-4 bg-red-50 rounded-lg border border-red-200">
+                  <AlertCircle className="h-5 w-5 text-red-500 flex-shrink-0" />
+                  <div>
+                    <p className="text-sm font-medium text-red-800">Failed to load availability</p>
+                    <p className="text-sm text-red-600">{availabilityError}</p>
+                    <button 
+                      onClick={refetchAvailability}
+                      className="text-sm text-red-700 underline hover:no-underline mt-1"
+                    >
+                      Try again
+                    </button>
+                  </div>
                 </div>
-              </div>
+              )}
+
+              {/* No Availability State */}
+              {!availabilityLoading && !availabilityError && availableDates.length === 0 && (
+                <div className="flex flex-col items-center gap-3 py-8 text-center">
+                  <Calendar className="h-12 w-12 text-[var(--black-30)]" />
+                  <div>
+                    <p className="text-base font-medium text-[var(--black-60)]">No availability found</p>
+                    <p className="text-sm text-[var(--black-40)] mt-1">
+                      This consultant hasn't set up availability for {sessionType.toLowerCase()} sessions yet.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Available Slots */}
+              {!availabilityLoading && !availabilityError && availableDates.length > 0 && (
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm text-black font-medium text-[var(--black-60)] mb-2">
+                      Select Date *
+                    </label>
+                    <Select
+                      value={formData.selectedDate}
+                      onValueChange={(value) => handleInputChange("selectedDate", value)}
+                    >
+                      <SelectTrigger className="h-[52px] text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg">
+                        <SelectValue placeholder="Choose a date" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableDates.map((date) => (
+                          <SelectItem key={date} value={date}>
+                            {formatDate(date)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  <div>
+                    <label className="block text-sm font-medium text-[var(--black-60)] mb-2">
+                      Select Time *
+                    </label>
+                    <Select
+                      value={formData.selectedTime}
+                      onValueChange={(value) => handleInputChange("selectedTime", value)}
+                      disabled={!formData.selectedDate}
+                    >
+                      <SelectTrigger className="h-[52px] text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg">
+                        <SelectValue placeholder={
+                          formData.selectedDate 
+                            ? "Choose a time" 
+                            : "First select a date"
+                        } />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {availableTimesForSelectedDate.length > 0 ? (
+                          availableTimesForSelectedDate.map((time) => (
+                            <SelectItem key={time} value={time}>
+                              {formatTime(time)}
+                            </SelectItem>
+                          ))
+                        ) : (
+                          formData.selectedDate && (
+                            <div className="p-2 text-sm text-[var(--black-40)] text-center">
+                              No available times for this date
+                            </div>
+                          )
+                        )}
+                      </SelectContent>
+                    </Select>
+                  </div>
+
+                  {/* Availability Summary */}
+                  {formData.selectedDate && availableTimesForSelectedDate.length > 0 && (
+                    <div className="bg-[var(--secondary-10)] rounded-lg p-3">
+                      <div className="flex items-center gap-2 text-sm text-[var(--black-60)]">
+                        <Clock className="h-4 w-4" />
+                        <span>
+                          {availableTimesForSelectedDate.length} time slot{availableTimesForSelectedDate.length === 1 ? '' : 's'} available on {formatDate(formData.selectedDate)}
+                        </span>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           )}
 

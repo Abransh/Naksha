@@ -620,11 +620,141 @@ export const consultantApi = {
   },
 };
 
+// Availability data types
+export interface WeeklyAvailabilityPattern {
+  id?: string;
+  sessionType: 'PERSONAL' | 'WEBINAR';
+  dayOfWeek: number; // 0 = Sunday, 6 = Saturday
+  startTime: string; // "HH:MM" format
+  endTime: string; // "HH:MM" format
+  isActive: boolean;
+  timezone: string;
+  consultantId?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface AvailabilitySlot {
+  id: string;
+  sessionType: 'PERSONAL' | 'WEBINAR';
+  date: string;
+  startTime: string;
+  endTime: string;
+  isBooked: boolean;
+  isBlocked: boolean;
+  consultantId: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Availability API methods
+export const availabilityApi = {
+  /**
+   * Get all weekly availability patterns for consultant
+   */
+  async getPatterns(): Promise<WeeklyAvailabilityPattern[]> {
+    const response = await apiRequest<ApiResponse<{ patterns: WeeklyAvailabilityPattern[] }>>('/availability/patterns', {
+      requireAuth: true,
+    });
+    return response.data!.patterns;
+  },
+
+  /**
+   * Create a single weekly availability pattern
+   */
+  async createPattern(pattern: Omit<WeeklyAvailabilityPattern, 'id' | 'consultantId' | 'createdAt' | 'updatedAt'>): Promise<WeeklyAvailabilityPattern> {
+    const response = await apiRequest<ApiResponse<{ pattern: WeeklyAvailabilityPattern }>>('/availability/patterns', {
+      method: 'POST',
+      body: pattern,
+      requireAuth: true,
+    });
+    return response.data!.pattern;
+  },
+
+  /**
+   * Update an existing weekly availability pattern
+   */
+  async updatePattern(patternId: string, updates: Partial<WeeklyAvailabilityPattern>): Promise<WeeklyAvailabilityPattern> {
+    const response = await apiRequest<ApiResponse<{ pattern: WeeklyAvailabilityPattern }>>(`/availability/patterns/${patternId}`, {
+      method: 'PUT',
+      body: updates,
+      requireAuth: true,
+    });
+    return response.data!.pattern;
+  },
+
+  /**
+   * Delete a weekly availability pattern
+   */
+  async deletePattern(patternId: string): Promise<void> {
+    await apiRequest(`/availability/patterns/${patternId}`, {
+      method: 'DELETE',
+      requireAuth: true,
+    });
+  },
+
+  /**
+   * Create or update multiple weekly availability patterns (bulk operation)
+   */
+  async saveBulkPatterns(patterns: Omit<WeeklyAvailabilityPattern, 'id' | 'consultantId' | 'createdAt' | 'updatedAt'>[]): Promise<WeeklyAvailabilityPattern[]> {
+    const response = await apiRequest<ApiResponse<{ patterns: WeeklyAvailabilityPattern[] }>>('/availability/patterns/bulk', {
+      method: 'POST',
+      body: { patterns },
+      requireAuth: true,
+    });
+    return response.data!.patterns;
+  },
+
+  /**
+   * Generate availability slots from weekly patterns
+   */
+  async generateSlots(data: {
+    startDate: string; // YYYY-MM-DD format
+    endDate: string; // YYYY-MM-DD format
+    sessionType?: 'PERSONAL' | 'WEBINAR';
+  }): Promise<{ slotsCreated: number; dateRange: { startDate: string; endDate: string } }> {
+    const response = await apiRequest<ApiResponse<{ slotsCreated: number; dateRange: { startDate: string; endDate: string } }>>('/availability/generate-slots', {
+      method: 'POST',
+      body: data,
+      requireAuth: true,
+    });
+    return response.data!;
+  },
+
+  /**
+   * Get available slots for a consultant (public endpoint)
+   */
+  async getAvailableSlots(consultantSlug: string, filters: {
+    sessionType?: 'PERSONAL' | 'WEBINAR';
+    startDate?: string;
+    endDate?: string;
+  } = {}): Promise<{
+    slots: AvailabilitySlot[];
+    slotsByDate: Record<string, AvailabilitySlot[]>;
+    totalSlots: number;
+  }> {
+    const params = new URLSearchParams();
+    Object.entries(filters).forEach(([key, value]) => {
+      if (value !== undefined) {
+        params.append(key, String(value));
+      }
+    });
+
+    const response = await apiRequest<ApiResponse<{
+      slots: AvailabilitySlot[];
+      slotsByDate: Record<string, AvailabilitySlot[]>;
+      totalSlots: number;
+    }>>(`/availability/slots/${consultantSlug}?${params}`);
+    return response.data!;
+  },
+};
+
 // Export the main API object
 export const api = {
   auth: authApi,
   dashboard: dashboardApi,
   consultant: consultantApi,
+  availability: availabilityApi,
 };
 
 // Profile completion calculation
