@@ -163,19 +163,223 @@ cd packages/database && npm run db:push
 - ✅ **User-Friendly UX**: Clear connection status and error messages
 - ✅ **Production Ready**: Proper error handling and token management
 
-## 🔧 Troubleshooting
+## 🔧 Troubleshooting & Debugging
 
-### Common Issues:
-1. **OAuth Popup Blocked**: Ensure popup blockers are disabled
-2. **Token Expired**: Use refresh token functionality or reconnect
-3. **Missing Permissions**: Verify Microsoft app has required Graph API permissions
-4. **Environment Variables**: Double-check Microsoft OAuth credentials
+### 🚨 **CRITICAL BUG FIXED** - "Failed to generate OAuth URL"
 
-### Debug Steps:
-1. Check console logs for OAuth errors
-2. Verify Microsoft app registration and permissions
-3. Test OAuth flow with valid Microsoft account
-4. Check database for stored tokens
+**Root Cause:** The `generateOAuthURL` function in `meetingService.ts` had a corrupted case statement (`case '':` instead of `case 'MICROSOFT':`) and was using hardcoded redirect URIs.
+
+**✅ Resolution:**
+1. Fixed case statement to properly match `'MICROSOFT'`
+2. Updated OAuth URL generation to use environment variable `MICROSOFT_REDIRECT_URI`
+3. Added comprehensive error handling and validation
+4. Enhanced OAuth scopes to include both OnlineMeetings and Calendars
+
+### Common Issues & Solutions:
+
+#### 1. **OAuth URL Generation Fails**
+**Symptoms:** "Failed to generate OAuth URL" error when clicking "Connect Microsoft Teams"
+
+**✅ Fixed Issues:**
+- Corrupted case statement in `generateOAuthURL` function
+- Hardcoded redirect URI instead of environment variable
+- Missing environment variable validation
+
+**Debug Steps:**
+```bash
+# Check if environment variables are set
+echo $MICROSOFT_CLIENT_ID
+echo $MICROSOFT_REDIRECT_URI
+
+# Check API logs for detailed error information
+tail -f apps/api/logs/app.log | grep "TEAMS"
+```
+
+#### 2. **OAuth Popup Blocked**
+**Symptoms:** Popup window doesn't open or is immediately blocked
+
+**Solutions:**
+- Disable popup blockers for localhost:3000
+- Ensure browser allows popups for the application domain
+- Try opening OAuth URL in new tab manually
+
+#### 3. **OAuth Callback Fails**
+**Symptoms:** Callback page shows error or gets stuck loading
+
+**Debug Steps:**
+```bash
+# Test OAuth callback with Postman
+POST /api/v1/teams/oauth-callback
+Headers: { "Authorization": "Bearer <token>" }
+Body: {
+  "code": "<oauth_code>",
+  "redirectUri": "http://localhost:3000/auth/teams/callback"
+}
+```
+
+**Common Errors:**
+- `invalid_grant`: Authorization code expired (get new code)
+- `invalid_client`: Check MICROSOFT_CLIENT_ID and MICROSOFT_CLIENT_SECRET
+- `redirect_uri_mismatch`: Ensure redirect URI matches exactly
+
+#### 4. **Token Expired Issues**
+**Symptoms:** Teams integration shows "Expired" status
+
+**Solutions:**
+```bash
+# Test token refresh
+POST /api/v1/teams/refresh-token
+Headers: { "Authorization": "Bearer <access_token>" }
+
+# If refresh fails, user needs to reconnect
+DELETE /api/v1/teams/disconnect
+GET /api/v1/teams/oauth-url
+```
+
+#### 5. **Environment Variable Issues**
+**Symptoms:** "Microsoft Teams integration is not configured properly" error
+
+**✅ Required Environment Variables:**
+```env
+MICROSOFT_CLIENT_ID=
+MICROSOFT_CLIENT_SECRET="
+MICROSOFT_TENANT_ID=
+MICROSOFT_REDIRECT_URI=
+```
+
+### 🧪 **Comprehensive Testing Strategy**
+
+#### **Phase 1: API Testing with Postman**
+
+**Import Collection:** `Naksha-Teams-Integration.postman_collection.json`
+
+**Critical Test Sequence:**
+1. **Authentication Setup**
+   ```bash
+   POST /api/v1/auth/login
+   # Copy access_token from response
+   ```
+
+2. **Teams OAuth URL Generation** (Previously Failing)
+   ```bash
+   GET /api/v1/teams/oauth-url
+   Headers: { "Authorization": "Bearer <token>" }
+   
+   # Should now return:
+   # - OAuth URL with correct redirect URI
+   # - Debug information with consultant ID
+   # - No more "Failed to generate OAuth URL" error
+   ```
+
+3. **Integration Status Check**
+   ```bash
+   GET /api/v1/teams/status
+   # Should return connection status and token info
+   ```
+
+4. **Session Creation with Teams**
+   ```bash
+   POST /api/v1/sessions
+   Body: { "platform": "TEAMS", ... }
+   # Should create Teams meeting if connected
+   ```
+
+#### **Phase 2: Frontend Testing**
+
+**Settings Page Integration:**
+1. Navigate to `/dashboard/settings`
+2. Click "Connect Microsoft Teams" (should no longer fail)
+3. Complete OAuth flow in popup window
+4. Verify integration status updates
+
+**Session Creation Testing:**
+1. Navigate to `/dashboard/sessions`
+2. Create new session with Teams platform
+3. Verify meeting link is generated
+4. Check session confirmation email
+
+#### **Phase 3: End-to-End Testing**
+
+**Complete User Journey:**
+1. Consultant connects Teams integration
+2. Client books session via public page
+3. System auto-creates Teams meeting
+4. Both parties receive meeting links
+5. Session can be updated/cancelled
+
+### 🔍 **Enhanced Debug Logging**
+
+**New Logging Format:**
+```bash
+# OAuth URL Generation
+🔗 [TEAMS] Generating OAuth URL for consultant: <consultant-id>
+✅ [TEAMS] OAuth URL generated successfully for consultant: <consultant-id>
+
+# OAuth Callback
+📧 [TEAMS] Processing Teams OAuth callback for consultant: <consultant-id>
+✅ [TEAMS] Teams OAuth successful for: <user-email>
+
+# Error Logging with Context
+❌ [TEAMS] OAuth URL generation error: {
+  consultantId: "...",
+  error: "...",
+  envVars: {
+    hasClientId: true,
+    hasRedirectUri: true,
+    ...
+  }
+}
+```
+
+### 🛠️ **Quick Debugging Commands**
+
+**Check API Health:**
+```bash
+curl http://localhost:8000/health
+```
+
+**Test OAuth URL Generation:**
+```bash
+curl -H "Authorization: Bearer <token>" \
+     http://localhost:8000/api/v1/teams/oauth-url
+```
+
+**Check Environment Variables:**
+```bash
+# In API server directory
+node -e "console.log({
+  clientId: !!process.env.MICROSOFT_CLIENT_ID,
+  redirectUri: process.env.MICROSOFT_REDIRECT_URI
+})"
+```
+
+**Database Token Check:**
+```sql
+-- Check if consultant has Teams tokens
+SELECT 
+  id, 
+  teams_access_token IS NOT NULL as has_access_token,
+  teams_token_expires_at,
+  teams_user_email 
+FROM consultants 
+WHERE id = '<consultant-id>';
+```
+
+### 🎯 **Success Metrics**
+
+**✅ Integration Fixed:**
+- OAuth URL generation works without errors
+- Complete OAuth flow from frontend to backend
+- Teams meetings created automatically for sessions
+- Proper error handling and user feedback
+- Comprehensive testing coverage
+
+**🔮 Next Enhancement Opportunities:**
+- Calendar event creation alongside Teams meetings
+- Meeting cancellation when sessions are cancelled
+- Bulk Teams meeting management
+- Advanced meeting configuration options
+- Integration usage analytics and monitoring
 
 ---
 

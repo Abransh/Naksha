@@ -35,7 +35,10 @@ const meetingConfig = {
     clientId: process.env.MICROSOFT_CLIENT_ID!,
     clientSecret: process.env.MICROSOFT_CLIENT_SECRET!,
     tenantId: process.env.MICROSOFT_TENANT_ID || 'common',
-    scopes: ['https://graph.microsoft.com/OnlineMeetings.ReadWrite']
+    scopes: [
+      'https://graph.microsoft.com/OnlineMeetings.ReadWrite',
+      'https://graph.microsoft.com/Calendars.ReadWrite'
+    ]
   },
 
   // Zoom configuration (if needed)
@@ -580,12 +583,17 @@ export const generateOAuthURL = (platform: 'GOOGLE' | 'MICROSOFT'): string => {
       });
 
     case 'MICROSOFT':
+      // Validate environment variables
+      if (!process.env.MICROSOFT_CLIENT_ID || !process.env.MICROSOFT_REDIRECT_URI) {
+        throw new Error('Microsoft OAuth configuration missing: MICROSOFT_CLIENT_ID and MICROSOFT_REDIRECT_URI are required');
+      }
+
       const microsoftAuthUrl = `https://login.microsoftonline.com/${meetingConfig.microsoft.tenantId}/oauth2/v2.0/authorize?` +
         `client_id=${meetingConfig.microsoft.clientId}&` +
         `response_type=code&` +
-        `redirect_uri=${encodeURIComponent(process.env.MICROSOFT_REDIRECT_URI || 'http://localhost:3001/auth/microsoft/callback')}&` +
+        `redirect_uri=${encodeURIComponent(process.env.MICROSOFT_REDIRECT_URI)}&` +
         `response_mode=query&` +
-        `scope=${encodeURIComponent(meetingConfig.microsoft.scopes.join(' '))}&` +
+        `scope=${encodeURIComponent('https://graph.microsoft.com/OnlineMeetings.ReadWrite https://graph.microsoft.com/Calendars.ReadWrite')}&` +
         `state=12345`;
 
       return microsoftAuthUrl;

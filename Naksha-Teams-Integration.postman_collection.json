@@ -1,0 +1,397 @@
+{
+  "info": {
+    "name": "Naksha Teams Integration API",
+    "description": "Comprehensive testing collection for Microsoft Teams integration in Naksha consulting platform",
+    "version": "1.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set base URL if not configured",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'http://localhost:8000');",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "1. Consultant Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Consultant\",\n  \"email\": \"test.consultant@example.com\",\n  \"password\": \"TestPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/signup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "signup"]
+            },
+            "description": "Create a test consultant account for Teams integration testing"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Consultant Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Extract and store access token",
+                  "if (pm.response.code === 200) {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.data && responseJson.data.tokens && responseJson.data.tokens.accessToken) {",
+                  "        pm.environment.set('access_token', responseJson.data.tokens.accessToken);",
+                  "        pm.environment.set('refresh_token', responseJson.data.tokens.refreshToken);",
+                  "        pm.environment.set('consultant_id', responseJson.data.consultant.id);",
+                  "        console.log('Access token stored successfully');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"test.consultant@example.com\",\n  \"password\": \"TestPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Login and extract access token for Teams API testing"
+          },
+          "response": []
+        },
+        {
+          "name": "3. Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Verify authentication token works"
+          },
+          "response": []
+        }
+      ],
+      "description": "Authentication endpoints for Teams integration testing"
+    },
+    {
+      "name": "Teams Integration",
+      "item": [
+        {
+          "name": "1. Get Teams Integration Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has Teams status data', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.data).to.have.property('isConnected');",
+                  "    pm.expect(responseJson.data).to.have.property('isExpired');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/teams/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teams", "status"]
+            },
+            "description": "Check current Teams integration status for consultant"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Generate Teams OAuth URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('OAuth URL is generated', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.data).to.have.property('oauthUrl');",
+                  "    pm.expect(responseJson.data.oauthUrl).to.include('login.microsoftonline.com');",
+                  "    pm.expect(responseJson.data.oauthUrl).to.include('client_id');",
+                  "    pm.expect(responseJson.data.oauthUrl).to.include('redirect_uri');",
+                  "    ",
+                  "    // Store OAuth URL for manual testing",
+                  "    pm.environment.set('teams_oauth_url', responseJson.data.oauthUrl);",
+                  "});",
+                  "",
+                  "pm.test('Debug information is present', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.data).to.have.property('debug');",
+                  "    pm.expect(responseJson.data.debug).to.have.property('consultantId');",
+                  "    pm.expect(responseJson.data.debug).to.have.property('redirectUri');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/teams/oauth-url",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teams", "oauth-url"]
+            },
+            "description": "🚨 This was the failing endpoint! Generate Microsoft OAuth URL for Teams integration."
+          },
+          "response": []
+        },
+        {
+          "name": "3. Teams OAuth Callback (Simulated)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"SIMULATED_OAUTH_CODE_FROM_MICROSOFT\",\n  \"redirectUri\": \"http://localhost:3000/auth/teams/callback\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/teams/oauth-callback",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teams", "oauth-callback"]
+            },
+            "description": "⚠️ This will fail with simulated data. Use real OAuth code from Microsoft OAuth flow."
+          },
+          "response": []
+        },
+        {
+          "name": "4. Refresh Teams Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/teams/refresh-token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teams", "refresh-token"]
+            },
+            "description": "Refresh expired Teams access token (requires existing integration)"
+          },
+          "response": []
+        },
+        {
+          "name": "5. Disconnect Teams Integration",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/teams/disconnect",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teams", "disconnect"]
+            },
+            "description": "Disconnect Teams integration and remove stored tokens"
+          },
+          "response": []
+        }
+      ],
+      "description": "Microsoft Teams integration endpoints for OAuth and meeting management"
+    },
+    {
+      "name": "Session Management with Teams",
+      "item": [
+        {
+          "name": "1. Create Session with Teams Platform",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Test Teams Session\",\n  \"sessionType\": \"PERSONAL\",\n  \"scheduledDate\": \"2024-01-20\",\n  \"scheduledTime\": \"14:00\",\n  \"duration\": 60,\n  \"platform\": \"TEAMS\",\n  \"amount\": 1500,\n  \"currency\": \"INR\",\n  \"clientEmail\": \"test.client@example.com\",\n  \"clientName\": \"Test Client\",\n  \"clientPhone\": \"+91-9876543210\",\n  \"description\": \"Test session with Teams integration\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sessions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sessions"]
+            },
+            "description": "Create a session with Teams platform (requires Teams integration)"
+          },
+          "response": []
+        },
+        {
+          "name": "2. Get Sessions List",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sessions?platform=TEAMS",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sessions"],
+              "query": [
+                {
+                  "key": "platform",
+                  "value": "TEAMS"
+                }
+              ]
+            },
+            "description": "Get all sessions filtered by Teams platform"
+          },
+          "response": []
+        }
+      ],
+      "description": "Session management with Teams meeting integration"
+    },
+    {
+      "name": "Health & Debugging",
+      "item": [
+        {
+          "name": "1. API Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Check API server health and status"
+          },
+          "response": []
+        },
+        {
+          "name": "2. API Info",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api",
+              "host": ["{{base_url}}"],
+              "path": ["api"]
+            },
+            "description": "Get API information and available endpoints"
+          },
+          "response": []
+        },
+        {
+          "name": "3. API Documentation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/docs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "docs"]
+            },
+            "description": "Get comprehensive API documentation (development only)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Health checks and debugging endpoints"
+    }
+  ]
+}

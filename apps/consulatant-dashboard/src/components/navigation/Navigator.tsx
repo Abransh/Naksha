@@ -221,8 +221,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
                 <Gift size={20} className="text-[var(--black-100)] mt-1" />
                 <div className="flex-1">
                   <p className="text-[var(--black-100)] font-inter text-sm font-medium">
-                    Free Gift Awaits You!
-                  </p>
+                  Upgrade your account to access your personal marketing team.                  </p>
                   <div className="flex items-center justify-between mt-2">
                     <p className="text-[var(--black-40)] font-inter text-xs">
                       Upgrade your account

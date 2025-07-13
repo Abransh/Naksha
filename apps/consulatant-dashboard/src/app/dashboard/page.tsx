@@ -19,7 +19,7 @@ import {
   FolderOpen,
   ChevronDown,
   Home,
-  Bell,
+
   Plus,
 } from "lucide-react";
 
@@ -105,9 +105,7 @@ export default function Dashboard() {
                   </span>
                   <ChevronDown size={14} className="text-[var(--black-100)]" />
                 </div>
-                <div className="relative">
-                  <Bell size={18} className="text-[var(--primary-100)]" />
-                </div>
+               
                 <div className="w-7 h-7 lg:w-8 lg:h-8 bg-gray-200 rounded-lg"></div>
               </div>
             </div>

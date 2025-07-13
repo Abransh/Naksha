@@ -14,7 +14,7 @@ import {
   ChevronDown,
 
   Home,
-  Bell,
+
 
   User,
   Mail,
@@ -150,9 +150,7 @@ export default function SettingsPage() {
                   </span>
                   <ChevronDown size={14} className="text-[var(--black-100)]" />
                 </div>
-                <div className="relative">
-                  <Bell size={20} className="text-[var(--primary-100)]" />
-                </div>
+               
                 <img
                   src="https://cdn.builder.io/api/v1/image/assets/TEMP/b46ae8e430c0e00c43a867420ccb2a521eda6c8b?width=64"
                   alt="Profile"

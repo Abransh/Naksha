@@ -357,6 +357,207 @@ Send quotation to client via email.
 
 ---
 
+## Microsoft Teams Integration
+
+The Teams integration allows consultants to connect their Microsoft accounts and automatically create Teams meetings for their sessions.
+
+### Teams Integration Workflow
+
+1. **Connect Account**: Consultant connects Microsoft account via OAuth
+2. **Store Tokens**: Access and refresh tokens stored securely 
+3. **Create Sessions**: When Teams platform selected, automatic meeting creation
+4. **Meeting Links**: Teams meeting links included in session confirmation emails
+
+### Teams Integration Routes
+
+#### `GET /api/v1/teams/status`
+Check Teams integration status for consultant.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "isConnected": true,
+    "isExpired": false,
+    "userEmail": "consultant@company.com",
+    "connectedAt": "2024-01-15T10:30:00Z",
+    "needsReconnection": false
+  }
+}
+```
+
+---
+
+#### `GET /api/v1/teams/oauth-url`
+Generate Microsoft OAuth URL for Teams integration.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "data": {
+    "oauthUrl": "https://login.microsoftonline.com/common/oauth2/v2.0/authorize?client_id=...",
+    "debug": {
+      "consultantId": "consultant-uuid",
+      "redirectUri": "http://localhost:3000/auth/teams/callback",
+      "clientId": "aKC8Q~P2..."
+    }
+  }
+}
+```
+
+**Common Errors:**
+- `TEAMS_CONFIG_ERROR` (500): Microsoft OAuth configuration missing
+- `TEAMS_OAUTH_URL_ERROR` (500): Failed to generate OAuth URL
+
+---
+
+#### `POST /api/v1/teams/oauth-callback`
+Handle Microsoft OAuth callback and exchange code for tokens.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "code": "0.AXsA...",
+  "redirectUri": "http://localhost:3000/auth/teams/callback"
+}
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Microsoft Teams integration connected successfully",
+  "data": {
+    "userEmail": "consultant@company.com",
+    "displayName": "Consultant Name",
+    "connectedAt": "2024-01-15T10:30:00Z"
+  }
+}
+```
+
+**Common Errors:**
+- `TEAMS_OAUTH_ERROR` (400): OAuth authorization failed
+- `CONSULTANT_NOT_FOUND` (404): Consultant account not found
+- `TEAMS_OAUTH_CALLBACK_ERROR` (500): Failed to complete OAuth flow
+
+---
+
+#### `POST /api/v1/teams/refresh-token`
+Refresh expired Teams access token.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Teams access token refreshed successfully",
+  "data": {
+    "expiresAt": "2024-01-15T11:30:00Z"
+  }
+}
+```
+
+**Common Errors:**
+- `TEAMS_NO_REFRESH_TOKEN` (400): No refresh token found
+- `TEAMS_REFRESH_ERROR` (400): Failed to refresh token
+
+---
+
+#### `DELETE /api/v1/teams/disconnect`
+Disconnect Teams integration and remove stored tokens.
+
+**Headers:**
+```
+Authorization: Bearer <access_token>
+```
+
+**Response:**
+```json
+{
+  "success": true,
+  "message": "Microsoft Teams integration disconnected successfully"
+}
+```
+
+---
+
+### Session Creation with Teams
+
+When creating sessions with `platform: "TEAMS"`, the system will automatically:
+
+1. Check if consultant has connected Teams integration
+2. Create Microsoft Teams meeting using stored access token
+3. Include meeting link in session confirmation emails
+4. Store meeting ID and link in session record
+
+**Example Session Creation:**
+```json
+{
+  "title": "Business Strategy Consultation",
+  "sessionType": "PERSONAL",
+  "platform": "TEAMS",
+  "scheduledDate": "2024-01-20",
+  "scheduledTime": "14:00",
+  "duration": 60,
+  "clientEmail": "client@company.com",
+  "clientName": "Client Name",
+  "amount": 1500
+}
+```
+
+### Teams Integration Errors
+
+| Error Code | Status | Description | Resolution |
+|------------|---------|-------------|------------|
+| `TEAMS_CONFIG_ERROR` | 500 | Microsoft OAuth configuration missing | Check environment variables |
+| `TEAMS_OAUTH_URL_ERROR` | 500 | Failed to generate OAuth URL | Check meetingService configuration |
+| `TEAMS_OAUTH_ERROR` | 400 | OAuth authorization failed | User should try connecting again |
+| `TEAMS_NO_REFRESH_TOKEN` | 400 | No refresh token found | User needs to reconnect Microsoft account |
+| `TEAMS_OAUTH_CALLBACK_ERROR` | 500 | Failed to complete OAuth flow | Check Microsoft API configuration |
+
+### Environment Variables Required
+
+```env
+# Microsoft Teams OAuth Configuration
+MICROSOFT_CLIENT_ID="your-microsoft-app-client-id"
+MICROSOFT_CLIENT_SECRET="your-microsoft-app-client-secret"
+MICROSOFT_TENANT_ID="common"
+MICROSOFT_REDIRECT_URI="http://localhost:3000/auth/teams/callback"
+```
+
+### Testing with Postman
+
+Import the comprehensive Postman collection: `Naksha-Teams-Integration.postman_collection.json`
+
+**Key Test Endpoints:**
+1. `GET /api/v1/teams/oauth-url` - Generate OAuth URL (should no longer fail!)
+2. `GET /api/v1/teams/status` - Check integration status  
+3. `POST /api/v1/sessions` with `platform: "TEAMS"` - Test meeting creation
+
+---
+
 ## Admin Routes (Admin Authentication Required)
 
 ### Admin Dashboard
