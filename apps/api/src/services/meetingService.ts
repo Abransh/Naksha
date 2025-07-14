@@ -284,7 +284,7 @@ export const getMeetingInfo = async (
 /**
  * Generate Microsoft OAuth URL for Teams integration
  */
-export const generateOAuthURL = (platform: 'MICROSOFT'): string => {
+export const generateOAuthURL = (platform: 'MICROSOFT', state?: string): string => {
   if (platform !== 'MICROSOFT') {
     throw new Error(`Only Microsoft Teams OAuth is supported. Platform '${platform}' is not available.`);
   }
@@ -294,13 +294,16 @@ export const generateOAuthURL = (platform: 'MICROSOFT'): string => {
     throw new Error('Microsoft OAuth configuration missing: MICROSOFT_CLIENT_ID and MICROSOFT_REDIRECT_URI are required');
   }
 
+  // Use provided state or default fallback
+  const oauthState = state || 'default_state';
+
   const microsoftAuthUrl = `https://login.microsoftonline.com/${meetingConfig.microsoft.tenantId}/oauth2/v2.0/authorize?` +
     `client_id=${meetingConfig.microsoft.clientId}&` +
     `response_type=code&` +
     `redirect_uri=${encodeURIComponent(meetingConfig.microsoft.redirectUri)}&` +
     `response_mode=query&` +
     `scope=${encodeURIComponent('https://graph.microsoft.com/OnlineMeetings.ReadWrite https://graph.microsoft.com/Calendars.ReadWrite')}&` +
-    `state=12345`;
+    `state=${encodeURIComponent(oauthState)}`;
 
   return microsoftAuthUrl;
 };

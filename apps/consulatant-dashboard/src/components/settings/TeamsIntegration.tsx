@@ -16,9 +16,9 @@ import { toast } from 'sonner';
 // Teams Integration Status Type
 interface TeamsStatus {
   isConnected: boolean;
-  isExpired: boolean | null;
-  userEmail: string | null;
-  connectedAt: string | null;
+  isExpired: boolean;
+  userEmail?: string;
+  connectedAt?: string;
   needsReconnection: boolean;
 }
 
@@ -36,8 +36,8 @@ export const TeamsIntegration: React.FC = () => {
       setError(null);
 
       // Use the API client from lib/api.ts instead of direct fetch
-      const { teamsApi } = await import('@/lib/api');
-      const statusData = await teamsApi.getStatus();
+      const { consultantApi } = await import('@/lib/api');
+      const statusData = await consultantApi.teams.getStatus();
       setStatus(statusData);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch status';
@@ -55,8 +55,8 @@ export const TeamsIntegration: React.FC = () => {
       setError(null);
 
       // Get OAuth URL using API client
-      const { teamsApi } = await import('@/lib/api');
-      const { oauthUrl } = await teamsApi.getOAuthUrl();
+      const { consultantApi } = await import('@/lib/api');
+      const { oauthUrl } = await consultantApi.teams.getOAuthUrl();
 
       // Open OAuth popup
       const popup = window.open(
@@ -124,8 +124,8 @@ export const TeamsIntegration: React.FC = () => {
       setError(null);
 
       // Use API client for disconnect
-      const { teamsApi } = await import('@/lib/api');
-      await teamsApi.disconnect();
+      const { consultantApi } = await import('@/lib/api');
+      await consultantApi.teams.disconnect();
 
       toast.success('Microsoft Teams disconnected successfully');
       fetchStatus();
@@ -145,8 +145,8 @@ export const TeamsIntegration: React.FC = () => {
       setError(null);
 
       // Use API client for token refresh
-      const { teamsApi } = await import('@/lib/api');
-      await teamsApi.refreshToken();
+      const { consultantApi } = await import('@/lib/api');
+      await consultantApi.teams.refreshToken();
 
       toast.success('Teams token refreshed successfully');
       fetchStatus();
@@ -168,7 +168,7 @@ export const TeamsIntegration: React.FC = () => {
   const renderStatusBadge = () => {
     if (!status) return null;
 
-    if (status.isConnected && status.isExpired === false) {
+    if (status.isConnected && !status.isExpired) {
       return (
         <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
           <CheckCircle className="w-3 h-3 mr-1" />
@@ -177,7 +177,7 @@ export const TeamsIntegration: React.FC = () => {
       );
     }
 
-    if (status.isConnected && status.isExpired === true) {
+    if (status.isConnected && status.isExpired) {
       return (
         <Badge variant="destructive" className="bg-orange-100 text-orange-800 border-orange-300">
           <AlertCircle className="w-3 h-3 mr-1" />
@@ -265,7 +265,7 @@ export const TeamsIntegration: React.FC = () => {
             </Button>
           )}
 
-          {status?.isConnected && status?.isExpired === false && (
+          {status?.isConnected && !status?.isExpired && (
             <Button
               onClick={disconnectTeams}
               disabled={isLoading}

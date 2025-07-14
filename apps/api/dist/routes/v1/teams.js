@@ -25,27 +25,49 @@ const exchangeCodeSchema = zod_1.z.object({
     redirectUri: zod_1.z.string().url('Invalid redirect URI'),
 });
 /**
- * GET /api/teams/oauth-url
+ * GET /api/v1/teams/oauth-url
  * Generate Microsoft OAuth URL for Teams integration
  */
 router.get('/oauth-url', async (req, res) => {
     try {
         const consultantId = req.user.id;
-        console.log(`📧 Generating Teams OAuth URL for consultant: ${consultantId}`);
-        // Generate Microsoft OAuth URL
-        const oauthUrl = (0, meetingService_1.generateOAuthURL)('MICROSOFT');
-        // Add state parameter with consultant ID for security
-        const urlWithState = `${oauthUrl}&state=${consultantId}`;
+        console.log(`🔗 [TEAMS] Generating OAuth URL for consultant: ${consultantId}`);
+        // Validate environment configuration
+        if (!process.env.MICROSOFT_CLIENT_ID || !process.env.MICROSOFT_REDIRECT_URI) {
+            console.error('❌ [TEAMS] Missing Microsoft OAuth configuration');
+            throw new errorHandler_1.AppError('Microsoft Teams integration is not configured properly. Please contact support.', 500, 'TEAMS_CONFIG_ERROR');
+        }
+        // Generate Microsoft OAuth URL with consultant ID as state parameter
+        const oauthUrl = (0, meetingService_1.generateOAuthURL)('MICROSOFT', consultantId);
+        console.log(`✅ [TEAMS] OAuth URL generated successfully for consultant: ${consultantId}`);
         res.json({
             success: true,
             data: {
-                oauthUrl: urlWithState
+                oauthUrl,
+                debug: {
+                    consultantId,
+                    redirectUri: process.env.MICROSOFT_REDIRECT_URI,
+                    clientId: process.env.MICROSOFT_CLIENT_ID?.substring(0, 8) + '...'
+                }
             }
         });
     }
     catch (error) {
-        console.error('❌ Teams OAuth URL generation error:', error);
-        throw new errorHandler_1.AppError('Failed to generate Teams OAuth URL', 500, 'TEAMS_OAUTH_URL_ERROR');
+        console.error('❌ [TEAMS] OAuth URL generation error:', {
+            consultantId: req.user?.id,
+            error: error.message,
+            stack: error.stack,
+            envVars: {
+                hasClientId: !!process.env.MICROSOFT_CLIENT_ID,
+                hasClientSecret: !!process.env.MICROSOFT_CLIENT_SECRET,
+                hasRedirectUri: !!process.env.MICROSOFT_REDIRECT_URI,
+                hasTenantId: !!process.env.MICROSOFT_TENANT_ID
+            }
+        });
+        if (error instanceof errorHandler_1.AppError) {
+            throw error;
+        }
+        throw new errorHandler_1.AppError(`Failed to generate Teams OAuth URL: ${error.message}`, 500, 'TEAMS_OAUTH_URL_ERROR');
     }
 });
 /**
@@ -108,12 +130,41 @@ router.post('/oauth-callback', (0, validation_1.validateRequest)(exchangeCodeSch
         });
     }
     catch (error) {
-        console.error('❌ Teams OAuth callback error:', error);
+        console.error('❌ [TEAMS] OAuth callback error:', {
+            consultantId: req.user?.id,
+            error: error.message,
+            stack: error.stack,
+            requestData: {
+                code: req.body.code ? 'present' : 'missing',
+                redirectUri: req.body.redirectUri
+            }
+        });
         if (axios_1.default.isAxiosError(error)) {
-            console.error('Microsoft API error:', error.response?.data);
-            throw new errorHandler_1.AppError(`Microsoft OAuth failed: ${error.response?.data?.error_description || error.message}`, 400, 'TEAMS_OAUTH_ERROR');
+            const microsoftError = error.response?.data;
+            console.error('❌ [TEAMS] Microsoft API error:', {
+                status: error.response?.status,
+                statusText: error.response?.statusText,
+                data: microsoftError,
+                url: error.config?.url
+            });
+            // Provide more specific error messages based on Microsoft's response
+            let userMessage = 'Failed to connect Microsoft Teams';
+            if (microsoftError?.error === 'invalid_grant') {
+                userMessage = 'Authorization code has expired or is invalid. Please try connecting again.';
+            }
+            else if (microsoftError?.error === 'invalid_client') {
+                userMessage = 'Microsoft Teams integration configuration error. Please contact support.';
+            }
+            else if (microsoftError?.error_description) {
+                userMessage = `Microsoft OAuth error: ${microsoftError.error_description}`;
+            }
+            throw new errorHandler_1.AppError(userMessage, 400, 'TEAMS_OAUTH_ERROR');
         }
-        throw new errorHandler_1.AppError('Failed to connect Microsoft Teams', 500, 'TEAMS_OAUTH_CALLBACK_ERROR');
+        // Handle Prisma database errors
+        if (error.code === 'P2002') {
+            throw new errorHandler_1.AppError('Consultant account not found or invalid', 404, 'CONSULTANT_NOT_FOUND');
+        }
+        throw new errorHandler_1.AppError(`Failed to connect Microsoft Teams: ${error.message}`, 500, 'TEAMS_OAUTH_CALLBACK_ERROR');
     }
 });
 /**

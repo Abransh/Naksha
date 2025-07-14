@@ -41,18 +41,15 @@ router.get('/oauth-url',
         throw new AppError('Microsoft Teams integration is not configured properly. Please contact support.', 500, 'TEAMS_CONFIG_ERROR');
       }
       
-      // Generate Microsoft OAuth URL
-      const oauthUrl = generateOAuthURL('MICROSOFT');
-      
-      // Add state parameter with consultant ID for security
-      const urlWithState = `${oauthUrl}&state=${consultantId}`;
+      // Generate Microsoft OAuth URL with consultant ID as state parameter
+      const oauthUrl = generateOAuthURL('MICROSOFT', consultantId);
       
       console.log(`✅ [TEAMS] OAuth URL generated successfully for consultant: ${consultantId}`);
       
       res.json({
         success: true,
         data: {
-          oauthUrl: urlWithState,
+          oauthUrl,
           debug: {
             consultantId,
             redirectUri: process.env.MICROSOFT_REDIRECT_URI,

@@ -1,15 +1,12 @@
 /**
  * File Path: apps/api/src/services/meetingService.ts
  *
- * Video Meeting Service
+ * Microsoft Teams Meeting Service
  *
- * Handles video meeting integration for:
- * - Google Meet link generation
- * - Microsoft Teams meeting creation
- * - Zoom meeting scheduling
- * - Calendar integration
+ * Handles Microsoft Teams meeting integration for:
+ * - Teams meeting creation
  * - Meeting notifications
- * - Meeting room management
+ * - OAuth integration
  */
 /**
  * Meeting interfaces
@@ -32,59 +29,45 @@ interface MeetingResponse {
     hostUrl?: string;
 }
 /**
- * Generate Google Meet link with calendar event
- */
-export declare const generateGoogleMeetLink: (meetingDetails: MeetingDetails, consultantAccessToken?: string) => Promise<MeetingResponse>;
-/**
  * Generate Microsoft Teams meeting
  */
 export declare const generateTeamsMeeting: (meetingDetails: MeetingDetails, consultantAccessToken?: string) => Promise<MeetingResponse>;
 /**
- * Generate Zoom meeting (if Zoom integration is available)
+ * Main meeting link generation function - Teams Only
  */
-export declare const generateZoomMeeting: (meetingDetails: MeetingDetails) => Promise<MeetingResponse>;
+export declare const generateMeetingLink: (platform: "TEAMS", meetingDetails: MeetingDetails, accessToken?: string) => Promise<MeetingResponse>;
 /**
- * Main meeting link generation function
+ * Update Teams meeting details
  */
-export declare const generateMeetingLink: (platform: "ZOOM" | "MEET" | "TEAMS", meetingDetails: MeetingDetails, accessToken?: string) => Promise<MeetingResponse>;
+export declare const updateMeeting: (platform: "TEAMS", meetingId: string, updates: Partial<MeetingDetails>, accessToken?: string) => Promise<boolean>;
 /**
- * Update meeting details
+ * Cancel/delete Teams meeting
  */
-export declare const updateMeeting: (platform: "ZOOM" | "MEET" | "TEAMS", meetingId: string, updates: Partial<MeetingDetails>, accessToken?: string) => Promise<boolean>;
+export declare const cancelMeeting: (platform: "TEAMS", meetingId: string, accessToken?: string) => Promise<boolean>;
 /**
- * Cancel/delete meeting
+ * Get Teams meeting information
  */
-export declare const cancelMeeting: (platform: "ZOOM" | "MEET" | "TEAMS", meetingId: string, accessToken?: string) => Promise<boolean>;
+export declare const getMeetingInfo: (platform: "TEAMS", meetingId: string, accessToken?: string) => Promise<any>;
 /**
- * Get meeting information
+ * Generate Microsoft OAuth URL for Teams integration
  */
-export declare const getMeetingInfo: (platform: "ZOOM" | "MEET" | "TEAMS", meetingId: string, accessToken?: string) => Promise<any>;
+export declare const generateOAuthURL: (platform: "MICROSOFT", state?: string) => string;
 /**
- * Generate OAuth URLs for platform integration
- */
-export declare const generateOAuthURL: (platform: "GOOGLE" | "MICROSOFT") => string;
-/**
- * Test meeting service connectivity
+ * Test Microsoft Teams service connectivity
  */
 export declare const testMeetingService: () => Promise<{
-    google: boolean;
     microsoft: boolean;
-    zoom: boolean;
 }>;
 declare const _default: {
-    generateMeetingLink: (platform: "ZOOM" | "MEET" | "TEAMS", meetingDetails: MeetingDetails, accessToken?: string) => Promise<MeetingResponse>;
-    updateMeeting: (platform: "ZOOM" | "MEET" | "TEAMS", meetingId: string, updates: Partial<MeetingDetails>, accessToken?: string) => Promise<boolean>;
-    cancelMeeting: (platform: "ZOOM" | "MEET" | "TEAMS", meetingId: string, accessToken?: string) => Promise<boolean>;
-    getMeetingInfo: (platform: "ZOOM" | "MEET" | "TEAMS", meetingId: string, accessToken?: string) => Promise<any>;
-    generateOAuthURL: (platform: "GOOGLE" | "MICROSOFT") => string;
+    generateMeetingLink: (platform: "TEAMS", meetingDetails: MeetingDetails, accessToken?: string) => Promise<MeetingResponse>;
+    updateMeeting: (platform: "TEAMS", meetingId: string, updates: Partial<MeetingDetails>, accessToken?: string) => Promise<boolean>;
+    cancelMeeting: (platform: "TEAMS", meetingId: string, accessToken?: string) => Promise<boolean>;
+    getMeetingInfo: (platform: "TEAMS", meetingId: string, accessToken?: string) => Promise<any>;
+    generateOAuthURL: (platform: "MICROSOFT", state?: string) => string;
     testMeetingService: () => Promise<{
-        google: boolean;
         microsoft: boolean;
-        zoom: boolean;
     }>;
-    generateGoogleMeetLink: (meetingDetails: MeetingDetails, consultantAccessToken?: string) => Promise<MeetingResponse>;
     generateTeamsMeeting: (meetingDetails: MeetingDetails, consultantAccessToken?: string) => Promise<MeetingResponse>;
-    generateZoomMeeting: (meetingDetails: MeetingDetails) => Promise<MeetingResponse>;
 };
 export default _default;
 //# sourceMappingURL=meetingService.d.ts.map
