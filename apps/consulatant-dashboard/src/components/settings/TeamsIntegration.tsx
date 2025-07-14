@@ -16,9 +16,9 @@ import { toast } from 'sonner';
 // Teams Integration Status Type
 interface TeamsStatus {
   isConnected: boolean;
-  isExpired: boolean;
-  userEmail?: string;
-  expiresAt?: string;
+  isExpired: boolean | null;
+  userEmail: string | null;
+  connectedAt: string | null;
   needsReconnection: boolean;
 }
 
@@ -168,7 +168,7 @@ export const TeamsIntegration: React.FC = () => {
   const renderStatusBadge = () => {
     if (!status) return null;
 
-    if (status.isConnected && !status.isExpired) {
+    if (status.isConnected && status.isExpired === false) {
       return (
         <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
           <CheckCircle className="w-3 h-3 mr-1" />
@@ -177,7 +177,7 @@ export const TeamsIntegration: React.FC = () => {
       );
     }
 
-    if (status.isConnected && status.isExpired) {
+    if (status.isConnected && status.isExpired === true) {
       return (
         <Badge variant="destructive" className="bg-orange-100 text-orange-800 border-orange-300">
           <AlertCircle className="w-3 h-3 mr-1" />
@@ -231,11 +231,11 @@ export const TeamsIntegration: React.FC = () => {
               </div>
             )}
 
-            {status.expiresAt && (
+            {status.connectedAt && (
               <div className="flex items-center justify-between">
-                <span className="text-sm font-medium">Token Expires</span>
+                <span className="text-sm font-medium">Connected At</span>
                 <span className="text-sm text-gray-600">
-                  {new Date(status.expiresAt).toLocaleDateString()}
+                  {new Date(status.connectedAt).toLocaleDateString()}
                 </span>
               </div>
             )}
@@ -265,7 +265,7 @@ export const TeamsIntegration: React.FC = () => {
             </Button>
           )}
 
-          {status?.isConnected && !status?.isExpired && (
+          {status?.isConnected && status?.isExpired === false && (
             <Button
               onClick={disconnectTeams}
               disabled={isLoading}
