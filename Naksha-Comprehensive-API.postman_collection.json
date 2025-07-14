@@ -1,0 +1,1945 @@
+{
+  "info": {
+    "name": "Naksha Comprehensive API Testing Suite",
+    "description": "Complete testing collection for all Naksha consulting platform API endpoints - covers 72 endpoints across authentication, consultant management, sessions, clients, quotations, admin operations, and Teams integration",
+    "version": "2.0.0",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set base URL if not configured",
+          "if (!pm.environment.get('base_url')) {",
+          "    pm.environment.set('base_url', 'http://localhost:8000');",
+          "}",
+          "",
+          "// Auto-refresh token if expired (for protected routes)",
+          "const currentRequest = pm.request.url.toString();",
+          "if (currentRequest.includes('/api/v1/') && !currentRequest.includes('/auth/')) {",
+          "    const tokenExpiry = pm.environment.get('token_expiry');",
+          "    if (tokenExpiry && new Date() > new Date(tokenExpiry)) {",
+          "        console.log('Token expired, should refresh...');",
+          "    }",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://localhost:8000",
+      "type": "string"
+    },
+    {
+      "key": "consultant_email",
+      "value": "test.consultant@example.com",
+      "type": "string"
+    },
+    {
+      "key": "consultant_password",
+      "value": "TestPassword123!",
+      "type": "string"
+    },
+    {
+      "key": "admin_email",
+      "value": "admin@naksha.com",
+      "type": "string"
+    },
+    {
+      "key": "admin_password",
+      "value": "AdminPassword123!",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Authentication & Admin",
+      "item": [
+        {
+          "name": "1.1 Consultant Signup",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Test Consultant\",\n  \"email\": \"{{consultant_email}}\",\n  \"password\": \"{{consultant_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/signup",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "signup"]
+            },
+            "description": "Register a new consultant account with admin approval workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "1.2 Consultant Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Extract and store tokens",
+                  "if (pm.response.code === 200) {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.data && responseJson.data.tokens) {",
+                  "        pm.environment.set('access_token', responseJson.data.tokens.accessToken);",
+                  "        pm.environment.set('refresh_token', responseJson.data.tokens.refreshToken);",
+                  "        pm.environment.set('consultant_id', responseJson.data.consultant.id);",
+                  "        pm.environment.set('consultant_slug', responseJson.data.consultant.slug);",
+                  "        ",
+                  "        // Calculate token expiry (15 minutes from now)",
+                  "        const expiryTime = new Date(Date.now() + 15 * 60 * 1000);",
+                  "        pm.environment.set('token_expiry', expiryTime.toISOString());",
+                  "        ",
+                  "        console.log('Consultant authenticated successfully');",
+                  "    }",
+                  "}",
+                  "",
+                  "pm.test('Login successful', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('Access token received', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.data.tokens).to.have.property('accessToken');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{consultant_email}}\",\n  \"password\": \"{{consultant_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "login"]
+            },
+            "description": "Authenticate consultant and extract access tokens"
+          },
+          "response": []
+        },
+        {
+          "name": "1.3 Admin Login",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Extract and store admin tokens",
+                  "if (pm.response.code === 200) {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.data && responseJson.data.tokens) {",
+                  "        pm.environment.set('admin_access_token', responseJson.data.tokens.accessToken);",
+                  "        pm.environment.set('admin_refresh_token', responseJson.data.tokens.refreshToken);",
+                  "        pm.environment.set('admin_id', responseJson.data.admin.id);",
+                  "        console.log('Admin authenticated successfully');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{admin_email}}\",\n  \"password\": \"{{admin_password}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/admin/login",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "admin", "login"]
+            },
+            "description": "Admin authentication for consultant approval and system management"
+          },
+          "response": []
+        },
+        {
+          "name": "1.4 Get Current User",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/me",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "me"]
+            },
+            "description": "Get current authenticated user profile information"
+          },
+          "response": []
+        },
+        {
+          "name": "1.5 Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"email\": \"{{consultant_email}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/forgot-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "forgot-password"]
+            },
+            "description": "Request password reset email for consultant"
+          },
+          "response": []
+        },
+        {
+          "name": "1.6 Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"token\": \"RESET_TOKEN_FROM_EMAIL\",\n  \"password\": \"NewPassword123!\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/reset-password",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "reset-password"]
+            },
+            "description": "Reset password using token from email"
+          },
+          "response": []
+        },
+        {
+          "name": "1.7 Verify Email",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/verify-email/EMAIL_VERIFICATION_TOKEN",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "verify-email", "EMAIL_VERIFICATION_TOKEN"]
+            },
+            "description": "Verify email address using token from verification email"
+          },
+          "response": []
+        },
+        {
+          "name": "1.8 Refresh Access Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"refreshToken\": \"{{refresh_token}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/refresh",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "refresh"]
+            },
+            "description": "Refresh expired access token using refresh token"
+          },
+          "response": []
+        },
+        {
+          "name": "1.9 Logout",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/auth/logout",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "auth", "logout"]
+            },
+            "description": "Logout user and invalidate session tokens"
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete authentication system including consultant/admin login, password management, and token handling"
+    },
+    {
+      "name": "2. Consultant Management",
+      "item": [
+        {
+          "name": "2.1 Get Consultant Profile",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultant/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultant", "profile"]
+            },
+            "description": "Get consultant's own profile with completion status and statistics"
+          },
+          "response": []
+        },
+        {
+          "name": "2.2 Update Consultant Profile",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Consultant\",\n  \"phoneCountryCode\": \"+91\",\n  \"phoneNumber\": \"9876543210\",\n  \"consultancySector\": \"Business Strategy\",\n  \"personalSessionTitle\": \"1-on-1 Business Consultation\",\n  \"webinarSessionTitle\": \"Business Strategy Webinar\",\n  \"description\": \"Experienced business consultant with 10+ years of expertise\",\n  \"experienceMonths\": 120,\n  \"personalSessionPrice\": 2500,\n  \"webinarSessionPrice\": 1500,\n  \"instagramUrl\": \"https://instagram.com/consultant\",\n  \"linkedinUrl\": \"https://linkedin.com/in/consultant\",\n  \"bankName\": \"HDFC Bank\",\n  \"accountNumber\": \"1234567890\",\n  \"ifscCode\": \"HDFC0001234\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultant/profile",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultant", "profile"]
+            },
+            "description": "Update consultant profile information including pricing and banking details"
+          },
+          "response": []
+        },
+        {
+          "name": "2.3 Upload Profile Photo",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "photo",
+                  "type": "file",
+                  "src": "",
+                  "description": "Profile photo file (JPEG, PNG, WebP - max 5MB)"
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultant/upload-photo",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultant", "upload-photo"]
+            },
+            "description": "Upload consultant profile photo to Cloudinary"
+          },
+          "response": []
+        },
+        {
+          "name": "2.4 Get Public Consultant Page",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultant/{{consultant_slug}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultant", "{{consultant_slug}}"]
+            },
+            "description": "Get public consultant profile for client booking page"
+          },
+          "response": []
+        },
+        {
+          "name": "2.5 Check Slug Availability",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultant/slug-check/new-consultant-slug",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultant", "slug-check", "new-consultant-slug"]
+            },
+            "description": "Check if consultant URL slug is available"
+          },
+          "response": []
+        },
+        {
+          "name": "2.6 Get Availability Slots",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultant/availability?sessionType=PERSONAL&startDate=2024-01-15&endDate=2024-01-30",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultant", "availability"],
+              "query": [
+                {
+                  "key": "sessionType",
+                  "value": "PERSONAL"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2024-01-15"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-30"
+                }
+              ]
+            },
+            "description": "Get consultant's availability slots with optional filtering"
+          },
+          "response": []
+        },
+        {
+          "name": "2.7 Create Availability Slots",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionType\": \"PERSONAL\",\n  \"dates\": [\"2024-01-20\", \"2024-01-21\", \"2024-01-22\"],\n  \"timeSlots\": [\n    {\n      \"startTime\": \"10:00\",\n      \"endTime\": \"11:00\"\n    },\n    {\n      \"startTime\": \"14:00\",\n      \"endTime\": \"15:00\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultant/availability",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultant", "availability"]
+            },
+            "description": "Create multiple availability slots for specific dates and times"
+          },
+          "response": []
+        },
+        {
+          "name": "2.8 Update Availability Slots",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"availabilitySlotIds\": [\"slot-id-1\", \"slot-id-2\"],\n  \"isBooked\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultant/availability",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultant", "availability"]
+            },
+            "description": "Update availability slots (mark as booked/unbooked)"
+          },
+          "response": []
+        },
+        {
+          "name": "2.9 Delete Availability Slot",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/consultant/availability/SLOT_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "consultant", "availability", "SLOT_ID"]
+            },
+            "description": "Delete a specific availability slot (only if not booked)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete consultant profile management including availability slots, public pages, and photo uploads"
+    },
+    {
+      "name": "3. Dashboard Analytics",
+      "item": [
+        {
+          "name": "3.1 Dashboard Metrics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/metrics?timeframe=month",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "metrics"],
+              "query": [
+                {
+                  "key": "timeframe",
+                  "value": "month",
+                  "description": "today, week, month, quarter, year, custom"
+                }
+              ]
+            },
+            "description": "Get comprehensive dashboard metrics with configurable timeframe"
+          },
+          "response": []
+        },
+        {
+          "name": "3.2 Dashboard Charts Data",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/charts?timeframe=month",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "charts"],
+              "query": [
+                {
+                  "key": "timeframe",
+                  "value": "month"
+                }
+              ]
+            },
+            "description": "Get chart data for dashboard visualizations (trends, breakdowns, growth)"
+          },
+          "response": []
+        },
+        {
+          "name": "3.3 Recent Activity Feed",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/recent-activity?limit=10",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "recent-activity"],
+              "query": [
+                {
+                  "key": "limit",
+                  "value": "10"
+                }
+              ]
+            },
+            "description": "Get recent activity feed (sessions, quotations, clients)"
+          },
+          "response": []
+        },
+        {
+          "name": "3.4 Dashboard Summary",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/summary",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "summary"]
+            },
+            "description": "Get quick summary stats for dashboard header"
+          },
+          "response": []
+        },
+        {
+          "name": "3.5 Dashboard Overview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/overview",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "overview"]
+            },
+            "description": "Get comprehensive dashboard overview data"
+          },
+          "response": []
+        },
+        {
+          "name": "3.6 Dashboard Stats",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/dashboard/stats",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "dashboard", "stats"]
+            },
+            "description": "Get additional dashboard statistics"
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete dashboard analytics including metrics, charts, activity feeds, and summary statistics"
+    },
+    {
+      "name": "4. Session Management",
+      "item": [
+        {
+          "name": "4.1 Public Session Booking",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Store session ID for later use",
+                  "if (pm.response.code === 201) {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.data && responseJson.data.session) {",
+                  "        pm.environment.set('session_id', responseJson.data.session.id);",
+                  "        pm.environment.set('client_id', responseJson.data.client.id);",
+                  "        console.log('Session booked successfully');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"fullName\": \"John Doe\",\n  \"email\": \"john.doe@example.com\",\n  \"phone\": \"+91-9876543210\",\n  \"sessionType\": \"PERSONAL\",\n  \"selectedDate\": \"2024-01-25\",\n  \"selectedTime\": \"10:00\",\n  \"duration\": 60,\n  \"amount\": 2500,\n  \"clientNotes\": \"Looking for business strategy guidance\",\n  \"consultantSlug\": \"{{consultant_slug}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sessions/book",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sessions", "book"]
+            },
+            "description": "Public endpoint for clients to book sessions (creates client automatically)"
+          },
+          "response": []
+        },
+        {
+          "name": "4.2 List Sessions with Filtering",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sessions?page=1&limit=10&status=PENDING&sessionType=PERSONAL&search=john",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sessions"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "PENDING",
+                  "description": "PENDING, CONFIRMED, COMPLETED, CANCELLED, ABANDONED, NO_SHOW"
+                },
+                {
+                  "key": "sessionType",
+                  "value": "PERSONAL"
+                },
+                {
+                  "key": "search",
+                  "value": "john"
+                }
+              ]
+            },
+            "description": "Get sessions with advanced filtering, pagination, and search"
+          },
+          "response": []
+        },
+        {
+          "name": "4.3 Get Session Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sessions/{{session_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sessions", "{{session_id}}"]
+            },
+            "description": "Get detailed session information including client and payment data"
+          },
+          "response": []
+        },
+        {
+          "name": "4.4 Create Session (Manual)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientId\": \"{{client_id}}\",\n  \"title\": \"Business Strategy Session\",\n  \"sessionType\": \"PERSONAL\",\n  \"scheduledDate\": \"2024-01-30\",\n  \"scheduledTime\": \"14:00\",\n  \"durationMinutes\": 60,\n  \"amount\": 2500,\n  \"platform\": \"TEAMS\",\n  \"notes\": \"Follow-up session for strategy implementation\",\n  \"paymentMethod\": \"online\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sessions",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sessions"]
+            },
+            "description": "Manually create session with existing client (generates Teams meeting link)"
+          },
+          "response": []
+        },
+        {
+          "name": "4.5 Update Session",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"status\": \"CONFIRMED\",\n  \"paymentStatus\": \"PAID\",\n  \"consultantNotes\": \"Payment received, session confirmed\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sessions/{{session_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sessions", "{{session_id}}"]
+            },
+            "description": "Update session details, status, and payment information"
+          },
+          "response": []
+        },
+        {
+          "name": "4.6 Cancel Session",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sessions/{{session_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sessions", "{{session_id}}"]
+            },
+            "description": "Cancel session (marks as cancelled, sends notification emails)"
+          },
+          "response": []
+        },
+        {
+          "name": "4.7 Bulk Update Sessions",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionIds\": [\"session-id-1\", \"session-id-2\"],\n  \"updates\": {\n    \"status\": \"CONFIRMED\",\n    \"consultantNotes\": \"Bulk confirmed sessions\"\n  }\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/sessions/bulk-update",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sessions", "bulk-update"]
+            },
+            "description": "Update multiple sessions at once"
+          },
+          "response": []
+        },
+        {
+          "name": "4.8 Session Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/sessions/analytics?startDate=2024-01-01&endDate=2024-01-31",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "sessions", "analytics"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-31"
+                }
+              ]
+            },
+            "description": "Get session analytics and metrics for specified date range"
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete session lifecycle management including public booking, manual creation, Teams integration, and analytics"
+    },
+    {
+      "name": "5. Client Management",
+      "item": [
+        {
+          "name": "5.1 List Clients with Filtering",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients?page=1&limit=10&isActive=true&city=Mumbai&search=john",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clients"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "isActive",
+                  "value": "true"
+                },
+                {
+                  "key": "city",
+                  "value": "Mumbai"
+                },
+                {
+                  "key": "search",
+                  "value": "john"
+                }
+              ]
+            },
+            "description": "Get clients with advanced filtering, search, and pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "5.2 Get Client Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/{{client_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clients", "{{client_id}}"]
+            },
+            "description": "Get detailed client information with session history and insights"
+          },
+          "response": []
+        },
+        {
+          "name": "5.3 Create Client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Smith\",\n  \"email\": \"jane.smith@example.com\",\n  \"phoneCountryCode\": \"+91\",\n  \"phoneNumber\": \"9876543210\",\n  \"address\": \"123 Business Street\",\n  \"city\": \"Mumbai\",\n  \"state\": \"Maharashtra\",\n  \"country\": \"India\",\n  \"notes\": \"Interested in business expansion strategies\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clients"]
+            },
+            "description": "Create new client manually (sends welcome email)"
+          },
+          "response": []
+        },
+        {
+          "name": "5.4 Update Client",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"Jane Smith Updated\",\n  \"phoneNumber\": \"9876543211\",\n  \"city\": \"Delhi\",\n  \"notes\": \"Updated client information\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/{{client_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clients", "{{client_id}}"]
+            },
+            "description": "Update client information"
+          },
+          "response": []
+        },
+        {
+          "name": "5.5 Deactivate Client",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/{{client_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clients", "{{client_id}}"]
+            },
+            "description": "Deactivate client (soft delete - only if no active sessions)"
+          },
+          "response": []
+        },
+        {
+          "name": "5.6 Bulk Import Clients",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clients\": [\n    {\n      \"name\": \"Client One\",\n      \"email\": \"client1@example.com\",\n      \"phoneNumber\": \"9876543210\",\n      \"city\": \"Mumbai\",\n      \"state\": \"Maharashtra\"\n    },\n    {\n      \"name\": \"Client Two\",\n      \"email\": \"client2@example.com\",\n      \"phoneNumber\": \"9876543211\",\n      \"city\": \"Delhi\",\n      \"state\": \"Delhi\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/import",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clients", "import"]
+            },
+            "description": "Bulk import multiple clients (max 100 per request)"
+          },
+          "response": []
+        },
+        {
+          "name": "5.7 Export Clients to CSV",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/export?isActive=true&city=Mumbai",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clients", "export"],
+              "query": [
+                {
+                  "key": "isActive",
+                  "value": "true"
+                },
+                {
+                  "key": "city",
+                  "value": "Mumbai"
+                }
+              ]
+            },
+            "description": "Export clients to CSV with optional filtering"
+          },
+          "response": []
+        },
+        {
+          "name": "5.8 Client Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/clients/analytics?startDate=2024-01-01&endDate=2024-01-31",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "clients", "analytics"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-31"
+                }
+              ]
+            },
+            "description": "Get comprehensive client analytics and insights"
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete client management system with CRUD operations, import/export, and analytics"
+    },
+    {
+      "name": "6. Quotation System",
+      "item": [
+        {
+          "name": "6.1 List Quotations with Filtering",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/quotations?page=1&limit=10&status=SENT&search=business",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "quotations"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "SENT",
+                  "description": "DRAFT, SENT, VIEWED, ACCEPTED, REJECTED, EXPIRED"
+                },
+                {
+                  "key": "search",
+                  "value": "business"
+                }
+              ]
+            },
+            "description": "Get quotations with filtering, search, and pagination"
+          },
+          "response": []
+        },
+        {
+          "name": "6.2 Get Quotation Details",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/quotations/QUOTATION_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "quotations", "QUOTATION_ID"]
+            },
+            "description": "Get detailed quotation information"
+          },
+          "response": []
+        },
+        {
+          "name": "6.3 Create Quotation",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "// Store quotation ID for sharing",
+                  "if (pm.response.code === 201) {",
+                  "    const responseJson = pm.response.json();",
+                  "    if (responseJson.data && responseJson.data.quotation) {",
+                  "        pm.environment.set('quotation_id', responseJson.data.quotation.id);",
+                  "        console.log('Quotation created successfully');",
+                  "    }",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"clientEmail\": \"john.doe@example.com\",\n  \"clientName\": \"John Doe\",\n  \"quotationName\": \"Business Strategy Consulting Package\",\n  \"description\": \"Comprehensive business strategy consultation including market analysis, competitive positioning, and growth roadmap development.\",\n  \"baseAmount\": 50000,\n  \"discountPercentage\": 10,\n  \"currency\": \"INR\",\n  \"expiryDays\": 30,\n  \"notes\": \"This quotation includes 3 months of follow-up support\",\n  \"includeImage\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/quotations",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "quotations"]
+            },
+            "description": "Create new quotation with pricing and client details"
+          },
+          "response": []
+        },
+        {
+          "name": "6.4 Update Quotation",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"quotationName\": \"Updated Business Strategy Package\",\n  \"baseAmount\": 45000,\n  \"discountPercentage\": 15,\n  \"notes\": \"Updated pricing with additional discount\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/quotations/{{quotation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "quotations", "{{quotation_id}}"]
+            },
+            "description": "Update quotation details (only if not accepted/rejected)"
+          },
+          "response": []
+        },
+        {
+          "name": "6.5 Send Quotation to Client",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"emailMessage\": \"Please find the attached business strategy quotation. I look forward to working with you on this exciting project.\",\n  \"includeAttachment\": true\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/quotations/{{quotation_id}}/send",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "quotations", "{{quotation_id}}", "send"]
+            },
+            "description": "Send quotation to client via email (critical business feature)"
+          },
+          "response": []
+        },
+        {
+          "name": "6.6 Delete Quotation",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/quotations/{{quotation_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "quotations", "{{quotation_id}}"]
+            },
+            "description": "Delete quotation (only draft quotations can be deleted)"
+          },
+          "response": []
+        },
+        {
+          "name": "6.7 Quotation Analytics",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/quotations/analytics?startDate=2024-01-01&endDate=2024-01-31",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "quotations", "analytics"],
+              "query": [
+                {
+                  "key": "startDate",
+                  "value": "2024-01-01"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-31"
+                }
+              ]
+            },
+            "description": "Get quotation analytics including conversion rates and value analysis"
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete quotation lifecycle management with email sharing, analytics, and client interaction tracking"
+    },
+    {
+      "name": "7. Admin Operations",
+      "item": [
+        {
+          "name": "7.1 Get All Consultants",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/consultants?page=1&limit=10&status=pending&search=consultant",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "consultants"],
+              "query": [
+                {
+                  "key": "page",
+                  "value": "1"
+                },
+                {
+                  "key": "limit",
+                  "value": "10"
+                },
+                {
+                  "key": "status",
+                  "value": "pending",
+                  "description": "pending, approved, rejected, all"
+                },
+                {
+                  "key": "search",
+                  "value": "consultant"
+                }
+              ]
+            },
+            "description": "Get all consultants for admin approval workflow"
+          },
+          "response": []
+        },
+        {
+          "name": "7.2 Get Consultant Details (Admin)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/consultants/{{consultant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "consultants", "{{consultant_id}}"]
+            },
+            "description": "Get detailed consultant information for admin review"
+          },
+          "response": []
+        },
+        {
+          "name": "7.3 Approve/Reject Consultant (CRITICAL)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"consultantId\": \"{{consultant_id}}\",\n  \"action\": \"approve\",\n  \"reason\": \"Verified credentials and experience. Approved for platform access.\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/consultants/approve",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "consultants", "approve"]
+            },
+            "description": "🚨 CRITICAL: Core admin approval workflow - approve or reject consultant applications"
+          },
+          "response": []
+        },
+        {
+          "name": "7.4 Update Consultant (Admin)",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"firstName\": \"Updated\",\n  \"lastName\": \"Consultant\",\n  \"isActive\": true,\n  \"adminNotes\": \"Profile updated by admin\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/consultants/{{consultant_id}}",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "consultants", "{{consultant_id}}"]
+            },
+            "description": "Update consultant information as admin"
+          },
+          "response": []
+        },
+        {
+          "name": "7.5 Create Admin (Super Admin Only)",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"name\": \"New Admin\",\n  \"email\": \"new.admin@naksha.com\",\n  \"password\": \"AdminPassword123!\",\n  \"role\": \"ADMIN\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/admins",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "admins"]
+            },
+            "description": "Create new admin account (Super Admin access required)"
+          },
+          "response": []
+        },
+        {
+          "name": "7.6 Get All Admins (Super Admin Only)",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/admins",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "admins"]
+            },
+            "description": "Get all admin accounts (Super Admin access required)"
+          },
+          "response": []
+        },
+        {
+          "name": "7.7 Admin Dashboard Overview",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/dashboard",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "dashboard"]
+            },
+            "description": "Get admin dashboard with platform-wide metrics and consultant status"
+          },
+          "response": []
+        },
+        {
+          "name": "7.8 System Health Check",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{admin_access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/admin/system/health",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "admin", "system", "health"]
+            },
+            "description": "Check system health status (database, Redis, email, storage)"
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete admin operations including consultant approval workflow, admin management, and system monitoring"
+    },
+    {
+      "name": "8. Availability Management",
+      "item": [
+        {
+          "name": "8.1 Get Weekly Patterns",
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/availability/patterns",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "availability", "patterns"]
+            },
+            "description": "Get all weekly availability patterns for consultant"
+          },
+          "response": []
+        },
+        {
+          "name": "8.2 Create Weekly Pattern",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"sessionType\": \"PERSONAL\",\n  \"dayOfWeek\": 1,\n  \"startTime\": \"10:00\",\n  \"endTime\": \"11:00\",\n  \"isActive\": true,\n  \"timezone\": \"Asia/Kolkata\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/availability/patterns",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "availability", "patterns"]
+            },
+            "description": "Create new weekly availability pattern (0=Sunday, 6=Saturday)"
+          },
+          "response": []
+        },
+        {
+          "name": "8.3 Update Weekly Pattern",
+          "request": {
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startTime\": \"09:00\",\n  \"endTime\": \"10:00\",\n  \"isActive\": false\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/availability/patterns/PATTERN_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "availability", "patterns", "PATTERN_ID"]
+            },
+            "description": "Update existing weekly availability pattern"
+          },
+          "response": []
+        },
+        {
+          "name": "8.4 Delete Weekly Pattern",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/availability/patterns/PATTERN_ID",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "availability", "patterns", "PATTERN_ID"]
+            },
+            "description": "Delete weekly availability pattern"
+          },
+          "response": []
+        },
+        {
+          "name": "8.5 Bulk Update Patterns",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"patterns\": [\n    {\n      \"sessionType\": \"PERSONAL\",\n      \"dayOfWeek\": 1,\n      \"startTime\": \"10:00\",\n      \"endTime\": \"11:00\",\n      \"isActive\": true,\n      \"timezone\": \"Asia/Kolkata\"\n    },\n    {\n      \"sessionType\": \"PERSONAL\",\n      \"dayOfWeek\": 3,\n      \"startTime\": \"14:00\",\n      \"endTime\": \"15:00\",\n      \"isActive\": true,\n      \"timezone\": \"Asia/Kolkata\"\n    }\n  ]\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/availability/patterns/bulk",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "availability", "patterns", "bulk"]
+            },
+            "description": "Replace all patterns with new set (bulk operation)"
+          },
+          "response": []
+        },
+        {
+          "name": "8.6 Generate Availability Slots",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"startDate\": \"2024-01-15\",\n  \"endDate\": \"2024-02-15\",\n  \"sessionType\": \"PERSONAL\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/availability/generate-slots",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "availability", "generate-slots"]
+            },
+            "description": "Generate availability slots from weekly patterns for date range (max 90 days)"
+          },
+          "response": []
+        },
+        {
+          "name": "8.7 Get Available Slots (Public)",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/v1/availability/slots/{{consultant_slug}}?sessionType=PERSONAL&startDate=2024-01-15&endDate=2024-01-30&limit=50",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "availability", "slots", "{{consultant_slug}}"],
+              "query": [
+                {
+                  "key": "sessionType",
+                  "value": "PERSONAL"
+                },
+                {
+                  "key": "startDate",
+                  "value": "2024-01-15"
+                },
+                {
+                  "key": "endDate",
+                  "value": "2024-01-30"
+                },
+                {
+                  "key": "limit",
+                  "value": "50"
+                }
+              ]
+            },
+            "description": "Public endpoint: Get available slots for booking by consultant slug"
+          },
+          "response": []
+        }
+      ],
+      "description": "Complete availability management including weekly patterns, slot generation, and public slot lookup for booking"
+    },
+    {
+      "name": "9. Teams Integration",
+      "item": [
+        {
+          "name": "9.1 Teams Integration Status",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('Response has Teams status data', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.data).to.have.property('isConnected');",
+                  "    pm.expect(responseJson.data).to.have.property('isExpired');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/teams/status",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teams", "status"]
+            },
+            "description": "Check Microsoft Teams integration status for consultant"
+          },
+          "response": []
+        },
+        {
+          "name": "9.2 Generate Teams OAuth URL",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "pm.test('Response status code is 200', function () {",
+                  "    pm.expect(pm.response.code).to.equal(200);",
+                  "});",
+                  "",
+                  "pm.test('OAuth URL is generated', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.data).to.have.property('oauthUrl');",
+                  "    pm.expect(responseJson.data.oauthUrl).to.include('login.microsoftonline.com');",
+                  "    pm.expect(responseJson.data.oauthUrl).to.include('client_id');",
+                  "    pm.expect(responseJson.data.oauthUrl).to.include('redirect_uri');",
+                  "    ",
+                  "    // Store OAuth URL for manual testing",
+                  "    pm.environment.set('teams_oauth_url', responseJson.data.oauthUrl);",
+                  "});",
+                  "",
+                  "pm.test('Debug information is present', function () {",
+                  "    const responseJson = pm.response.json();",
+                  "    pm.expect(responseJson.data).to.have.property('debug');",
+                  "    pm.expect(responseJson.data.debug).to.have.property('consultantId');",
+                  "    pm.expect(responseJson.data.debug).to.have.property('redirectUri');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/teams/oauth-url",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teams", "oauth-url"]
+            },
+            "description": "🚨 Generate Microsoft OAuth URL for Teams integration (was failing before fix)"
+          },
+          "response": []
+        },
+        {
+          "name": "9.3 Teams OAuth Callback",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              },
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"code\": \"REAL_OAUTH_CODE_FROM_MICROSOFT\",\n  \"redirectUri\": \"http://localhost:3000/auth/teams/callback\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}/api/v1/teams/oauth-callback",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teams", "oauth-callback"]
+            },
+            "description": "Handle Microsoft OAuth callback (requires real OAuth code from Microsoft flow)"
+          },
+          "response": []
+        },
+        {
+          "name": "9.4 Refresh Teams Token",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/teams/refresh-token",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teams", "refresh-token"]
+            },
+            "description": "Refresh expired Teams access token using stored refresh token"
+          },
+          "response": []
+        },
+        {
+          "name": "9.5 Disconnect Teams Integration",
+          "request": {
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Authorization",
+                "value": "Bearer {{access_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}/api/v1/teams/disconnect",
+              "host": ["{{base_url}}"],
+              "path": ["api", "v1", "teams", "disconnect"]
+            },
+            "description": "Disconnect Teams integration and remove stored tokens"
+          },
+          "response": []
+        }
+      ],
+      "description": "Microsoft Teams integration for automatic meeting generation with OAuth flow and token management"
+    },
+    {
+      "name": "10. Health & Debugging",
+      "item": [
+        {
+          "name": "10.1 API Health Check",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/health",
+              "host": ["{{base_url}}"],
+              "path": ["health"]
+            },
+            "description": "Check API server health, uptime, and system status"
+          },
+          "response": []
+        },
+        {
+          "name": "10.2 API Information",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api",
+              "host": ["{{base_url}}"],
+              "path": ["api"]
+            },
+            "description": "Get API information, version, and available endpoints"
+          },
+          "response": []
+        },
+        {
+          "name": "10.3 API Documentation",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/api/docs",
+              "host": ["{{base_url}}"],
+              "path": ["api", "docs"]
+            },
+            "description": "Get comprehensive API documentation (development environment only)"
+          },
+          "response": []
+        }
+      ],
+      "description": "System health monitoring, API information, and debugging endpoints"
+    }
+  ]
+}

@@ -35,18 +35,10 @@ export const TeamsIntegration: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/v1/teams/status', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch Teams integration status');
-      }
-
-      const data = await response.json();
-      setStatus(data.data);
+      // Use the API client from lib/api.ts instead of direct fetch
+      const { teamsApi } = await import('@/lib/api');
+      const statusData = await teamsApi.getStatus();
+      setStatus(statusData);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to fetch status';
       setError(errorMessage);
@@ -62,19 +54,9 @@ export const TeamsIntegration: React.FC = () => {
       setIsConnecting(true);
       setError(null);
 
-      // Get OAuth URL
-      const response = await fetch('/api/v1/teams/oauth-url', {
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to generate OAuth URL');
-      }
-
-      const data = await response.json();
-      const oauthUrl = data.data.oauthUrl;
+      // Get OAuth URL using API client
+      const { teamsApi } = await import('@/lib/api');
+      const { oauthUrl } = await teamsApi.getOAuthUrl();
 
       // Open OAuth popup
       const popup = window.open(
@@ -141,16 +123,9 @@ export const TeamsIntegration: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/v1/teams/disconnect', {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to disconnect Teams integration');
-      }
+      // Use API client for disconnect
+      const { teamsApi } = await import('@/lib/api');
+      await teamsApi.disconnect();
 
       toast.success('Microsoft Teams disconnected successfully');
       fetchStatus();
@@ -169,16 +144,9 @@ export const TeamsIntegration: React.FC = () => {
       setIsLoading(true);
       setError(null);
 
-      const response = await fetch('/api/v1/teams/refresh-token', {
-        method: 'POST',
-        headers: {
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to refresh Teams token');
-      }
+      // Use API client for token refresh
+      const { teamsApi } = await import('@/lib/api');
+      await teamsApi.refreshToken();
 
       toast.success('Teams token refreshed successfully');
       fetchStatus();
