@@ -8,7 +8,7 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import { getPrismaClient } from '../../config/database';
-import { AuthenticatedRequest } from '../../middleware/auth';
+import { AuthenticatedRequest, authenticateConsultantBasic } from '../../middleware/auth';
 import { validateRequest } from '../../middleware/validation';
 import { AppError, NotFoundError } from '../../middleware/errorHandler';
 import { generateOAuthURL } from '../../services/meetingService';
@@ -29,6 +29,7 @@ const exchangeCodeSchema = z.object({
  * Generate Microsoft OAuth URL for Teams integration
  */
 router.get('/oauth-url',
+  authenticateConsultantBasic,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const consultantId = req.user!.id;
@@ -89,6 +90,7 @@ router.get('/oauth-url',
  * Handle Microsoft OAuth callback and exchange code for tokens
  */
 router.post('/oauth-callback',
+  authenticateConsultantBasic,
   validateRequest(exchangeCodeSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
@@ -208,6 +210,7 @@ router.post('/oauth-callback',
  * Check Teams integration status for consultant
  */
 router.get('/status',
+  authenticateConsultantBasic,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const consultantId = req.user!.id;
@@ -258,6 +261,7 @@ router.get('/status',
  * Disconnect Teams integration for consultant
  */
 router.delete('/disconnect',
+  authenticateConsultantBasic,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const consultantId = req.user!.id;
@@ -297,6 +301,7 @@ router.delete('/disconnect',
  * Refresh expired Teams access token
  */
 router.post('/refresh-token',
+  authenticateConsultantBasic,
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
     try {
       const consultantId = req.user!.id;

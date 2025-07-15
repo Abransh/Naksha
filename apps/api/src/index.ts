@@ -226,7 +226,7 @@ class App {
     this.app.use('/api/v1/sessions', authenticateConsultant, sessionRoutes);
     this.app.use('/api/v1/clients', authenticateConsultant, clientRoutes);
     this.app.use('/api/v1/quotations', authenticateConsultant, quotationRoutes);
-    this.app.use('/api/v1/teams', authenticateConsultant, teamsRoutes);
+    this.app.use('/api/v1/teams', teamsRoutes);
     this.app.use('/api/v1/availability', availabilityRoutes);
 
     // Admin routes (admin authentication required)
