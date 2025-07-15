@@ -9,3 +9,5 @@ read CLAUDE.md and /docs, you have to ULTRATHINK and be CTO of a startup for whi
 │   inside lib folder so that you make a dynamic mail with input variable as to take from database which consultant types inside modal,   │
 │   and we have upload image part, remove it from modal, and email too, understand the logic of website, make an efficient and well       │
 │   commented code with at last updating CLAUDE.md and making a .md file inside /docs     
+
+lmao
