@@ -36,6 +36,15 @@ const TeamsCallbackHandler = () => {
           origin: window.location.origin
         });
 
+        // Environment validation and debugging
+        const apiUrl = process.env.NEXT_PUBLIC_API_URL;
+        console.log('Environment Configuration:', {
+          apiUrl,
+          isProduction: process.env.NODE_ENV === 'production',
+          currentDomain: window.location.hostname,
+          expectedApiDomain: apiUrl ? new URL(apiUrl).hostname : 'unknown'
+        });
+
         // Handle OAuth error
         if (error) {
           setStatus('error');
@@ -89,52 +98,31 @@ const TeamsCallbackHandler = () => {
           return;
         }
 
-        const response = await fetch('/api/v1/teams/oauth-callback', {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            'Authorization': `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            code,
-            redirectUri: window.location.origin + '/auth/teams/callback',
-          }),
-        });
-
-        if (!response.ok) {
-          const errorData = await response.json();
-          console.error('Teams OAuth API Error:', {
-            status: response.status,
-            statusText: response.statusText,
-            errorData,
-            url: response.url
-          });
-          
-          // Provide more specific error messages
-          let errorMessage = 'Failed to complete OAuth flow';
-          if (response.status === 401) {
-            errorMessage = 'Authentication expired. Please login again and try connecting Teams.';
-          } else if (response.status === 400) {
-            errorMessage = errorData.message || errorData.error?.message || 'Invalid OAuth request. Please try again.';
-          } else if (response.status >= 500) {
-            errorMessage = 'Server error. Please try again later or contact support.';
-          } else {
-            errorMessage = errorData.message || errorData.error?.message || errorMessage;
-          }
-          
-          throw new Error(errorMessage);
+        // Validate API URL configuration
+        if (!apiUrl) {
+          throw new Error('API URL not configured. Please check environment variables.');
         }
 
-        const data = await response.json();
+        // Use the API client to ensure correct domain resolution
+        const { consultantApi } = await import('../../../lib/api');
+        
+        console.log('Making API call to complete OAuth...');
+        
+        const data = await consultantApi.teams.completeOAuth(
+          code,
+          window.location.origin + '/auth/teams/callback'
+        );
+        
+        console.log('OAuth completion successful:', data);
         
         setStatus('success');
         setMessage('Microsoft Teams integration connected successfully!');
-        setUserInfo(data.data);
+        setUserInfo(data);
 
         // Notify parent window
         window.parent.postMessage({
           type: 'TEAMS_OAUTH_SUCCESS',
-          data: data.data
+          data: data
         }, window.location.origin);
 
         // Close popup after short delay
@@ -144,7 +132,37 @@ const TeamsCallbackHandler = () => {
 
       } catch (err) {
         console.error('Teams OAuth callback error:', err);
-        const errorMessage = err instanceof Error ? err.message : 'Failed to complete OAuth flow';
+        
+        // Enhanced error handling for different error types
+        let errorMessage = 'Failed to complete OAuth flow';
+        
+        if (err instanceof Error) {
+          errorMessage = err.message;
+          
+          // Check for specific API client errors
+          if (err.message.includes('Failed to connect to server')) {
+            errorMessage = 'Unable to connect to the server. Please check your internet connection and try again.';
+          } else if (err.message.includes('API URL not configured')) {
+            errorMessage = 'Configuration error: API URL not properly set. Please contact support.';
+          } else if (err.message.includes('NetworkError') || err.message.includes('CORS')) {
+            errorMessage = 'Network error: Cross-origin request failed. Please ensure the API server is running and accessible.';
+          } else if (err.message.includes('401')) {
+            errorMessage = 'Authentication expired. Please login again and try connecting Teams.';
+          } else if (err.message.includes('403')) {
+            errorMessage = 'Access denied. Your account may not have permission to connect Teams.';
+          } else if (err.message.includes('500')) {
+            errorMessage = 'Server error. Please try again later or contact support.';
+          }
+        }
+        
+        // Log detailed error information for debugging
+        console.error('Detailed error information:', {
+          originalError: err,
+          errorMessage,
+          stack: err instanceof Error ? err.stack : undefined,
+          apiUrl: process.env.NEXT_PUBLIC_API_URL,
+          currentUrl: window.location.href
+        });
         
         setStatus('error');
         setMessage(errorMessage);
