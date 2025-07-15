@@ -104,7 +104,7 @@ const TeamsCallbackHandler = () => {
         }
 
         // Use the API client to ensure correct domain resolution
-        const { consultantApi } = await import('../../../lib/api');
+        const { consultantApi } = await import('../../../../lib/api');
         
         console.log('Making API call to complete OAuth...');
         
