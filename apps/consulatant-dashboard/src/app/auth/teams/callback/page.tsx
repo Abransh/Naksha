@@ -26,6 +26,16 @@ const TeamsCallbackHandler = () => {
         const error = searchParams.get('error');
         const errorDescription = searchParams.get('error_description');
 
+        // Debug logging for OAuth parameters
+        console.log('Teams OAuth Callback Parameters:', {
+          hasCode: !!code,
+          hasState: !!state,
+          hasError: !!error,
+          errorDescription,
+          currentUrl: window.location.href,
+          origin: window.location.origin
+        });
+
         // Handle OAuth error
         if (error) {
           setStatus('error');
@@ -53,15 +63,28 @@ const TeamsCallbackHandler = () => {
         }
 
         // Exchange code for tokens
-        const token = localStorage.getItem('token');
+        const token = localStorage.getItem('accessToken');
+        
+        // Debug token availability
+        console.log('Token Validation:', {
+          hasAccessToken: !!token,
+          tokenLength: token?.length,
+          localStorageKeys: Object.keys(localStorage),
+          hasAlternativeTokens: {
+            token: !!localStorage.getItem('token'),
+            authToken: !!localStorage.getItem('authToken'),
+            jwt: !!localStorage.getItem('jwt')
+          }
+        });
+        
         if (!token) {
           setStatus('error');
-          setMessage('Authentication token not found');
+          setMessage('Authentication token not found. Please login again and try connecting Teams.');
           
           // Notify parent window
           window.parent.postMessage({
             type: 'TEAMS_OAUTH_ERROR',
-            error: 'Authentication token not found'
+            error: 'Authentication token not found. Please login again and try connecting Teams.'
           }, window.location.origin);
           return;
         }
@@ -80,7 +103,26 @@ const TeamsCallbackHandler = () => {
 
         if (!response.ok) {
           const errorData = await response.json();
-          throw new Error(errorData.error?.message || 'Failed to complete OAuth flow');
+          console.error('Teams OAuth API Error:', {
+            status: response.status,
+            statusText: response.statusText,
+            errorData,
+            url: response.url
+          });
+          
+          // Provide more specific error messages
+          let errorMessage = 'Failed to complete OAuth flow';
+          if (response.status === 401) {
+            errorMessage = 'Authentication expired. Please login again and try connecting Teams.';
+          } else if (response.status === 400) {
+            errorMessage = errorData.message || errorData.error?.message || 'Invalid OAuth request. Please try again.';
+          } else if (response.status >= 500) {
+            errorMessage = 'Server error. Please try again later or contact support.';
+          } else {
+            errorMessage = errorData.message || errorData.error?.message || errorMessage;
+          }
+          
+          throw new Error(errorMessage);
         }
 
         const data = await response.json();
