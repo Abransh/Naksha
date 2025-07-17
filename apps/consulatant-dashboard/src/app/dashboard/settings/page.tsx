@@ -148,7 +148,7 @@ export default function SettingsPage() {
                   <span className="text-sm text-[var(--black-100)] font-inter">
                     {profile ? `${profile.firstName} ${profile.lastName}` : 'Loading...'}
                   </span>
-                  <ChevronDown size={14} className="text-[var(--black-100)]" />
+                 
                 </div>
                
                 <img
