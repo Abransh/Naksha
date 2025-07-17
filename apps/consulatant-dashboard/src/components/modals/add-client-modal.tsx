@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
   Dialog,
   DialogContent,
@@ -34,9 +34,36 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
     sameAsBillingAddress: false,
   });
 
+  const [isStateDropdownOpen, setIsStateDropdownOpen] = useState(false);
+  const stateDropdownRef = useRef<HTMLDivElement>(null);
+
+  const indianStates = [
+    "Andhra Pradesh", "Arunachal Pradesh", "Assam", "Bihar", "Chhattisgarh", "Goa", "Gujarat",
+    "Haryana", "Himachal Pradesh", "Jharkhand", "Karnataka", "Kerala", "Madhya Pradesh",
+    "Maharashtra", "Manipur", "Meghalaya", "Mizoram", "Nagaland", "Odisha", "Punjab",
+    "Rajasthan", "Sikkim", "Tamil Nadu", "Telangana", "Tripura", "Uttar Pradesh",
+    "Uttarakhand", "West Bengal", "Andaman and Nicobar Islands", "Chandigarh",
+    "Dadra and Nagar Haveli and Daman and Diu", "Delhi", "Jammu and Kashmir", "Ladakh",
+    "Lakshadweep", "Puducherry"
+  ];
+
   const [isOpen, setIsOpen] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (stateDropdownRef.current && !stateDropdownRef.current.contains(event.target as Node)) {
+        setIsStateDropdownOpen(false);
+      }
+    };
+
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => {
+      document.removeEventListener("mousedown", handleClickOutside);
+    };
+  }, []);
 
   const handleInputChange = (field: string, value: string | boolean) => {
     setFormData((prev) => ({
@@ -357,27 +384,56 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                     </div>
 
                     {/* State */}
-                    <div className="flex-1 h-[52px] bg-[var(--input-defaultBackground)] rounded-lg px-4 flex items-center justify-between">
-                      <span
-                        className="text-base text-[var(--black-2)]"
-                        style={{ fontFamily: "Inter, sans-serif" }}
+                    <div className="flex-1 relative" ref={stateDropdownRef}>
+                      <button
+                        type="button"
+                        onClick={() => setIsStateDropdownOpen(!isStateDropdownOpen)}
+                        className="w-full h-[52px] bg-[var(--input-defaultBackground)] rounded-lg px-4 flex items-center justify-between text-left"
                       >
-                        State
-                      </span>
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <path
-                          d="M6 9L12 15L18 9"
-                          stroke="#5E6366"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                        <span
+                          className="text-base text-[var(--black-2)]"
+                          style={{ fontFamily: "Inter, sans-serif" }}
+                        >
+                          {formData.state || "State"}
+                        </span>
+                        <svg
+                          width="24"
+                          height="24"
+                          viewBox="0 0 24 24"
+                          fill="none"
+                          style={{
+                            transform: isStateDropdownOpen ? "rotate(180deg)" : "rotate(0deg)",
+                            transition: "transform 0.2s ease-in-out",
+                          }}
+                        >
+                          <path
+                            d="M6 9L12 15L18 9"
+                            stroke="#5E6366"
+                            strokeWidth="2"
+                            strokeLinecap="round"
+                            strokeLinejoin="round"
+                          />
+                        </svg>
+                      </button>
+                      
+                      {isStateDropdownOpen && (
+                        <div className="absolute top-full left-0 right-0 z-50 mt-1 bg-white border border-gray-200 rounded-lg shadow-lg max-h-48 overflow-y-auto">
+                          {indianStates.map((state) => (
+                            <button
+                              key={state}
+                              type="button"
+                              onClick={() => {
+                                handleInputChange("state", state);
+                                setIsStateDropdownOpen(false);
+                              }}
+                              className="w-full px-4 py-2 text-left hover:bg-gray-50 text-sm text-gray-700 first:rounded-t-lg last:rounded-b-lg"
+                              style={{ fontFamily: "Inter, sans-serif" }}
+                            >
+                              {state}
+                            </button>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
 
