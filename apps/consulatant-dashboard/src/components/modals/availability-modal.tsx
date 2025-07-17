@@ -261,7 +261,7 @@ export function AvailabilityModal({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+      <DialogContent className="max-w-4xl max-h-[90vh] bg-white overflow-y-auto">
         <DialogHeader>
           <div className="flex items-center justify-between">
             <DialogTitle className="text-xl text-white font-semibold text-[var(--black-60)]">
@@ -280,7 +280,7 @@ export function AvailabilityModal({
 
         <div className="space-y-6">
           {/* Session Type Selector */}
-          <div className="flex items-center gap-4">
+          <div className="flex text-black items-center gap-4">
             <label className="text-sm font-medium text-[var(--black-60)]">
               Session Type:
             </label>
@@ -411,9 +411,9 @@ export function AvailabilityModal({
           </div>
 
           {/* Action Buttons */}
-          <div className="flex justify-end gap-3 pt-4 border-t">
+          <div className="flex text-red-600 justify-end gap-3 pt-4 border-t">
             <Button
-              variant="outline"
+              variant="destructive"
               onClick={handleClose}
               disabled={isLoading}
             >

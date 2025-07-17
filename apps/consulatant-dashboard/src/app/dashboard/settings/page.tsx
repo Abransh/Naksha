@@ -152,7 +152,7 @@ export default function SettingsPage() {
                 </div>
                
                 <img
-                  src="https://cdn.builder.io/api/v1/image/assets/TEMP/b46ae8e430c0e00c43a867420ccb2a521eda6c8b?width=64"
+                  src="{profile ? `${profile.profilePhotoUrl}`"
                   alt="Profile"
                   className="w-8 h-8 rounded-lg"
                 />
@@ -492,9 +492,9 @@ export default function SettingsPage() {
                     {/* Pricing */}
                     <div className="flex flex-col gap-2">
                       <label className="text-xs text-[var(--black-4)] font-inter px-1">
-                        Price for your Personal Session and Webinar
+                        Price for your Personal Session
                       </label>
-                      <div className="flex gap-1.5">
+                      <div className="flex-col gap-1.5">
                         <Input
                           placeholder="₹200"
                           type="number"
@@ -504,6 +504,9 @@ export default function SettingsPage() {
                           }
                           className="w-[142px] h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base text-[var(--black-4)] font-inter"
                         />
+                        <label className="text-xs text-[var(--black-4)] font-inter px-1">
+                        Price for your Webinar
+                      </label>
                         <Input
                           placeholder="₹150"
                           type="number"
