@@ -62,7 +62,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
       icon: ShoppingBag,
       label: "Sessions",
       href: "/dashboard/sessions",
-      badge: 3,
+    
     },
     {
       id: "clients",
