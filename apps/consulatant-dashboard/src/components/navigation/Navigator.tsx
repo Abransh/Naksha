@@ -118,13 +118,13 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
       <div className={`p-4 ${isExpanded ? "p-8" : "p-4"} transition-all duration-300`}>
         {isExpanded ? (
           <img
-            src="https://cdn.builder.io/api/v1/image/assets%2Ff8a06de2181a491da294e9d2e5f35408%2F9cb11a3e7881422da58cb120ef3645b2?format=webp&width=800"
+            src="/assets/NakkshaBigLogo.svg"
             alt="Logo"
             className="w-[179px] h-[74px] rounded-lg"
           />
         ) : (
           <img
-            src="https://cdn.builder.io/api/v1/image/assets%2Ff8a06de2181a491da294e9d2e5f35408%2F9cb11a3e7881422da58cb120ef3645b2?format=webp&width=800"
+            src="/assets/nakksha-small.png"
             alt="Logo"
             className="w-14 h-14 rounded-lg"
           />
