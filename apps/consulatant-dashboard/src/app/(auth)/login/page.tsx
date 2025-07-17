@@ -73,9 +73,13 @@ export default function LoginPage() {
     <>
       {/* Top Logo */}
       <div className="fixed top-0 left-0 w-full h-[76px] bg-white flex items-center px-[42px]">
-        <div className="w-[56px] h-[56px] bg-gray-200 rounded-lg flex items-center justify-center">
-          <BarChart3 size={32} className="text-[var(--primary-100)]" />
-        </div>
+      <div className="p-8">
+              <img
+                src="/assets/NakkshaBigLogo.svg"
+                alt="Logo"
+                className="w-[179px] h-[74px] rounded-lg"
+              />
+            </div>
       </div>
 
       {/* Main Container */}
@@ -84,15 +88,12 @@ export default function LoginPage() {
           {/* Header Section */}
           <div className="flex flex-col items-center gap-[30px]">
             {/* Icon */}
-            <div className="w-[60px] h-[60px] bg-gray-100 rounded-lg flex items-center justify-center">
-              <BarChart3 size={32} className="text-[var(--primary-100)]" />
-            </div>
-
-            {/* Company Logo Placeholder */}
-            <div className="w-[179px] h-[74px] bg-gray-200 rounded-lg flex items-center justify-center">
-              <span className="text-sm text-gray-500 font-poppins">
-                Company Logo
-              </span>
+            <div className="p-8">
+              <img
+                src="/assets/NakkshaBigLogo.svg"
+                alt="Logo"
+                className="w-[179px] h-[74px] rounded-lg"
+              />
             </div>
 
             {/* Intro Content */}
