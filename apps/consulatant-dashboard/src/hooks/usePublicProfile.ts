@@ -46,6 +46,10 @@ export const usePublicProfile = (
       setError(null);
 
       const profileData = await consultantApi.getPublicProfile(slug);
+      console.log('🔍 Public Profile Data:', profileData);
+      console.log('🔍 Consultant Data:', profileData.consultant);
+      console.log('🔍 Personal Session Description:', profileData.consultant?.personalSessionDescription);
+      console.log('🔍 Webinar Session Description:', profileData.consultant?.webinarSessionDescription);
       setProfile(profileData);
       setLastUpdated(new Date());
     } catch (err) {
@@ -185,6 +189,13 @@ export const useConsultantShowcase = (slug: string) => {
     personalSessionDescription: profile.consultant.personalSessionDescription,
     webinarSessionDescription: profile.consultant.webinarSessionDescription,
   } : null;
+
+  // Debug logging for summary
+  if (summary) {
+    console.log('🔍 Summary Created:', summary);
+    console.log('🔍 Summary Personal Session Description:', summary.personalSessionDescription);
+    console.log('🔍 Summary Webinar Session Description:', summary.webinarSessionDescription);
+  }
 
   return {
     profile,

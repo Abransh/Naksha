@@ -48,17 +48,23 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
     refetch,
   } = useConsultantShowcase(consultantSlug || '');
 
+  // Debug logging
+  console.log('🔍 Page Component - Summary:', summary);
+  console.log('🔍 Page Component - Services:', services);
+  console.log('🔍 Page Component - Personal Session Description:', summary?.personalSessionDescription);
+  console.log('🔍 Page Component - Webinar Session Description:', summary?.webinarSessionDescription);
+
   // Show loading state
-  // if (!consultantSlug || isLoading) {
-  //   return (
-  //     <div className="min-h-screen flex items-center justify-center bg-[var(--primary-100)]">
-  //       <div className="flex items-center gap-3 text-white">
-  //         <Loader2 className="h-8 w-8 animate-spin" />
-  //         <span className="text-xl">Loading consultant profile...</span>
-  //       </div>
-  //     </div>
-  //   );
-  // }
+  if (!consultantSlug || isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[var(--primary-100)]">
+        <div className="flex items-center gap-3 text-white">
+          <Loader2 className="h-8 w-8 animate-spin" />
+          <span className="text-xl">Loading consultant profile...</span>
+        </div>
+      </div>
+    );
+  }
 
   // Show error state
   if (error || !summary) {
@@ -120,7 +126,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
               {summary.name}
             </h1>
             {summary.verified && (
-              <CheckCircle size={24} className="text-black fill-current" />
+              <CheckCircle size={24} className=" text-black" />
             )}
           </div>
 
@@ -173,22 +179,14 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                 {/* Event Details */}
                 <div className="bg-[var(--primary-100)] rounded-[18px] p-4 flex items-center gap-3 relative">
                   {/* Calendar Icon */}
-                  <div className="w-10 h-10 bg-white rounded border border-[#DEDEDF] flex flex-col items-center justify-center relative">
-                    <div className="w-12 h-8 bg-[#EDEDED] absolute -top-4 -left-1"></div>
-                    <span className="text-[8px] font-bold text-[#141414] font-inter mt-1">
-                      AUG
-                    </span>
-                    <span className="text-base font-bold text-[#141414] font-inter">
-                      4
-                    </span>
-                  </div>
+                  <Calendar size={36} className="text-white" />
 
                   {/* Event Info */}
                   <div className="flex-1">
-                    <div className="text-base font-bold text-[#141414] font-inter">
+                    <div className="text-base font-bold text-white font-inter">
                       Tue, 4 Aug&apos;23
                     </div>
-                    <div className="text-sm text-[#5C5C5C] font-inter">
+                    <div className="text-sm text-white font-inter">
                       18:30 - 19:30 GMT+5:30
                     </div>
                   </div>

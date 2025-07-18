@@ -170,6 +170,9 @@ export const useSettingsForm = () => {
   // Initialize form data when profile loads
   useEffect(() => {
     if (profile) {
+      console.log('🔍 Settings Form: Loading profile data:', profile);
+      console.log('🔍 Settings Form: Personal Session Description:', profile.personalSessionDescription);
+      console.log('🔍 Settings Form: Webinar Session Description:', profile.webinarSessionDescription);
       const initialData: UpdateProfileData = {
         firstName: profile.firstName || '',
         lastName: profile.lastName || '',
@@ -192,6 +195,7 @@ export const useSettingsForm = () => {
         xUrl: profile.xUrl || '',
         slug: profile.slug || '',
       };
+      console.log('🔍 Settings Form: Initial form data:', initialData);
       setFormData(initialData);
       setHasChanges(false);
     }
