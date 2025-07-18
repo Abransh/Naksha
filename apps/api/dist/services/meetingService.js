@@ -133,27 +133,20 @@ const generateTeamsMeeting = async (meetingDetails, consultantAccessToken) => {
         }
         const startTime = meetingDetails.startTime.toISOString();
         const endTime = new Date(meetingDetails.startTime.getTime() + meetingDetails.duration * 60000).toISOString();
-        // Simplified meeting payload without problematic participant identity structure
+        // Minimal meeting payload - Microsoft Graph API Error 9038 fix
+        // Removed chatInfo and audioConferencing that were causing "post message to chat thread failure"
         const meetingPayload = {
             subject: meetingDetails.title,
             startDateTime: startTime,
             endDateTime: endTime,
-            // Remove participants section that was causing 404 errors
-            // Teams will handle participant invitations via email separately
+            // Basic meeting settings only - let Teams handle chat and audio automatically
             allowedPresenters: 'organizer', // Only organizer can present
             allowAttendeeToEnableCamera: true,
             allowAttendeeToEnableMic: true,
             allowMeetingChat: 'enabled',
-            allowTeamworkReactions: true,
-            // Optional audio conferencing settings
-            audioConferencing: {
-                tollNumber: '+91-22-6140-9999',
-                conferenceId: Math.random().toString().slice(2, 10)
-            },
-            // Optional chat settings
-            chatInfo: {
-                threadId: `nakksha-${Date.now()}`
-            }
+            allowTeamworkReactions: true
+            // Removed audioConferencing - was causing thread creation issues
+            // Removed chatInfo - custom threadId was causing Error 9038
         };
         console.log('📡 [TEAMS] Making API call to create meeting:', {
             endpoint: 'https://graph.microsoft.com/v1.0/me/onlineMeetings',
@@ -181,7 +174,7 @@ const generateTeamsMeeting = async (meetingDetails, consultantAccessToken) => {
             meetingLink: meeting.joinWebUrl,
             meetingId: meeting.id,
             joinUrl: meeting.joinWebUrl,
-            password: meeting.audioConferencing?.conferenceId
+            password: meeting.audioConferencing?.conferenceId || undefined
         };
     }
     catch (error) {
