@@ -195,7 +195,7 @@ class App {
         this.app.use('/api/v1/sessions', auth_1.authenticateConsultant, sessions_1.default);
         this.app.use('/api/v1/clients', auth_1.authenticateConsultant, clients_1.default);
         this.app.use('/api/v1/quotations', auth_1.authenticateConsultant, quotations_1.default);
-        this.app.use('/api/v1/teams', auth_1.authenticateConsultant, teams_1.default);
+        this.app.use('/api/v1/teams', teams_1.default);
         this.app.use('/api/v1/availability', availability_1.default);
         // Admin routes (admin authentication required)
         this.app.use('/api/v1/admin', auth_1.authenticateAdmin, admin_1.default);

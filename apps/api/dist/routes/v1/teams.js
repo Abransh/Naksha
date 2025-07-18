@@ -12,6 +12,7 @@ Object.defineProperty(exports, "__esModule", { value: true });
 const express_1 = require("express");
 const zod_1 = require("zod");
 const database_1 = require("../../config/database");
+const auth_1 = require("../../middleware/auth");
 const validation_1 = require("../../middleware/validation");
 const errorHandler_1 = require("../../middleware/errorHandler");
 const meetingService_1 = require("../../services/meetingService");
@@ -25,16 +26,52 @@ const exchangeCodeSchema = zod_1.z.object({
     redirectUri: zod_1.z.string().url('Invalid redirect URI'),
 });
 /**
+ * GET /api/v1/teams/config
+ * Validate Microsoft Teams configuration
+ */
+router.get('/config', auth_1.authenticateConsultantBasic, async (req, res) => {
+    try {
+        const config = {
+            hasClientId: !!process.env.MICROSOFT_CLIENT_ID,
+            hasClientSecret: !!process.env.MICROSOFT_CLIENT_SECRET,
+            hasTenantId: !!process.env.MICROSOFT_TENANT_ID,
+            hasRedirectUri: !!process.env.MICROSOFT_REDIRECT_URI,
+            tenantId: process.env.MICROSOFT_TENANT_ID,
+            redirectUri: process.env.MICROSOFT_REDIRECT_URI,
+            clientId: process.env.MICROSOFT_CLIENT_ID?.substring(0, 8) + '...',
+            tokenEndpoint: `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID}/oauth2/v2.0/token`,
+            authEndpoint: `https://login.microsoftonline.com/${process.env.MICROSOFT_TENANT_ID}/oauth2/v2.0/authorize`
+        };
+        const isConfigValid = config.hasClientId && config.hasClientSecret && config.hasTenantId && config.hasRedirectUri;
+        res.json({
+            success: true,
+            data: {
+                ...config,
+                isConfigValid,
+                message: isConfigValid ? 'Microsoft Teams configuration is valid' : 'Microsoft Teams configuration is incomplete'
+            }
+        });
+    }
+    catch (error) {
+        console.error('❌ [TEAMS] Config validation error:', error);
+        throw new errorHandler_1.AppError('Failed to validate Teams configuration', 500, 'TEAMS_CONFIG_ERROR');
+    }
+});
+/**
  * GET /api/v1/teams/oauth-url
  * Generate Microsoft OAuth URL for Teams integration
  */
-router.get('/oauth-url', async (req, res) => {
+router.get('/oauth-url', auth_1.authenticateConsultantBasic, async (req, res) => {
     try {
         const consultantId = req.user.id;
         console.log(`🔗 [TEAMS] Generating OAuth URL for consultant: ${consultantId}`);
         // Validate environment configuration
-        if (!process.env.MICROSOFT_CLIENT_ID || !process.env.MICROSOFT_REDIRECT_URI) {
-            console.error('❌ [TEAMS] Missing Microsoft OAuth configuration');
+        if (!process.env.MICROSOFT_CLIENT_ID || !process.env.MICROSOFT_REDIRECT_URI || !process.env.MICROSOFT_TENANT_ID) {
+            console.error('❌ [TEAMS] Missing Microsoft OAuth configuration', {
+                hasClientId: !!process.env.MICROSOFT_CLIENT_ID,
+                hasRedirectUri: !!process.env.MICROSOFT_REDIRECT_URI,
+                hasTenantId: !!process.env.MICROSOFT_TENANT_ID
+            });
             throw new errorHandler_1.AppError('Microsoft Teams integration is not configured properly. Please contact support.', 500, 'TEAMS_CONFIG_ERROR');
         }
         // Generate Microsoft OAuth URL with consultant ID as state parameter
@@ -74,13 +111,21 @@ router.get('/oauth-url', async (req, res) => {
  * POST /api/teams/oauth-callback
  * Handle Microsoft OAuth callback and exchange code for tokens
  */
-router.post('/oauth-callback', (0, validation_1.validateRequest)(exchangeCodeSchema), async (req, res) => {
+router.post('/oauth-callback', auth_1.authenticateConsultantBasic, (0, validation_1.validateRequest)(exchangeCodeSchema), async (req, res) => {
     try {
         const { code, redirectUri } = req.body;
         const consultantId = req.user.id;
         console.log(`📧 Processing Teams OAuth callback for consultant: ${consultantId}`);
-        // Exchange authorization code for access token
-        const tokenResponse = await axios_1.default.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+        // Validate environment configuration
+        if (!process.env.MICROSOFT_CLIENT_ID || !process.env.MICROSOFT_CLIENT_SECRET || !process.env.MICROSOFT_TENANT_ID) {
+            console.error('❌ [TEAMS] Missing Microsoft OAuth configuration for token exchange');
+            throw new errorHandler_1.AppError('Microsoft Teams integration is not configured properly. Please contact support.', 500, 'TEAMS_CONFIG_ERROR');
+        }
+        // Exchange authorization code for access token using tenant-specific endpoint
+        const tenantId = process.env.MICROSOFT_TENANT_ID;
+        const tokenEndpoint = `https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`;
+        console.log(`🔄 [TEAMS] Using tenant-specific endpoint: ${tokenEndpoint}`);
+        const tokenResponse = await axios_1.default.post(tokenEndpoint, {
             client_id: process.env.MICROSOFT_CLIENT_ID,
             client_secret: process.env.MICROSOFT_CLIENT_SECRET,
             code,
@@ -155,6 +200,14 @@ router.post('/oauth-callback', (0, validation_1.validateRequest)(exchangeCodeSch
             else if (microsoftError?.error === 'invalid_client') {
                 userMessage = 'Microsoft Teams integration configuration error. Please contact support.';
             }
+            else if (microsoftError?.error === 'invalid_request') {
+                if (microsoftError.error_description?.includes('multi-tenant')) {
+                    userMessage = 'Microsoft Teams application configuration error. The application needs to be configured for the correct tenant. Please contact support.';
+                }
+                else {
+                    userMessage = 'Invalid OAuth request. Please try connecting again.';
+                }
+            }
             else if (microsoftError?.error_description) {
                 userMessage = `Microsoft OAuth error: ${microsoftError.error_description}`;
             }
@@ -171,7 +224,7 @@ router.post('/oauth-callback', (0, validation_1.validateRequest)(exchangeCodeSch
  * GET /api/teams/status
  * Check Teams integration status for consultant
  */
-router.get('/status', async (req, res) => {
+router.get('/status', auth_1.authenticateConsultantBasic, async (req, res) => {
     try {
         const consultantId = req.user.id;
         const prisma = (0, database_1.getPrismaClient)();
@@ -213,7 +266,7 @@ router.get('/status', async (req, res) => {
  * DELETE /api/teams/disconnect
  * Disconnect Teams integration for consultant
  */
-router.delete('/disconnect', async (req, res) => {
+router.delete('/disconnect', auth_1.authenticateConsultantBasic, async (req, res) => {
     try {
         const consultantId = req.user.id;
         console.log(`📧 Disconnecting Teams integration for consultant: ${consultantId}`);
@@ -244,7 +297,7 @@ router.delete('/disconnect', async (req, res) => {
  * POST /api/teams/refresh-token
  * Refresh expired Teams access token
  */
-router.post('/refresh-token', async (req, res) => {
+router.post('/refresh-token', auth_1.authenticateConsultantBasic, async (req, res) => {
     try {
         const consultantId = req.user.id;
         const prisma = (0, database_1.getPrismaClient)();
@@ -259,8 +312,14 @@ router.post('/refresh-token', async (req, res) => {
             throw new errorHandler_1.AppError('No Teams refresh token found. Please reconnect your Microsoft account.', 400, 'TEAMS_NO_REFRESH_TOKEN');
         }
         console.log(`🔄 Refreshing Teams token for consultant: ${consultantId}`);
-        // Refresh the access token
-        const tokenResponse = await axios_1.default.post('https://login.microsoftonline.com/common/oauth2/v2.0/token', {
+        // Validate environment configuration
+        if (!process.env.MICROSOFT_CLIENT_ID || !process.env.MICROSOFT_CLIENT_SECRET || !process.env.MICROSOFT_TENANT_ID) {
+            console.error('❌ [TEAMS] Missing Microsoft OAuth configuration for token refresh');
+            throw new errorHandler_1.AppError('Microsoft Teams integration is not configured properly. Please contact support.', 500, 'TEAMS_CONFIG_ERROR');
+        }
+        // Refresh the access token using tenant-specific endpoint
+        const tenantId = process.env.MICROSOFT_TENANT_ID;
+        const tokenResponse = await axios_1.default.post(`https://login.microsoftonline.com/${tenantId}/oauth2/v2.0/token`, {
             client_id: process.env.MICROSOFT_CLIENT_ID,
             client_secret: process.env.MICROSOFT_CLIENT_SECRET,
             refresh_token: consultant.teamsRefreshToken,

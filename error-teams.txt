@@ -1,0 +1,396 @@
+ ❌ Teams meeting creation error: AxiosError: Request failed with status code 404
+[naksha] [2025-07-18 12:32:03]     at settle (/workspace/node_modules/axios/dist/node/axios.cjs:2053:12)
+[naksha] [2025-07-18 12:32:03]     at Unzip.handleStreamEnd (/workspace/node_modules/axios/dist/node/axios.cjs:3170:11)
+[naksha] [2025-07-18 12:32:03]     at Unzip.emit (node:events:519:35)
+[naksha] [2025-07-18 12:32:03]     at endReadableNT (node:internal/streams/readable:1701:12)
+[naksha] [2025-07-18 12:32:03]     at process.processTicksAndRejections (node:internal/process/task_queues:90:21)
+[naksha] [2025-07-18 12:32:03]     at Axios.request (/workspace/node_modules/axios/dist/node/axios.cjs:4280:41)
+[naksha] [2025-07-18 12:32:03]     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[naksha] [2025-07-18 12:32:03]     at async generateTeamsMeeting (/workspace/apps/api/dist/services/meetingService.js:84:26)
+[naksha] [2025-07-18 12:32:03]     at async generateMeetingLink (/workspace/apps/api/dist/services/meetingService.js:113:16)
+[naksha] [2025-07-18 12:32:03]     at async /workspace/apps/api/dist/routes/v1/sessions.js:554:32 {
+[naksha] [2025-07-18 12:32:03]   code: 'ERR_BAD_REQUEST',
+[naksha] [2025-07-18 12:32:03]   config: {
+[naksha] [2025-07-18 12:32:03]     transitional: {
+[naksha] [2025-07-18 12:32:03]       silentJSONParsing: true,
+[naksha] [2025-07-18 12:32:03]       forcedJSONParsing: true,
+[naksha] [2025-07-18 12:32:03]       clarifyTimeoutError: false
+[naksha] [2025-07-18 12:32:03]     },
+[naksha] [2025-07-18 12:32:03]     adapter: [ 'xhr', 'http', 'fetch' ],
+[naksha] [2025-07-18 12:32:03]     transformRequest: [ [Function: transformRequest] ],
+[naksha] [2025-07-18 12:32:03]     transformResponse: [ [Function: transformResponse] ],
+[naksha] [2025-07-18 12:32:03]     timeout: 0,
+[naksha] [2025-07-18 12:32:03]     xsrfCookieName: 'XSRF-TOKEN',
+[naksha] [2025-07-18 12:32:03]     xsrfHeaderName: 'X-XSRF-TOKEN',
+[naksha] [2025-07-18 12:32:03]     maxContentLength: -1,
+[naksha] [2025-07-18 12:32:03]     maxBodyLength: -1,
+[naksha] [2025-07-18 12:32:03]     env: { FormData: [Function [FormData]], Blob: [class Blob] },
+[naksha] [2025-07-18 12:32:03]     validateStatus: [Function: validateStatus],
+[naksha] [2025-07-18 12:32:03]     headers: Object [AxiosHeaders] {
+[naksha] [2025-07-18 12:32:03]       Accept: 'application/json, text/plain, */*',
+[naksha] [2025-07-18 12:32:03]       'Content-Type': 'application/json',
+[naksha] [2025-07-18 12:32:03]       Authorization: 'Bearer eyJ0eXAiOiJKV1QiLCJub25jZSI6InhFYldKM05SNDlmbGFSZUFQLU8xNngzZENneERURW5Pd1E0LTU2NlhtSGsiLCJhbGciOiJSUzI1NiIsIng1dCI6Il9qTndqZVNudlRUSzhYRWRyNVFVUGtCUkxMbyIsImtpZCI6Il9qTndqZVNudlRUSzhYRWRyNVFVUGtCUkxMbyJ9.eyJhdWQiOiJodHRwczovL2dyYXBoLm1pY3Jvc29mdC5jb20iLCJpc3MiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC8xMGNkNDNkMi1lMTAyLTQ5OWYtODZkMC1mMDBhMmI4MmRiN2IvIiwiaWF0IjoxNzUyODQxMTA3LCJuYmYiOjE3NTI4NDExMDcsImV4cCI6MTc1Mjg0NjI2NywiYWNjdCI6MCwiYWNyIjoiMSIsImFjcnMiOlsicDEiXSwiYWlvIjoiQVpRQWEvOFpBQUFBZ2hJVGVkUXNBQ3BhRk1aRVpPRWZyMG5tZGs1NHJTNWFzM2c5NjZldnJraTRVeHVMRGJuYlFkVGlIcmE5eithVkdYR3cyNzVZS3pUNnZNVnFIYU51aFVjTmErRmVCeG55RC85Z1N5ZDRUWEw0b1FKc0k1K2dOWUduek82UmpCS0lMNFl1alE3MXBGNTJxeTZMQkNFWXl4bUlvalpzVVdzVlBNcG5IS0ZOd0IrRWRaa2M4ampJeE02VjVFR055RUJsIiwiYW1yIjpbInB3ZCIsIm1mYSJdLCJhcHBfZGlzcGxheW5hbWUiOiJOYWtrc2hhIiwiYXBwaWQiOiI3Mjc1ZTRkYy1hNTFiLTRiODAtYjM5My03NzI1M2Y5NjczZDQiLCJhcHBpZGFjciI6IjEiLCJmYW1pbHlfbmFtZSI6Ik5pbWtoZWRrYXIiLCJnaXZlbl9uYW1lIjoiUmlndmVkIiwiaWR0eXAiOiJ1c2VyIiwiaXBhZGRyIjoiMTc2LjIwMC43Mi42NCIsIm5hbWUiOiJSaWd2ZWQgTmlta2hlZGthciIsIm9pZCI6IjYxY2M0NTM3LWQ5MmEtNGE1MS04MGRmLTlhNzIwNGRmMjcwNCIsInBsYXRmIjoiNSIsInB1aWQiOiIxMDAzMjAwNEQ4RERBMjYxIiwicmgiOiIxLkFjWUEwa1BORUFMaG4wbUcwUEFLSzRMYmV3TUFBQUFBQUFBQXdBQUFBQUFBQUFEcEFNdkdBQS4iLCJzY3AiOiJDYWxlbmRhcnMuUmVhZFdyaXRlIE9ubGluZU1lZXRpbmdzLlJlYWRXcml0ZSBVc2VyLlJlYWQgcHJvZmlsZSBvcGVuaWQgZW1haWwiLCJzaWQiOiIwMDZjMzczOS0xZjA5LTQzZDQtNjgyZC1jMDE5ZjQ0Nzc5NmMiLCJzaWduaW5fc3RhdGUiOlsia21zaSJdLCJzdWIiOiJ0dDlYMmNURzlwTnlBZUFTRjZ6OVNYN2p5NVNlWG5ic1U1U3ZjcTNPUUY4IiwidGVuYW50X3JlZ2lvbl9zY29wZSI6IkFTIiwidGlkIjoiMTBjZDQzZDItZTEwMi00OTlmLTg2ZDAtZjAwYTJiODJkYjdiIiwidW5pcXVlX25hbWUiOiJSaWd2ZWROaW1raGVka2FyQE5ha2tzaGExMjMub25taWNyb3NvZnQuY29tIiwidXBuIjoiUmlndmVkTmlta2hlZGthckBOYWtrc2hhMTIzLm9ubWljcm9zb2Z0LmNvbSIsInV0aSI6ImZUR2pQbm10QWtXc3ZwWHBBV3MxQUEiLCJ2ZXIiOiIxLjAiLCJ3aWRzIjpbIjYyZTkwMzk0LTY5ZjUtNDIzNy05MTkwLTAxMjE3NzE0NWUxMCIsImI3OWZiZjRkLTNlZjktNDY4OS04MTQzLTc2YjE5NGU4NTUwOSJdLCJ4bXNfZnRkIjoibFZWV0IxdVJ3bEh0Nkl0ZXVFSHkxUUNiTDY0blY4eU1SY2E3YjI3UE9UTUJhMjl5WldGemIzVjBhQzFrYzIxeiIsInhtc19pZHJlbCI6IjIwIDEiLCJ4bXNfc3QiOnsic3ViIjoiLUp2VURWd1JkcnpQU2c1UU1SWk9ZSy1mVG9DTlNYZ0htZGhoVkNNQUFzbyJ9LCJ4bXNfdGNkdCI6MTc1MTk5NTE2OX0.mPhWDSeBgrEfLhWuj8mY2YCvYA2ge_ms_CUT0zIcnOyWstQtdZqF6KnhrxImh7-VvzhBAhM4UYmik_pQx2GX0BZnOOvdlPp3ktdjrptum9t2u_7av6uwsfqWopnW1jDHUTknL0kg2O4jHpJ_pFGFkboqYEVDU1x-PSeF4tLToocXHohOBIsruyr9Es4Qc8fIf5Zuv-EZFGgOOVu6IhHytDuqf9UOvNrFg5gxQq7wrwN80XD9UIcQBBCaFoAxg3bk2gQikIa2NGS4IeYkhcYpNZoHfg5-x6Vu_ihzLpZfFXQab51peOUMqfBN1PJSbgi0OtjeWXwsaw_xqUXjrlaDdw',
+[naksha] [2025-07-18 12:32:03]       'User-Agent': 'axios/1.10.0',
+[naksha] [2025-07-18 12:32:03]       'Content-Length': '430',
+[naksha] [2025-07-18 12:32:03]       'Accept-Encoding': 'gzip, compress, deflate, br'
+[naksha] [2025-07-18 12:32:03]     },
+[naksha] [2025-07-18 12:32:03]     method: 'post',
+[naksha] [2025-07-18 12:32:03]     url: 'https://graph.microsoft.com/v1.0/me/onlineMeetings',
+[naksha] [2025-07-18 12:32:03]     data: '{"subject":"Business Strategy Session","startDateTime":"2024-01-30T14:00:00.000Z","endDateTime":"2024-01-30T15:00:00.000Z","participants":{"attendees":[{"identity":{"user":{"id":"abranshbaliyan2807@gmail.com"}},"role":"presenter"},{"identity":{"user":{"id":"abransh05@gmail.com"}},"role":"attendee"}]},"audioConferencing":{"tollNumber":"+91-22-6140-9999","conferenceId":"04413004"},"chatInfo":{"threadId":"nakksha-1752841922548"}}',
+[naksha] [2025-07-18 12:32:03]     allowAbsoluteUrls: true
+[naksha] [2025-07-18 12:32:03]   },
+[naksha] [2025-07-18 12:32:03]   request: <ref *1> ClientRequest {
+[naksha] [2025-07-18 12:32:03]     _events: [Object: null prototype] {
+[naksha] [2025-07-18 12:32:03]       abort: [Function (anonymous)],
+[naksha] [2025-07-18 12:32:03]       aborted: [Function (anonymous)],
+[naksha] [2025-07-18 12:32:03]       connect: [Function (anonymous)],
+[naksha] [2025-07-18 12:32:03]       error: [Function (anonymous)],
+[naksha] [2025-07-18 12:32:03]       socket: [Function (anonymous)],
+[naksha] [2025-07-18 12:32:03]       timeout: [Function (anonymous)],
+[naksha] [2025-07-18 12:32:03]       finish: [Function: requestOnFinish]
+[naksha] [2025-07-18 12:32:03]     },
+[naksha] [2025-07-18 12:32:03]     _eventsCount: 7,
+[naksha] [2025-07-18 12:32:03]     _maxListeners: undefined,
+[naksha] [2025-07-18 12:32:03]     outputData: [],
+[naksha] [2025-07-18 12:32:03]     outputSize: 0,
+[naksha] [2025-07-18 12:32:03]     writable: true,
+[naksha] [2025-07-18 12:32:03]     destroyed: true,
+[naksha] [2025-07-18 12:32:03]     _last: false,
+[naksha] [2025-07-18 12:32:03]     chunkedEncoding: false,
+[naksha] [2025-07-18 12:32:03]     shouldKeepAlive: true,
+[naksha] [2025-07-18 12:32:03]     maxRequestsOnConnectionReached: false,
+[naksha] [2025-07-18 12:32:03]     _defaultKeepAlive: true,
+[naksha] [2025-07-18 12:32:03]     useChunkedEncodingByDefault: true,
+[naksha] [2025-07-18 12:32:03]     sendDate: false,
+[naksha] [2025-07-18 12:32:03]     _removedConnection: false,
+[naksha] [2025-07-18 12:32:03]     _removedContLen: false,
+[naksha] [2025-07-18 12:32:03]     _removedTE: false,
+[naksha] [2025-07-18 12:32:03]     strictContentLength: false,
+[naksha] [2025-07-18 12:32:03]     _contentLength: 430,
+[naksha] [2025-07-18 12:32:03]     _hasBody: true,
+[naksha] [2025-07-18 12:32:03]     _trailer: '',
+[naksha] [2025-07-18 12:32:03]     finished: true,
+[naksha] [2025-07-18 12:32:03]     _headerSent: true,
+[naksha] [2025-07-18 12:32:03]     _closed: true,
+[naksha] [2025-07-18 12:32:03]     _header: 'POST /v1.0/me/onlineMeetings HTTP/1.1\r\n' +
+[naksha] [2025-07-18 12:32:03]       'Accept: application/json, text/plain, */*\r\n' +
+[naksha] [2025-07-18 12:32:03]       'Content-Type: application/json\r\n' +
+[naksha] [2025-07-18 12:32:03]       'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJub25jZSI6InhFYldKM05SNDlmbGFSZUFQLU8xNngzZENneERURW5Pd1E0LTU2NlhtSGsiLCJhbGciOiJSUzI1NiIsIng1dCI6Il9qTndqZVNudlRUSzhYRWRyNVFVUGtCUkxMbyIsImtpZCI6Il9qTndqZVNudlRUSzhYRWRyNVFVUGtCUkxMbyJ9.eyJhdWQiOiJodHRwczovL2dyYXBoLm1pY3Jvc29mdC5jb20iLCJpc3MiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC8xMGNkNDNkMi1lMTAyLTQ5OWYtODZkMC1mMDBhMmI4MmRiN2IvIiwiaWF0IjoxNzUyODQxMTA3LCJuYmYiOjE3NTI4NDExMDcsImV4cCI6MTc1Mjg0NjI2NywiYWNjdCI6MCwiYWNyIjoiMSIsImFjcnMiOlsicDEiXSwiYWlvIjoiQVpRQWEvOFpBQUFBZ2hJVGVkUXNBQ3BhRk1aRVpPRWZyMG5tZGs1NHJTNWFzM2c5NjZldnJraTRVeHVMRGJuYlFkVGlIcmE5eithVkdYR3cyNzVZS3pUNnZNVnFIYU51aFVjTmErRmVCeG55RC85Z1N5ZDRUWEw0b1FKc0k1K2dOWUduek82UmpCS0lMNFl1alE3MXBGNTJxeTZMQkNFWXl4bUlvalpzVVdzVlBNcG5IS0ZOd0IrRWRaa2M4ampJeE02VjVFR055RUJsIiwiYW1yIjpbInB3ZCIsIm1mYSJdLCJhcHBfZGlzcGxheW5hbWUiOiJOYWtrc2hhIiwiYXBwaWQiOiI3Mjc1ZTRkYy1hNTFiLTRiODAtYjM5My03NzI1M2Y5NjczZDQiLCJhcHBpZGFjciI6IjEiLCJmYW1pbHlfbmFtZSI6Ik5pbWtoZWRrYXIiLCJnaXZlbl9uYW1lIjoiUmlndmVkIiwiaWR0eXAiOiJ1c2VyIiwiaXBhZGRyIjoiMTc2LjIwMC43Mi42NCIsIm5hbWUiOiJSaWd2ZWQgTmlta2hlZGthciIsIm9pZCI6IjYxY2M0NTM3LWQ5MmEtNGE1MS04MGRmLTlhNzIwNGRmMjcwNCIsInBsYXRmIjoiNSIsInB1aWQiOiIxMDAzMjAwNEQ4RERBMjYxIiwicmgiOiIxLkFjWUEwa1BORUFMaG4wbUcwUEFLSzRMYmV3TUFBQUFBQUFBQXdBQUFBQUFBQUFEcEFNdkdBQS4iLCJzY3AiOiJDYWxlbmRhcnMuUmVhZFdyaXRlIE9ubGluZU1lZXRpbmdzLlJlYWRXcml0ZSBVc2VyLlJlYWQgcHJvZmlsZSBvcGVuaWQgZW1haWwiLCJzaWQiOiIwMDZjMzczOS0xZjA5LTQzZDQtNjgyZC1jMDE5ZjQ0Nzc5NmMiLCJzaWduaW5fc3RhdGUiOlsia21zaSJdLCJzdWIiOiJ0dDlYMmNURzlwTnlBZUFTRjZ6OVNYN2p5NVNlWG5ic1U1U3ZjcTNPUUY4IiwidGVuYW50X3JlZ2lvbl9zY29wZSI6IkFTIiwidGlkIjoiMTBjZDQzZDItZTEwMi00OTlmLTg2ZDAtZjAwYTJiODJkYjdiIiwidW5pcXVlX25hbWUiOiJSaWd2ZWROaW1raGVka2FyQE5ha2tzaGExMjMub25taWNyb3NvZnQuY29tIiwidXBuIjoiUmlndmVkTmlta2hlZGthckBOYWtrc2hhMTIzLm9ubWljcm9zb2Z0LmNvbSIsInV0aSI6ImZUR2pQbm10QWtXc3ZwWHBBV3MxQUEiLCJ2ZXIiOiIxLjAiLCJ3aWRzIjpbIjYyZTkwMzk0LTY5ZjUtNDIzNy05MTkwLTAxMjE3NzE0NWUxMCIsImI3OWZiZjRkLTNlZjktNDY4OS04MTQzLTc2YjE5NGU4NTUwOSJdLCJ4bXNfZnRkIjoibFZWV0IxdVJ3bEh0Nkl0ZXVFSHkxUUNiTDY0blY4eU1SY2E3YjI3UE9UTUJhMjl5WldGemIzVjBhQzFrYzIxeiIsInhtc19pZHJlbCI6IjIwIDEiLCJ4bXNfc3QiOnsic3ViIjoiLUp2VURWd1JkcnpQU2c1UU1SWk9ZSy1mVG9DTlNYZ0htZGhoVkNNQUFzbyJ9LCJ4bXNfdGNkdCI6MTc1MTk5NTE2OX0.mPhWDSeBgrEfLhWuj8mY2YCvYA2ge_ms_CUT0zIcnOyWstQtdZqF6KnhrxImh7-VvzhBAhM4UYmik_pQx2GX0BZnOOvdlPp3ktdjrptum9t2u_7av6uwsfqWopnW1jDHUTknL0kg2O4jHpJ_pFGFkboqYEVDU1x-PSeF4tLToocXHohOBIsruyr9Es4Qc8fIf5Zuv-EZFGgOOVu6IhHytDuqf9UOvNrFg5gxQq7wrwN80XD9UIcQBBCaFoAxg3bk2gQikIa2NGS4IeYkhcYpNZoHfg5-x6Vu_ihzLpZfFXQab51peOUMqfBN1PJSbgi0OtjeWXwsaw_xqUXjrlaDdw\r\n' +
+[naksha] [2025-07-18 12:32:03]       'User-Agent: axios/1.10.0\r\n' +
+[naksha] [2025-07-18 12:32:03]       'Content-Length: 430\r\n' +
+[naksha] [2025-07-18 12:32:03]       'Accept-Encoding: gzip, compress, deflate, br\r\n' +
+[naksha] [2025-07-18 12:32:03]       'Host: graph.microsoft.com\r\n' +
+[naksha] [2025-07-18 12:32:03]       'Connection: keep-alive\r\n' +
+[naksha] [2025-07-18 12:32:03]       '\r\n',
+[naksha] [2025-07-18 12:32:03]     _keepAliveTimeout: 0,
+[naksha] [2025-07-18 12:32:03]     _onPendingData: [Function: nop],
+[naksha] [2025-07-18 12:32:03]     agent: Agent {
+[naksha] [2025-07-18 12:32:03]       _events: [Object: null prototype],
+[naksha] [2025-07-18 12:32:03]       _eventsCount: 2,
+[naksha] [2025-07-18 12:32:03]       _maxListeners: undefined,
+[naksha] [2025-07-18 12:32:03]       defaultPort: 443,
+[naksha] [2025-07-18 12:32:03]       protocol: 'https:',
+[naksha] [2025-07-18 12:32:03]       options: [Object: null prototype],
+[naksha] [2025-07-18 12:32:03]       requests: [Object: null prototype] {},
+[naksha] [2025-07-18 12:32:03]       sockets: [Object: null prototype] {},
+[naksha] [2025-07-18 12:32:03]       freeSockets: [Object: null prototype],
+[naksha] [2025-07-18 12:32:03]       keepAliveMsecs: 1000,
+[naksha] [2025-07-18 12:32:03]       keepAlive: true,
+[naksha] [2025-07-18 12:32:03]       maxSockets: Infinity,
+[naksha] [2025-07-18 12:32:03]       maxFreeSockets: 256,
+[naksha] [2025-07-18 12:32:03]       scheduling: 'lifo',
+[naksha] [2025-07-18 12:32:03]       maxTotalSockets: Infinity,
+[naksha] [2025-07-18 12:32:03]       totalSocketCount: 1,
+[naksha] [2025-07-18 12:32:03]       maxCachedSessions: 100,
+[naksha] [2025-07-18 12:32:03]       _sessionCache: [Object],
+[naksha] [2025-07-18 12:32:03]       Symbol(shapeMode): false,
+[naksha] [2025-07-18 12:32:03]       Symbol(kCapture): false
+[naksha] [2025-07-18 12:32:03]     },
+[naksha] [2025-07-18 12:32:03]     socketPath: undefined,
+[naksha] [2025-07-18 12:32:03]     method: 'POST',
+[naksha] [2025-07-18 12:32:03]     maxHeaderSize: undefined,
+[naksha] [2025-07-18 12:32:03]     insecureHTTPParser: undefined,
+[naksha] [2025-07-18 12:32:03]     joinDuplicateHeaders: undefined,
+[naksha] [2025-07-18 12:32:03]     path: '/v1.0/me/onlineMeetings',
+[naksha] [2025-07-18 12:32:03]     _ended: true,
+[naksha] [2025-07-18 12:32:03]     res: IncomingMessage {
+[naksha] [2025-07-18 12:32:03]       _events: [Object],
+[naksha] [2025-07-18 12:32:03]       _readableState: [ReadableState],
+[naksha] [2025-07-18 12:32:03]       _maxListeners: undefined,
+[naksha] [2025-07-18 12:32:03]       socket: null,
+[naksha] [2025-07-18 12:32:03]       httpVersionMajor: 1,
+[naksha] [2025-07-18 12:32:03]       httpVersionMinor: 1,
+[naksha] [2025-07-18 12:32:03]       httpVersion: '1.1',
+[naksha] [2025-07-18 12:32:03]       complete: true,
+[naksha] [2025-07-18 12:32:03]       rawHeaders: [Array],
+[naksha] [2025-07-18 12:32:03]       rawTrailers: [],
+[naksha] [2025-07-18 12:32:03]       joinDuplicateHeaders: undefined,
+[naksha] [2025-07-18 12:32:03]       aborted: false,
+[naksha] [2025-07-18 12:32:03]       upgrade: false,
+[naksha] [2025-07-18 12:32:03]       url: '',
+[naksha] [2025-07-18 12:32:03]       method: null,
+[naksha] [2025-07-18 12:32:03]       statusCode: 404,
+[naksha] [2025-07-18 12:32:03]       statusMessage: 'Not Found',
+[naksha] [2025-07-18 12:32:03]       client: [TLSSocket],
+[naksha] [2025-07-18 12:32:03]       _consuming: true,
+[naksha] [2025-07-18 12:32:03]       _dumped: false,
+[naksha] [2025-07-18 12:32:03]       req: [Circular *1],
+[naksha] [2025-07-18 12:32:03]       _eventsCount: 4,
+[naksha] [2025-07-18 12:32:03]       responseUrl: 'https://graph.microsoft.com/v1.0/me/onlineMeetings',
+[naksha] [2025-07-18 12:32:03]       redirects: [],
+[naksha] [2025-07-18 12:32:03]       Symbol(shapeMode): true,
+[naksha] [2025-07-18 12:32:03]       Symbol(kCapture): false,
+[naksha] [2025-07-18 12:32:03]       Symbol(kHeaders): [Object],
+[naksha] [2025-07-18 12:32:03]       Symbol(kHeadersCount): 20,
+[naksha] [2025-07-18 12:32:03]       Symbol(kTrailers): null,
+[naksha] [2025-07-18 12:32:03]       Symbol(kTrailersCount): 0
+[naksha] [2025-07-18 12:32:03]     },
+[naksha] [2025-07-18 12:32:03]     aborted: false,
+[naksha] [2025-07-18 12:32:03]     timeoutCb: null,
+[naksha] [2025-07-18 12:32:03]     upgradeOrConnect: false,
+[naksha] [2025-07-18 12:32:03]     parser: null,
+[naksha] [2025-07-18 12:32:03]     maxHeadersCount: null,
+[naksha] [2025-07-18 12:32:03]     reusedSocket: false,
+[naksha] [2025-07-18 12:32:03]     host: 'graph.microsoft.com',
+[naksha] [2025-07-18 12:32:03]     protocol: 'https:',
+[naksha] [2025-07-18 12:32:03]     _redirectable: Writable {
+[naksha] [2025-07-18 12:32:03]       _events: [Object],
+[naksha] [2025-07-18 12:32:03]       _writableState: [WritableState],
+[naksha] [2025-07-18 12:32:03]       _maxListeners: undefined,
+[naksha] [2025-07-18 12:32:03]       _options: [Object],
+[naksha] [2025-07-18 12:32:03]       _ended: true,
+[naksha] [2025-07-18 12:32:03]       _ending: true,
+[naksha] [2025-07-18 12:32:03]       _redirectCount: 0,
+[naksha] [2025-07-18 12:32:03]       _redirects: [],
+[naksha] [2025-07-18 12:32:03]       _requestBodyLength: 430,
+[naksha] [2025-07-18 12:32:03]       _requestBodyBuffers: [],
+[naksha] [2025-07-18 12:32:03]       _eventsCount: 3,
+[naksha] [2025-07-18 12:32:03]       _onNativeResponse: [Function (anonymous)],
+[naksha] [2025-07-18 12:32:03]       _currentRequest: [Circular *1],
+[naksha] [2025-07-18 12:32:03]       _currentUrl: 'https://graph.microsoft.com/v1.0/me/onlineMeetings',
+[naksha] [2025-07-18 12:32:03]       Symbol(shapeMode): true,
+[naksha] [2025-07-18 12:32:03]       Symbol(kCapture): false
+[naksha] [2025-07-18 12:32:03]     },
+[naksha] [2025-07-18 12:32:03]     Symbol(shapeMode): false,
+[naksha] [2025-07-18 12:32:03]     Symbol(kCapture): false,
+[naksha] [2025-07-18 12:32:03]     Symbol(kBytesWritten): 0,
+[naksha] [2025-07-18 12:32:03]     Symbol(kNeedDrain): false,
+[naksha] [2025-07-18 12:32:03]     Symbol(corked): 0,
+[naksha] [2025-07-18 12:32:03]     Symbol(kChunkedBuffer): [],
+[naksha] [2025-07-18 12:32:03]     Symbol(kChunkedLength): 0,
+[naksha] [2025-07-18 12:32:03]     Symbol(kSocket): TLSSocket {
+[naksha] [2025-07-18 12:32:03]       _tlsOptions: [Object],
+[naksha] [2025-07-18 12:32:03]       _secureEstablished: true,
+[naksha] [2025-07-18 12:32:03]       _securePending: false,
+[naksha] [2025-07-18 12:32:03]       _newSessionPending: false,
+[naksha] [2025-07-18 12:32:03]       _controlReleased: true,
+[naksha] [2025-07-18 12:32:03]       secureConnecting: false,
+[naksha] [2025-07-18 12:32:03]       _SNICallback: null,
+[naksha] [2025-07-18 12:32:03]       servername: 'graph.microsoft.com',
+[naksha] [2025-07-18 12:32:03]       alpnProtocol: false,
+[naksha] [2025-07-18 12:32:03]       authorized: true,
+[naksha] [2025-07-18 12:32:03]       authorizationError: null,
+[naksha] [2025-07-18 12:32:03]       encrypted: true,
+[naksha] [2025-07-18 12:32:03]       _events: [Object: null prototype],
+[naksha] [2025-07-18 12:32:03]       _eventsCount: 9,
+[naksha] [2025-07-18 12:32:03]       connecting: false,
+[naksha] [2025-07-18 12:32:03]       _hadError: false,
+[naksha] [2025-07-18 12:32:03]       _parent: null,
+[naksha] [2025-07-18 12:32:03]       _host: 'graph.microsoft.com',
+[naksha] [2025-07-18 12:32:03]       _closeAfterHandlingError: false,
+[naksha] [2025-07-18 12:32:03]       _readableState: [ReadableState],
+[naksha] [2025-07-18 12:32:03]       _writableState: [WritableState],
+[naksha] [2025-07-18 12:32:03]       allowHalfOpen: false,
+[naksha] [2025-07-18 12:32:03]       _maxListeners: undefined,
+[naksha] [2025-07-18 12:32:03]       _sockname: null,
+[naksha] [2025-07-18 12:32:03]       _pendingData: null,
+[naksha] [2025-07-18 12:32:03]       _pendingEncoding: '',
+[naksha] [2025-07-18 12:32:03]       server: undefined,
+[naksha] [2025-07-18 12:32:03]       _server: null,
+[naksha] [2025-07-18 12:32:03]       ssl: [TLSWrap],
+[naksha] [2025-07-18 12:32:03]       _requestCert: true,
+[naksha] [2025-07-18 12:32:03]       _rejectUnauthorized: true,
+[naksha] [2025-07-18 12:32:03]       timeout: 5000,
+[naksha] [2025-07-18 12:32:03]       parser: null,
+[naksha] [2025-07-18 12:32:03]       _httpMessage: null,
+[naksha] [2025-07-18 12:32:03]       autoSelectFamilyAttemptedAddresses: [Array],
+[naksha] [2025-07-18 12:32:03]       Symbol(alpncallback): null,
+[naksha] [2025-07-18 12:32:03]       Symbol(res): [TLSWrap],
+[naksha] [2025-07-18 12:32:03]       Symbol(verified): true,
+[naksha] [2025-07-18 12:32:03]       Symbol(pendingSession): null,
+[naksha] [2025-07-18 12:32:03]       Symbol(async_id_symbol): -1,
+[naksha] [2025-07-18 12:32:03]       Symbol(kHandle): [TLSWrap],
+[naksha] [2025-07-18 12:32:03]       Symbol(lastWriteQueueSize): 0,
+[naksha] [2025-07-18 12:32:03]       Symbol(timeout): Timeout {
+[naksha] [2025-07-18 12:32:03]         _idleTimeout: 5000,
+[naksha] [2025-07-18 12:32:03]         _idlePrev: [TimersList],
+[naksha] [2025-07-18 12:32:03]         _idleNext: [TimersList],
+[naksha] [2025-07-18 12:32:03]         _idleStart: 47660565,
+[naksha] [2025-07-18 12:32:03]         _onTimeout: [Function: bound ],
+[naksha] [2025-07-18 12:32:03]         _timerArgs: undefined,
+[naksha] [2025-07-18 12:32:03]         _repeat: null,
+[naksha] [2025-07-18 12:32:03]         _destroyed: false,
+[naksha] [2025-07-18 12:32:03]         Symbol(refed): false,
+[naksha] [2025-07-18 12:32:03]         Symbol(kHasPrimitive): false,
+[naksha] [2025-07-18 12:32:03]         Symbol(asyncId): 492004,
+[naksha] [2025-07-18 12:32:03]         Symbol(triggerId): 492002,
+[naksha] [2025-07-18 12:32:03]         Symbol(kAsyncContextFrame): undefined
+[naksha] [2025-07-18 12:32:03]       },
+[naksha] [2025-07-18 12:32:03]       Symbol(kBuffer): null,
+[naksha] [2025-07-18 12:32:03]       Symbol(kBufferCb): null,
+[naksha] [2025-07-18 12:32:03]       Symbol(kBufferGen): null,
+[naksha] [2025-07-18 12:32:03]       Symbol(shapeMode): true,
+[naksha] [2025-07-18 12:32:03]       Symbol(kCapture): false,
+[naksha] [2025-07-18 12:32:03]       Symbol(kSetNoDelay): false,
+[naksha] [2025-07-18 12:32:03]       Symbol(kSetKeepAlive): true,
+[naksha] [2025-07-18 12:32:03]       Symbol(kSetKeepAliveInitialDelay): 1,
+[naksha] [2025-07-18 12:32:03]       Symbol(kBytesRead): 0,
+[naksha] [2025-07-18 12:32:03]       Symbol(kBytesWritten): 0,
+[naksha] [2025-07-18 12:32:03]       Symbol(connect-options): [Object]
+[naksha] [2025-07-18 12:32:03]     },
+[naksha] [2025-07-18 12:32:03]     Symbol(kOutHeaders): [Object: null prototype] {
+[naksha] [2025-07-18 12:32:03]       accept: [Array],
+[naksha] [2025-07-18 12:32:03]       'content-type': [Array],
+[naksha] [2025-07-18 12:32:03]       authorization: [Array],
+[naksha] [2025-07-18 12:32:03]       'user-agent': [Array],
+[naksha] [2025-07-18 12:32:03]       'content-length': [Array],
+[naksha] [2025-07-18 12:32:03]       'accept-encoding': [Array],
+[naksha] [2025-07-18 12:32:03]       host: [Array]
+[naksha] [2025-07-18 12:32:03]     },
+[naksha] [2025-07-18 12:32:03]     Symbol(errored): null,
+[naksha] [2025-07-18 12:32:03]     Symbol(kHighWaterMark): 65536,
+[naksha] [2025-07-18 12:32:03]     Symbol(kRejectNonStandardBodyWrites): false,
+[naksha] [2025-07-18 12:32:03]     Symbol(kUniqueHeaders): null
+[naksha] [2025-07-18 12:32:03]   },
+[naksha] [2025-07-18 12:32:03]   response: {
+[naksha] [2025-07-18 12:32:03]     status: 404,
+[naksha] [2025-07-18 12:32:03]     statusText: 'Not Found',
+[naksha] [2025-07-18 12:32:03]     headers: Object [AxiosHeaders] {
+[naksha] [2025-07-18 12:32:03]       'transfer-encoding': 'chunked',
+[naksha] [2025-07-18 12:32:03]       'content-type': 'application/json',
+[naksha] [2025-07-18 12:32:03]       vary: 'Accept-Encoding',
+[naksha] [2025-07-18 12:32:03]       'strict-transport-security': 'max-age=31536000',
+[naksha] [2025-07-18 12:32:03]       'request-id': 'e49702cb-d74e-438a-a39f-65f76b82f9bf',
+[naksha] [2025-07-18 12:32:03]       'client-request-id': 'e49702cb-d74e-438a-a39f-65f76b82f9bf',
+[naksha] [2025-07-18 12:32:03]       'x-ms-ags-diagnostic': '{"ServerInfo":{"DataCenter":"South India","Slice":"E","Ring":"2","ScaleUnit":"002","RoleInstance":"MA1PEPF000095E5"}}',
+[naksha] [2025-07-18 12:32:03]       'scenario-id': 'cf7dbd1f-8ec6-484e-ba6f-9270302b12d4',
+[naksha] [2025-07-18 12:32:03]       date: 'Fri, 18 Jul 2025 12:32:03 GMT'
+[naksha] [2025-07-18 12:32:03]     },
+[naksha] [2025-07-18 12:32:03]     config: {
+[naksha] [2025-07-18 12:32:03]       transitional: [Object],
+[naksha] [2025-07-18 12:32:03]       adapter: [Array],
+[naksha] [2025-07-18 12:32:03]       transformRequest: [Array],
+[naksha] [2025-07-18 12:32:03]       transformResponse: [Array],
+[naksha] [2025-07-18 12:32:03]       timeout: 0,
+[naksha] [2025-07-18 12:32:03]       xsrfCookieName: 'XSRF-TOKEN',
+[naksha] [2025-07-18 12:32:03]       xsrfHeaderName: 'X-XSRF-TOKEN',
+[naksha] [2025-07-18 12:32:03]       maxContentLength: -1,
+[naksha] [2025-07-18 12:32:03]       maxBodyLength: -1,
+[naksha] [2025-07-18 12:32:03]       env: [Object],
+[naksha] [2025-07-18 12:32:03]       validateStatus: [Function: validateStatus],
+[naksha] [2025-07-18 12:32:03]       headers: [Object [AxiosHeaders]],
+[naksha] [2025-07-18 12:32:03]       method: 'post',
+[naksha] [2025-07-18 12:32:03]       url: 'https://graph.microsoft.com/v1.0/me/onlineMeetings',
+[naksha] [2025-07-18 12:32:03]       data: '{"subject":"Business Strategy Session","startDateTime":"2024-01-30T14:00:00.000Z","endDateTime":"2024-01-30T15:00:00.000Z","participants":{"attendees":[{"identity":{"user":{"id":"abranshbaliyan2807@gmail.com"}},"role":"presenter"},{"identity":{"user":{"id":"abransh05@gmail.com"}},"role":"attendee"}]},"audioConferencing":{"tollNumber":"+91-22-6140-9999","conferenceId":"04413004"},"chatInfo":{"threadId":"nakksha-1752841922548"}}',
+[naksha] [2025-07-18 12:32:03]       allowAbsoluteUrls: true
+[naksha] [2025-07-18 12:32:03]     },
+[naksha] [2025-07-18 12:32:03]     request: <ref *1> ClientRequest {
+[naksha] [2025-07-18 12:32:03]       _events: [Object: null prototype],
+[naksha] [2025-07-18 12:32:03]       _eventsCount: 7,
+[naksha] [2025-07-18 12:32:03]       _maxListeners: undefined,
+[naksha] [2025-07-18 12:32:03]       outputData: [],
+[naksha] [2025-07-18 12:32:03]       outputSize: 0,
+[naksha] [2025-07-18 12:32:03]       writable: true,
+[naksha] [2025-07-18 12:32:03]       destroyed: true,
+[naksha] [2025-07-18 12:32:03]       _last: false,
+[naksha] [2025-07-18 12:32:03]       chunkedEncoding: false,
+[naksha] [2025-07-18 12:32:03]       shouldKeepAlive: true,
+[naksha] [2025-07-18 12:32:03]       maxRequestsOnConnectionReached: false,
+[naksha] [2025-07-18 12:32:03]       _defaultKeepAlive: true,
+[naksha] [2025-07-18 12:32:03]       useChunkedEncodingByDefault: true,
+[naksha] [2025-07-18 12:32:03]       sendDate: false,
+[naksha] [2025-07-18 12:32:03]       _removedConnection: false,
+[naksha] [2025-07-18 12:32:03]       _removedContLen: false,
+[naksha] [2025-07-18 12:32:03]       _removedTE: false,
+[naksha] [2025-07-18 12:32:03]       strictContentLength: false,
+[naksha] [2025-07-18 12:32:03]       _contentLength: 430,
+[naksha] [2025-07-18 12:32:03]       _hasBody: true,
+[naksha] [2025-07-18 12:32:03]       _trailer: '',
+[naksha] [2025-07-18 12:32:03]       finished: true,
+[naksha] [2025-07-18 12:32:03]       _headerSent: true,
+[naksha] [2025-07-18 12:32:03]       _closed: true,
+[naksha] [2025-07-18 12:32:03]       _header: 'POST /v1.0/me/onlineMeetings HTTP/1.1\r\n' +
+[naksha] [2025-07-18 12:32:03]         'Accept: application/json, text/plain, */*\r\n' +
+[naksha] [2025-07-18 12:32:03]         'Content-Type: application/json\r\n' +
+[naksha] [2025-07-18 12:32:03]         'Authorization: Bearer eyJ0eXAiOiJKV1QiLCJub25jZSI6InhFYldKM05SNDlmbGFSZUFQLU8xNngzZENneERURW5Pd1E0LTU2NlhtSGsiLCJhbGciOiJSUzI1NiIsIng1dCI6Il9qTndqZVNudlRUSzhYRWRyNVFVUGtCUkxMbyIsImtpZCI6Il9qTndqZVNudlRUSzhYRWRyNVFVUGtCUkxMbyJ9.eyJhdWQiOiJodHRwczovL2dyYXBoLm1pY3Jvc29mdC5jb20iLCJpc3MiOiJodHRwczovL3N0cy53aW5kb3dzLm5ldC8xMGNkNDNkMi1lMTAyLTQ5OWYtODZkMC1mMDBhMmI4MmRiN2IvIiwiaWF0IjoxNzUyODQxMTA3LCJuYmYiOjE3NTI4NDExMDcsImV4cCI6MTc1Mjg0NjI2NywiYWNjdCI6MCwiYWNyIjoiMSIsImFjcnMiOlsicDEiXSwiYWlvIjoiQVpRQWEvOFpBQUFBZ2hJVGVkUXNBQ3BhRk1aRVpPRWZyMG5tZGs1NHJTNWFzM2c5NjZldnJraTRVeHVMRGJuYlFkVGlIcmE5eithVkdYR3cyNzVZS3pUNnZNVnFIYU51aFVjTmErRmVCeG55RC85Z1N5ZDRUWEw0b1FKc0k1K2dOWUduek82UmpCS0lMNFl1alE3MXBGNTJxeTZMQkNFWXl4bUlvalpzVVdzVlBNcG5IS0ZOd0IrRWRaa2M4ampJeE02VjVFR055RUJsIiwiYW1yIjpbInB3ZCIsIm1mYSJdLCJhcHBfZGlzcGxheW5hbWUiOiJOYWtrc2hhIiwiYXBwaWQiOiI3Mjc1ZTRkYy1hNTFiLTRiODAtYjM5My03NzI1M2Y5NjczZDQiLCJhcHBpZGFjciI6IjEiLCJmYW1pbHlfbmFtZSI6Ik5pbWtoZWRrYXIiLCJnaXZlbl9uYW1lIjoiUmlndmVkIiwiaWR0eXAiOiJ1c2VyIiwiaXBhZGRyIjoiMTc2LjIwMC43Mi42NCIsIm5hbWUiOiJSaWd2ZWQgTmlta2hlZGthciIsIm9pZCI6IjYxY2M0NTM3LWQ5MmEtNGE1MS04MGRmLTlhNzIwNGRmMjcwNCIsInBsYXRmIjoiNSIsInB1aWQiOiIxMDAzMjAwNEQ4RERBMjYxIiwicmgiOiIxLkFjWUEwa1BORUFMaG4wbUcwUEFLSzRMYmV3TUFBQUFBQUFBQXdBQUFBQUFBQUFEcEFNdkdBQS4iLCJzY3AiOiJDYWxlbmRhcnMuUmVhZFdyaXRlIE9ubGluZU1lZXRpbmdzLlJlYWRXcml0ZSBVc2VyLlJlYWQgcHJvZmlsZSBvcGVuaWQgZW1haWwiLCJzaWQiOiIwMDZjMzczOS0xZjA5LTQzZDQtNjgyZC1jMDE5ZjQ0Nzc5NmMiLCJzaWduaW5fc3RhdGUiOlsia21zaSJdLCJzdWIiOiJ0dDlYMmNURzlwTnlBZUFTRjZ6OVNYN2p5NVNlWG5ic1U1U3ZjcTNPUUY4IiwidGVuYW50X3JlZ2lvbl9zY29wZSI6IkFTIiwidGlkIjoiMTBjZDQzZDItZTEwMi00OTlmLTg2ZDAtZjAwYTJiODJkYjdiIiwidW5pcXVlX25hbWUiOiJSaWd2ZWROaW1raGVka2FyQE5ha2tzaGExMjMub25taWNyb3NvZnQuY29tIiwidXBuIjoiUmlndmVkTmlta2hlZGthckBOYWtrc2hhMTIzLm9ubWljcm9zb2Z0LmNvbSIsInV0aSI6ImZUR2pQbm10QWtXc3ZwWHBBV3MxQUEiLCJ2ZXIiOiIxLjAiLCJ3aWRzIjpbIjYyZTkwMzk0LTY5ZjUtNDIzNy05MTkwLTAxMjE3NzE0NWUxMCIsImI3OWZiZjRkLTNlZjktNDY4OS04MTQzLTc2YjE5NGU4NTUwOSJdLCJ4bXNfZnRkIjoibFZWV0IxdVJ3bEh0Nkl0ZXVFSHkxUUNiTDY0blY4eU1SY2E3YjI3UE9UTUJhMjl5WldGemIzVjBhQzFrYzIxeiIsInhtc19pZHJlbCI6IjIwIDEiLCJ4bXNfc3QiOnsic3ViIjoiLUp2VURWd1JkcnpQU2c1UU1SWk9ZSy1mVG9DTlNYZ0htZGhoVkNNQUFzbyJ9LCJ4bXNfdGNkdCI6MTc1MTk5NTE2OX0.mPhWDSeBgrEfLhWuj8mY2YCvYA2ge_ms_CUT0zIcnOyWstQtdZqF6KnhrxImh7-VvzhBAhM4UYmik_pQx2GX0BZnOOvdlPp3ktdjrptum9t2u_7av6uwsfqWopnW1jDHUTknL0kg2O4jHpJ_pFGFkboqYEVDU1x-PSeF4tLToocXHohOBIsruyr9Es4Qc8fIf5Zuv-EZFGgOOVu6IhHytDuqf9UOvNrFg5gxQq7wrwN80XD9UIcQBBCaFoAxg3bk2gQikIa2NGS4IeYkhcYpNZoHfg5-x6Vu_ihzLpZfFXQab51peOUMqfBN1PJSbgi0OtjeWXwsaw_xqUXjrlaDdw\r\n' +
+[naksha] [2025-07-18 12:32:03]         'User-Agent: axios/1.10.0\r\n' +
+[naksha] [2025-07-18 12:32:03]         'Content-Length: 430\r\n' +
+[naksha] [2025-07-18 12:32:03]         'Accept-Encoding: gzip, compress, deflate, br\r\n' +
+[naksha] [2025-07-18 12:32:03]         'Host: graph.microsoft.com\r\n' +
+[naksha] [2025-07-18 12:32:03]         'Connection: keep-alive\r\n' +
+[naksha] [2025-07-18 12:32:03]         '\r\n',
+[naksha] [2025-07-18 12:32:03]       _keepAliveTimeout: 0,
+[naksha] [2025-07-18 12:32:03]       _onPendingData: [Function: nop],
+[naksha] [2025-07-18 12:32:03]       agent: [Agent],
+[naksha] [2025-07-18 12:32:03]       socketPath: undefined,
+[naksha] [2025-07-18 12:32:03]       method: 'POST',
+[naksha] [2025-07-18 12:32:03]       maxHeaderSize: undefined,
+[naksha] [2025-07-18 12:32:03]       insecureHTTPParser: undefined,
+[naksha] [2025-07-18 12:32:03]       joinDuplicateHeaders: undefined,
+[naksha] [2025-07-18 12:32:03]       path: '/v1.0/me/onlineMeetings',
+[naksha] [2025-07-18 12:32:03]       _ended: true,
+[naksha] [2025-07-18 12:32:03]       res: [IncomingMessage],
+[naksha] [2025-07-18 12:32:03]       aborted: false,
+[naksha] [2025-07-18 12:32:03]       timeoutCb: null,
+[naksha] [2025-07-18 12:32:03]       upgradeOrConnect: false,
+[naksha] [2025-07-18 12:32:03]       parser: null,
+[naksha] [2025-07-18 12:32:03]       maxHeadersCount: null,
+[naksha] [2025-07-18 12:32:03]       reusedSocket: false,
+[naksha] [2025-07-18 12:32:03]       host: 'graph.microsoft.com',
+[naksha] [2025-07-18 12:32:03]       protocol: 'https:',
+[naksha] [2025-07-18 12:32:03]       _redirectable: [Writable],
+[naksha] [2025-07-18 12:32:03]       Symbol(shapeMode): false,
+[naksha] [2025-07-18 12:32:03]       Symbol(kCapture): false,
+[naksha] [2025-07-18 12:32:03]       Symbol(kBytesWritten): 0,
+[naksha] [2025-07-18 12:32:03]       Symbol(kNeedDrain): false,
+[naksha] [2025-07-18 12:32:03]       Symbol(corked): 0,
+[naksha] [2025-07-18 12:32:03]       Symbol(kChunkedBuffer): [],
+[naksha] [2025-07-18 12:32:03]       Symbol(kChunkedLength): 0,
+[naksha] [2025-07-18 12:32:03]       Symbol(kSocket): [TLSSocket],
+[naksha] [2025-07-18 12:32:03]       Symbol(kOutHeaders): [Object: null prototype],
+[naksha] [2025-07-18 12:32:03]       Symbol(errored): null,
+[naksha] [2025-07-18 12:32:03]       Symbol(kHighWaterMark): 65536,
+[naksha] [2025-07-18 12:32:03]       Symbol(kRejectNonStandardBodyWrites): false,
+[naksha] [2025-07-18 12:32:03]       Symbol(kUniqueHeaders): null
+[naksha] [2025-07-18 12:32:03]     },
+[naksha] [2025-07-18 12:32:03]     data: { error: [Object] }
+[naksha] [2025-07-18 12:32:03]   },
+[naksha] [2025-07-18 12:32:03]   status: 404
+[naksha] [2025-07-18 12:32:03] }
+[naksha] [2025-07-18 12:32:03] ❌ Teams meeting generation failed: Error: Failed to create Teams meeting: Request failed with status code 404
+[naksha] [2025-07-18 12:32:03]     at generateTeamsMeeting (/workspace/apps/api/dist/services/meetingService.js:101:15)
+[naksha] [2025-07-18 12:32:03]     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[naksha] [2025-07-18 12:32:03]     at async generateMeetingLink (/workspace/apps/api/dist/services/meetingService.js:113:16)
+[naksha] [2025-07-18 12:32:03]     at async /workspace/apps/api/dist/routes/v1/sessions.js:554:32
+[naksha] [2025-07-18 12:32:03] ❌ Create session error: Error: Failed to create Teams meeting: Request failed with status code 404
+[naksha] [2025-07-18 12:32:03]     at generateTeamsMeeting (/workspace/apps/api/dist/services/meetingService.js:101:15)
+[naksha] [2025-07-18 12:32:03]     at process.processTicksAndRejections (node:internal/process/task_queues:105:5)
+[naksha] [2025-07-18 12:32:03]     at async generateMeetingLink (/workspace/apps/api/dist/services/meetingService.js:113:16)
+[naksha] [2025-07-18 12:32:03]     at async /workspace/apps/api/dist/routes/v1/sessions.js:554:32
+[naksha] [2025-07-18 12:32:03] Unhandled Rejection at: Promise {
+[naksha] [2025-07-18 12:32:03]   <rejected> AppError: Failed to create session
+[naksha] [2025-07-18 12:32:03]       at /workspace/apps/api/dist/routes/v1/sessions.js:663:15
+[naksha] [2025-07-18 12:32:03]       at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+[naksha] [2025-07-18 12:32:03]     statusCode: 500,
+[naksha] [2025-07-18 12:32:03]     code: 'SESSION_CREATE_ERROR',
+[naksha] [2025-07-18 12:32:03]     isOperational: true,
+[naksha] [2025-07-18 12:32:03]     details: undefined
+[naksha] [2025-07-18 12:32:03]   }
+[naksha] [2025-07-18 12:32:03] } reason: AppError: Failed to create session
+[naksha] [2025-07-18 12:32:03]     at /workspace/apps/api/dist/routes/v1/sessions.js:663:15
+[naksha] [2025-07-18 12:32:03]     at process.processTicksAndRejections (node:internal/process/task_queues:105:5) {
+[naksha] [2025-07-18 12:32:03]   statusCode: 500,
+[naksha] [2025-07-18 12:32:03]   code: 'SESSION_CREATE_ERROR',
+[naksha] [2025-07-18 12:32:03]   isOperational: true,
+[naksha] [2025-07-18 12:32:03]   details: undefined
+[naksha] [2025-07-18 12:32:03] }

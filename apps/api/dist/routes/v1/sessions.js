@@ -534,30 +534,103 @@ router.post('/', (0, validation_1.validateRequest)(createSessionSchema), async (
         // Get consultant's Teams access token if needed
         let consultantAccessToken;
         if (sessionData.platform === 'TEAMS') {
+            console.log('🔍 [SESSIONS] Checking Teams integration for consultant:', consultantId);
             const consultant = await prisma.consultant.findUnique({
                 where: { id: consultantId },
                 select: {
                     id: true,
                     teamsAccessToken: true,
-                    teamsTokenExpiresAt: true
+                    teamsTokenExpiresAt: true,
+                    teamsUserEmail: true
                 }
             });
             if (!consultant?.teamsAccessToken || !consultant?.teamsTokenExpiresAt) {
+                console.error('❌ [SESSIONS] Teams integration not connected:', {
+                    consultantId,
+                    hasToken: !!consultant?.teamsAccessToken,
+                    hasExpiration: !!consultant?.teamsTokenExpiresAt,
+                    userEmail: consultant?.teamsUserEmail
+                });
                 throw new errorHandler_1.ValidationError('Microsoft Teams integration is not connected. Please connect your Microsoft account in Settings.');
             }
-            if (consultant.teamsTokenExpiresAt < new Date()) {
+            const currentTime = new Date();
+            const tokenExpiresAt = new Date(consultant.teamsTokenExpiresAt);
+            const isExpired = tokenExpiresAt < currentTime;
+            console.log('🕐 [SESSIONS] Token expiration check:', {
+                consultantId,
+                currentTime: currentTime.toISOString(),
+                tokenExpiresAt: tokenExpiresAt.toISOString(),
+                isExpired,
+                timeUntilExpiration: tokenExpiresAt.getTime() - currentTime.getTime(),
+                userEmail: consultant.teamsUserEmail
+            });
+            if (isExpired) {
+                console.error('❌ [SESSIONS] Teams token expired:', {
+                    consultantId,
+                    expiredAt: tokenExpiresAt.toISOString(),
+                    currentTime: currentTime.toISOString(),
+                    expiredBy: currentTime.getTime() - tokenExpiresAt.getTime()
+                });
                 throw new errorHandler_1.ValidationError('Microsoft Teams access token has expired. Please reconnect your Microsoft account in Settings.');
             }
             consultantAccessToken = consultant.teamsAccessToken;
+            console.log('✅ [SESSIONS] Teams token valid, proceeding with meeting creation');
         }
         // Generate meeting link based on platform
-        const meetingDetails = await (0, meetingService_1.generateMeetingLink)(sessionData.platform, {
-            title: sessionData.title,
-            startTime: scheduledDateTime,
-            duration: sessionData.durationMinutes,
-            consultantEmail: req.user.email,
-            clientEmail: client.email
-        }, consultantAccessToken);
+        let meetingDetails;
+        try {
+            console.log('🔗 [SESSIONS] Generating meeting link:', {
+                platform: sessionData.platform,
+                title: sessionData.title,
+                startTime: scheduledDateTime.toISOString(),
+                duration: sessionData.durationMinutes,
+                consultantEmail: req.user.email,
+                clientEmail: client.email,
+                hasAccessToken: !!consultantAccessToken
+            });
+            meetingDetails = await (0, meetingService_1.generateMeetingLink)(sessionData.platform, {
+                title: sessionData.title,
+                startTime: scheduledDateTime,
+                duration: sessionData.durationMinutes,
+                consultantEmail: req.user.email,
+                clientEmail: client.email
+            }, consultantAccessToken);
+            console.log('✅ [SESSIONS] Meeting link generated successfully:', {
+                meetingId: meetingDetails.meetingId,
+                meetingLink: meetingDetails.meetingLink,
+                platform: sessionData.platform
+            });
+        }
+        catch (meetingError) {
+            console.error('❌ [SESSIONS] Meeting link generation failed:', {
+                error: meetingError.message,
+                platform: sessionData.platform,
+                consultantId,
+                clientId: sessionData.clientId,
+                meetingDetails: {
+                    title: sessionData.title,
+                    startTime: scheduledDateTime.toISOString(),
+                    duration: sessionData.durationMinutes
+                }
+            });
+            // Re-throw with additional context for Teams-specific errors
+            if (sessionData.platform === 'TEAMS') {
+                if (meetingError.message.includes('authentication failed') ||
+                    meetingError.message.includes('expired') ||
+                    meetingError.message.includes('invalid')) {
+                    throw new errorHandler_1.ValidationError('Microsoft Teams authentication failed. Please reconnect your Microsoft account in Settings and try again.');
+                }
+                if (meetingError.message.includes('permissions') ||
+                    meetingError.message.includes('scopes')) {
+                    throw new errorHandler_1.ValidationError('Microsoft Teams permissions are insufficient. Please reconnect your Microsoft account with proper permissions.');
+                }
+                if (meetingError.message.includes('404') ||
+                    meetingError.message.includes('not found')) {
+                    throw new errorHandler_1.ValidationError('Microsoft Teams service is not available. Please check your account permissions and try again.');
+                }
+            }
+            throw new errorHandler_1.AppError('Failed to create meeting link: ' + meetingError.message, 500, 'MEETING_GENERATION_ERROR');
+        }
         // Create session
         const session = await prisma.session.create({
             data: {
