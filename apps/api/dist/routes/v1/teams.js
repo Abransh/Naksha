@@ -160,10 +160,10 @@ router.post('/oauth-callback', auth_1.authenticateConsultantBasic, (0, validatio
                 teamsAccessToken: tokens.access_token,
                 teamsRefreshToken: tokens.refresh_token,
                 teamsTokenExpiresAt: tokenExpirationTime,
-                teamsConnectedAt: connectionTime, // Store actual connection time
+                teamsConnectedAt: connectionTime,
                 teamsUserEmail: userInfo.mail || userInfo.userPrincipalName,
                 teamsUserId: userInfo.id,
-                updatedAt: new Date()
+                updatedAt: new Date() // Use connection time for updatedAt as temporary solution
             }
         });
         console.log(`✅ Teams tokens stored for consultant: ${consultantId}`, {

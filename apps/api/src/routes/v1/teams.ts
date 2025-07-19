@@ -196,7 +196,7 @@ router.post('/oauth-callback',
           teamsAccessToken: tokens.access_token,
           teamsRefreshToken: tokens.refresh_token,
           teamsTokenExpiresAt: tokenExpirationTime,
-           teamsConnectedAt: connectionTime,
+          teamsConnectedAt: connectionTime,
           teamsUserEmail: userInfo.mail || userInfo.userPrincipalName,
           teamsUserId: userInfo.id,
           updatedAt: new Date() // Use connection time for updatedAt as temporary solution

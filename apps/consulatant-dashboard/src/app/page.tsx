@@ -1,8 +1,11 @@
+"use client";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import Link from "next/link";
+import { useState } from "react";
 
 const consultantTypes = [
   {
@@ -79,8 +82,8 @@ const consultantTypes = [
 const pricingPlans = [
   {
     name: "Starter",
-    price: "INR 2000",
-    subtitle: "per user monthly",
+    monthlyPrice: 2000,
+    yearlyPrice: 19200, // 20% discount on 12 months (24000 * 0.8)
     description:
       "Perfect for consultants who need technical support and have their own marketing setup.",
     buttonStyle: "secondary",
@@ -101,8 +104,8 @@ const pricingPlans = [
   },
   {
     name: "Growth",
-    price: "INR 3000",
-    subtitle: "per user monthly",
+    monthlyPrice: 3000,
+    yearlyPrice: 28800, // 20% discount on 12 months (36000 * 0.8)
     description:
       "Perfect for consultants who need technical support and a personal marketing advisor.",
     buttonStyle: "primary",
@@ -124,8 +127,8 @@ const pricingPlans = [
   },
   {
     name: "Pro",
-    price: "INR 5000",
-    subtitle: "per user monthly",
+    monthlyPrice: 5000,
+    yearlyPrice: 48000, // 20% discount on 12 months (60000 * 0.8)
     description:
       "Perfect for consultants looking for a complete tech and marketing solution. A campaign manager and video editor will be provided.",
     buttonStyle: "secondary",
@@ -163,6 +166,8 @@ const CheckIcon = () => (
 );
 
 export default function HomePage() {
+  const [isAnnualBilling, setIsAnnualBilling] = useState(false);
+
   return (
     <div className="min-h-screen bg-white">
       {/* Navigation */}
@@ -272,7 +277,7 @@ export default function HomePage() {
       </section>
 
       {/* Community Section */}
-      <section className="py-24" id="about">
+      <section className="py-24" id="features">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           {/* Section Header */}
           <div className="text-center mb-16">
@@ -374,19 +379,33 @@ export default function HomePage() {
           {/* Billing Toggle */}
           <div className="flex justify-center mb-12">
             <div className="bg-[#F1F2F9] rounded-xl p-1 flex items-center gap-6">
-              <div className="bg-white rounded-lg px-4 py-3 shadow-sm">
+              <button
+                onClick={() => setIsAnnualBilling(false)}
+                className={`rounded-lg px-4 py-3 transition-all ${
+                  !isAnnualBilling
+                    ? "bg-white shadow-sm"
+                    : "hover:bg-white/50"
+                }`}
+              >
                 <span className="text-[#170F49] font-medium">
                   Monthly billing
                 </span>
-              </div>
-              <div className="flex items-center gap-2 px-4 py-3">
+              </button>
+              <button
+                onClick={() => setIsAnnualBilling(true)}
+                className={`flex items-center gap-2 px-4 py-3 rounded-lg transition-all ${
+                  isAnnualBilling
+                    ? "bg-white shadow-sm"
+                    : "hover:bg-white/50"
+                }`}
+              >
                 <span className="text-[#170F49] font-medium">
                   Annually billing
                 </span>
                 <Badge className="bg-[#D9DBE9] text-[#6F6C8F] text-xs">
                   Save 20%
                 </Badge>
-              </div>
+              </button>
             </div>
           </div>
 
@@ -414,13 +433,23 @@ export default function HomePage() {
                   {/* Pricing */}
                   <div className="flex items-end gap-2 mb-12">
                     <span className="text-5xl md:text-6xl font-bold text-[#170F49]">
-                      {plan.price}
+                      ₹{isAnnualBilling ? Math.floor(plan.yearlyPrice / 12).toLocaleString() : plan.monthlyPrice.toLocaleString()}
                     </span>
                     <div className="flex flex-col text-[#A0A3BD] text-base">
                       <span>per user</span>
-                      <span>monthly</span>
+                      <span>{isAnnualBilling ? "monthly" : "monthly"}</span>
                     </div>
                   </div>
+                  {isAnnualBilling && (
+                    <div className="mb-6">
+                      <p className="text-sm text-[#6F6C8F]">
+                        Billed annually: ₹{plan.yearlyPrice.toLocaleString()}
+                      </p>
+                      <p className="text-xs text-green-600 font-medium">
+                        Save ₹{(plan.monthlyPrice * 12 - plan.yearlyPrice).toLocaleString()} per year
+                      </p>
+                    </div>
+                  )}
 
                   {/* Description */}
                   <p className="text-[#514F6E] mb-10 leading-relaxed">
