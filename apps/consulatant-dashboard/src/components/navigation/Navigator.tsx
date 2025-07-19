@@ -198,18 +198,24 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
         {/* Contact Support */}
         <div className={`${isExpanded ? "mt-8" : "mt-12"} transition-all duration-300`}>
           {isExpanded ? (
-            <div className="bg-gray-100 rounded-2xl p-4 cursor-pointer hover:bg-gray-200 transition-colors">
+            <a 
+              href="mailto:booking@nakksha.in" 
+              className="block bg-gray-100 rounded-2xl p-4 cursor-pointer hover:bg-gray-200 transition-colors"
+            >
               <div className="flex items-center gap-3">
                 <Headphones size={20} className="text-[var(--black-100)]" />
                 <span className="text-[var(--black-100)] font-inter text-sm">
                   Contact Support
                 </span>
               </div>
-            </div>
+            </a>
           ) : (
-            <div className="flex items-center justify-center w-14 h-12 rounded-2xl bg-[rgba(94,99,102,0.1)] hover:bg-gray-200 cursor-pointer transition-colors">
+            <a 
+              href="mailto:booking@nakksha.in" 
+              className="flex items-center justify-center w-14 h-12 rounded-2xl bg-[rgba(94,99,102,0.1)] hover:bg-gray-200 cursor-pointer transition-colors"
+            >
               <Headphones size={24} className="text-black" />
-            </div>
+            </a>
           )}
         </div>
 
@@ -316,14 +322,17 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
         </nav>
 
         {/* Contact Support */}
-        <div className="mt-8 bg-gray-100 rounded-2xl p-4 cursor-pointer hover:bg-gray-200 transition-colors">
+        <a 
+          href="mailto:booking@nakksha.in" 
+          className="block mt-8 bg-gray-100 rounded-2xl p-4 cursor-pointer hover:bg-gray-200 transition-colors"
+        >
           <div className="flex items-center gap-3">
             <Headphones size={20} className="text-[var(--black-100)]" />
             <span className="text-[var(--black-100)] font-inter text-sm">
               Contact Support
             </span>
           </div>
-        </div>
+        </a>
 
         {/* Gift Banner */}
         <div className="mt-5 bg-[var(--secondary-20)] rounded-2xl p-4 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">

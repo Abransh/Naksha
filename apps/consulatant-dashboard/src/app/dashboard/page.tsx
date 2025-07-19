@@ -9,6 +9,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import { useAuth } from "@/app/providers";
 import { useDashboardMetrics, useRecentSessions } from "@/hooks/useDashboard";
 import { useClientSummary } from "@/hooks/useClients";
+import { useQuotationSummary } from "@/hooks/useQuotations";
 import Navigator from "@/components/navigation/Navigator";
 import { Timeline } from "@/components/ui/timeline";
 import { RevenueSplitChart } from "@/components/charts/revenue-split-chart";
@@ -31,7 +32,6 @@ export default function Dashboard() {
     revenue,
     clients,
     sessions,
-    services,
     revenueSplit,
     chartData,
     isLoading,
@@ -48,6 +48,12 @@ export default function Dashboard() {
     isLoading: clientStatsLoading,
     formatCurrency: formatClientCurrency 
   } = useClientSummary();
+
+  // Get quotation summary statistics
+  const {
+    summaryStats: quotationStats,
+    isLoading: quotationStatsLoading
+  } = useQuotationSummary(timeframe);
 
   // Helper function to format currency
   const formatCurrency = (amount: number) => `₹${amount.toLocaleString('en-IN')}`;
@@ -324,41 +330,41 @@ export default function Dashboard() {
 
                 {/* Right Column */}
                 <div className="space-y-4 lg:space-y-5">
-                  {/* All Services Card */}
+                  {/* Quotations Card */}
                   <Card className="bg-[var(--primary-100)] border-0 shadow-sm rounded-xl text-white">
                     <CardHeader className="pb-4">
                       <div className="flex items-center justify-between">
                         <div className="w-9 h-9 bg-white/20 rounded-lg flex items-center justify-center">
                           <FolderOpen size={20} className="text-white" />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-white/70 text-xs">
-                            {"{Timeline}"}
-                          </span>
-                        </div>
+                        <Timeline 
+                          value={timeframe || 'month'} 
+                          onChange={setTimeframe || (() => {})} 
+                          variant="white"
+                        />
                       </div>
                     </CardHeader>
                     <CardContent className="space-y-4">
                       <div className="grid grid-cols-2 gap-8">
                         <div>
-                          <p className="text-white text-sm">All Services</p>
+                          <p className="text-white text-sm">Quotations Sent</p>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-white font-poppins text-xl font-medium">
-                              {services.all}
+                              {quotationStatsLoading ? '...' : quotationStats.sentQuotations}
                             </span>
                             <span className="text-white/70 text-xs">
-                              {formatChange(services.change)}
+                              Total
                             </span>
                           </div>
                         </div>
                         <div>
-                          <p className="text-white text-sm">Active</p>
+                          <p className="text-white text-sm">Accepted</p>
                           <div className="flex items-center gap-2 mt-2">
                             <span className="text-white font-poppins text-xl font-medium">
-                              {services.active}
+                              {quotationStatsLoading ? '...' : quotationStats.acceptedQuotations}
                             </span>
                             <span className="text-white/70 text-xs">
-                              {services.all > 0 ? `${Math.round((services.active / services.all) * 100)}%` : '0%'}
+                              {quotationStats.sentQuotations > 0 ? `${Math.round((quotationStats.acceptedQuotations / quotationStats.sentQuotations) * 100)}%` : '0%'}
                             </span>
                           </div>
                         </div>
@@ -442,15 +448,10 @@ export default function Dashboard() {
                         />
                       </div>
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[var(--black-100)] text-xs">
-                        {"{Timeline}"}
-                      </span>
-                      <ChevronDown
-                        size={12}
-                        className="text-[var(--black-100)]"
-                      />
-                    </div>
+                    <Timeline 
+                      value={timeframe || 'month'} 
+                      onChange={setTimeframe || (() => {})} 
+                    />
                   </div>
                 </CardHeader>
                 <CardContent className="overflow-x-auto">

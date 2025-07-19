@@ -343,3 +343,77 @@ export const getDaysUntilExpiry = (validUntil: string): number | null => {
   
   return diffDays;
 };
+
+// Helper hook for quotation summary statistics (for dashboard)
+export const useQuotationSummary = (timeframe: string = 'month') => {
+  const [summaryStats, setSummaryStats] = useState<QuotationSummaryStats | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  const fetchSummaryStats = useCallback(async () => {
+    try {
+      setIsLoading(true);
+      setError(null);
+
+      const token = localStorage.getItem('accessToken');
+      if (!token) {
+        throw new Error('Authentication token not found');
+      }
+
+      // Build query params with timeframe
+      const params = new URLSearchParams();
+      params.append('timeframe', timeframe);
+      params.append('summary', 'true');
+
+      const response = await fetch(`${API_URL}/quotations/summary?${params}`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${token}`,
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to fetch quotation summary');
+      }
+
+      const result = await response.json();
+      setSummaryStats(result.data || null);
+
+    } catch (err) {
+      console.error('❌ Error fetching quotation summary:', err);
+      setError(err instanceof Error ? err.message : 'An error occurred');
+      setSummaryStats(null);
+    } finally {
+      setIsLoading(false);
+    }
+  }, [timeframe]);
+
+  useEffect(() => {
+    fetchSummaryStats();
+  }, [fetchSummaryStats]);
+
+  // Auto-refresh every 60 seconds
+  useEffect(() => {
+    const interval = setInterval(fetchSummaryStats, 60000);
+    return () => clearInterval(interval);
+  }, [fetchSummaryStats]);
+
+  return {
+    summaryStats: summaryStats || {
+      totalQuotations: 0,
+      draftQuotations: 0,
+      sentQuotations: 0,
+      acceptedQuotations: 0,
+      rejectedQuotations: 0,
+      expiredQuotations: 0,
+      totalValue: 0,
+      averageValue: 0,
+      conversionRate: 0,
+    },
+    isLoading,
+    error,
+    refetch: fetchSummaryStats,
+  };
+};

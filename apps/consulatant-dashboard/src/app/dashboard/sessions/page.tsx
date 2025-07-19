@@ -12,7 +12,8 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Navigator from "@/components/navigation/Navigator";
 import { useSessions, Session } from "@/hooks/useSessions";
 import { useAuth } from "@/app/providers";
-import { toast } from "sonner";
+//import { toast } from "sonner";
+import {Toast} from "@/components/ui/toast";
 import {
   BarChart3,
   ShoppingBag,
