@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/badge";
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { Instagram, Linkedin, Youtube, Twitter } from "lucide-react";
 
 const consultantTypes = [
   {
@@ -552,85 +553,52 @@ export default function HomePage() {
 
               {/* Social Links */}
               <div className="flex space-x-4">
-                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 32 32"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M16.0007 7.4668C13.6832 7.4668 13.3923 7.47693 12.4821 7.51835C11.5736 7.55995 10.9535 7.70378 10.4109 7.9148C9.84969 8.13276 9.37359 8.42432 8.89928 8.89881C8.42461 9.37313 8.13305 9.84922 7.91438 10.4103C7.70282 10.9531 7.55882 11.5733 7.51793 12.4814C7.47722 13.3917 7.46655 13.6827 7.46655 16.0002C7.46655 18.3178 7.47686 18.6077 7.51811 19.5179C7.55989 20.4264 7.70371 21.0465 7.91456 21.5891C8.13269 22.1503 8.42425 22.6264 8.89875 23.1007C9.37288 23.5754 9.84898 23.8677 10.4099 24.0856C10.9528 24.2967 11.5731 24.4405 12.4814 24.4821C13.3916 24.5235 13.6823 24.5336 15.9996 24.5336C18.3173 24.5336 18.6073 24.5235 19.5175 24.4821C20.426 24.4405 21.0468 24.2967 21.5897 24.0856C22.1508 23.8677 22.6262 23.5754 23.1003 23.1007C23.575 22.6264 23.8665 22.1503 24.0852 21.5893C24.295 21.0465 24.439 20.4262 24.4817 19.5181C24.5226 18.6079 24.5332 18.3178 24.5332 16.0002C24.5332 13.6827 24.5226 13.3918 24.4817 12.4816C24.439 11.5732 24.295 10.9531 24.0852 10.4105C23.8665 9.84922 23.575 9.37313 23.1003 8.89881C22.6256 8.42414 22.151 8.13258 21.5892 7.9148C21.0452 7.70378 20.4247 7.55995 19.5163 7.51835C18.606 7.47693 18.3163 7.4668 15.998 7.4668H16.0007Z"
-                      fill="white"
-                    />
-                  </svg>
-                </div>
-                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 32 32"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M15.5208 13.0051L15.5544 13.5587L14.9948 13.4909C12.9579 13.2311 11.1784 12.3498 9.66756 10.8696L8.92891 10.1352L8.73865 10.6776C8.33575 11.8865 8.59316 13.1633 9.43253 14.022C9.8802 14.4965 9.77948 14.5643 9.00725 14.2819C8.73865 14.1915 8.50363 14.1237 8.48124 14.1576C8.4029 14.2367 8.6715 15.2648 8.88414 15.6716C9.17513 16.2365 9.76828 16.7902 10.4174 17.1178L10.9658 17.3777L10.3167 17.389C9.68994 17.389 9.66756 17.4003 9.73471 17.6376C9.95854 18.372 10.8427 19.1516 11.8276 19.4906L12.5214 19.7278L11.9171 20.0894C11.0218 20.6091 9.96973 20.9029 8.91772 20.9255C8.41409 20.9368 8 20.982 8 21.0159C8 21.1289 9.36538 21.7616 10.16 22.0102C12.5438 22.7446 15.3753 22.4282 17.5017 21.1741C19.0126 20.2815 20.5235 18.5076 21.2286 16.7902C21.6091 15.875 21.9896 14.2028 21.9896 13.4006C21.9896 12.8808 22.0232 12.813 22.6499 12.1916C23.0192 11.83 23.3662 11.4346 23.4333 11.3216C23.5452 11.1069 23.534 11.1069 22.9633 11.299C22.012 11.638 21.8777 11.5928 22.3477 11.0843C22.6947 10.7228 23.1088 10.0674 23.1088 9.87536C23.1088 9.84146 22.9409 9.89796 22.7506 9.99964C22.5492 10.1126 22.1015 10.2821 21.7658 10.3838L21.1614 10.5759L20.613 10.203C20.3108 9.99964 19.8856 9.77367 19.6617 9.70588C19.0909 9.5477 18.218 9.57029 17.7032 9.75107C16.3042 10.2595 15.4201 11.5702 15.5208 13.0051Z"
-                      fill="white"
-                    />
-                  </svg>
-                </div>
-                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 32 32"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M22.6679 10.4995C23.4022 10.701 23.9805 11.2948 24.1768 12.0488C24.5335 13.4153 24.5335 16.2666 24.5335 16.2666C24.5335 16.2666 24.5335 19.1178 24.1768 20.4845C23.9805 21.2385 23.4022 21.8322 22.6679 22.0338C21.3371 22.4 16.0001 22.4 16.0001 22.4C16.0001 22.4 10.6632 22.4 9.3323 22.0338C8.59795 21.8322 8.01962 21.2385 7.82335 20.4845C7.4668 19.1178 7.4668 16.2666 7.4668 16.2666C7.4668 16.2666 7.4668 13.4153 7.82335 12.0488C8.01962 11.2948 8.59795 10.701 9.3323 10.4995C10.6632 10.1333 16.0001 10.1333 16.0001 10.1333C16.0001 10.1333 21.3371 10.1333 22.6679 10.4995Z"
-                      fill="white"
-                    />
-                  </svg>
-                </div>
-                <div className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors cursor-pointer">
-                  <svg
-                    width="16"
-                    height="16"
-                    viewBox="0 0 32 32"
-                    fill="none"
-                    xmlns="http://www.w3.org/2000/svg"
-                  >
-                    <path
-                      fillRule="evenodd"
-                      clipRule="evenodd"
-                      d="M24.5332 15.9883C24.5332 16.5654 24.4745 17.1417 24.3591 17.7034C24.2465 18.2518 24.0799 18.7902 23.8615 19.3049C23.6482 19.8105 23.3836 20.2977 23.0744 20.7521C22.7698 21.2036 22.419 21.6271 22.0335 22.0133C21.6473 22.3977 21.2222 22.7476 20.771 23.0535C20.3151 23.3605 19.8272 23.6247 19.3213 23.8391C18.8059 24.0562 18.2662 24.2227 17.7183 24.335C17.1558 24.4507 16.5774 24.5098 15.9995 24.5098C15.4211 24.5098 14.8428 24.4507 14.2811 24.335C13.7323 24.2227 13.1927 24.0562 12.6777 23.8391C12.1718 23.6247 11.6834 23.3605 11.2276 23.0535C10.7763 22.7476 10.3513 22.3977 9.96587 22.0133C9.58003 21.6271 9.22915 21.2036 8.92414 20.7521C8.61663 20.2977 8.35159 19.8105 8.13743 19.3049C7.91906 18.7902 7.75199 18.2518 7.63907 17.7034C7.5249 17.1417 7.46655 16.5654 7.46655 15.9883C7.46655 15.4108 7.52487 14.8332 7.6391 14.2727C7.75203 13.7243 7.91909 13.1851 8.13747 12.6712C8.35163 12.1653 8.61666 11.6776 8.92418 11.2232C9.22919 10.7714 9.58006 10.3486 9.9659 9.96207C10.3513 9.57759 10.7764 9.22852 11.2276 8.92312C11.6835 8.61478 12.1719 8.35059 12.6777 8.13587C13.1927 7.91822 13.7323 7.75139 14.2811 7.63989C14.8428 7.52506 15.4212 7.4668 15.9995 7.4668C16.5775 7.4668 17.1558 7.52506 17.7184 7.63989C18.2663 7.75142 18.8059 7.91825 19.3214 8.13587C19.8272 8.35056 20.3152 8.61478 20.771 8.92312C21.2223 9.22852 21.6473 9.57759 22.0336 9.96207C22.419 10.3486 22.7699 10.7714 23.0745 11.2232C23.3836 11.6776 23.6482 12.1653 23.8615 12.6712C24.0799 13.1851 24.2465 13.7243 24.3591 14.2727C24.4745 14.8332 24.5332 15.4108 24.5332 15.9883Z"
-                      fill="white"
-                    />
-                  </svg>
-                </div>
+                <Link 
+                  href="https://www.instagram.com/nakkshagrow/" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors"
+                >
+                  <Instagram size={16} className="text-white" />
+                </Link>
+                <Link 
+                  href="https://www.linkedin.com/company/nakksha-the-naksha-group/?viewAsMember=true" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors"
+                >
+                  <Linkedin size={16} className="text-white" />
+                </Link>
+                <Link 
+                  href="https://www.youtube.com/@TheNakshaGroup" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors"
+                >
+                  <Youtube size={16} className="text-white" />
+                </Link>
+                <Link 
+                  href="https://x.com/nakksha_tng" 
+                  target="_blank" 
+                  rel="noopener noreferrer"
+                  className="w-8 h-8 bg-white/10 rounded-full flex items-center justify-center hover:bg-white/20 transition-colors"
+                >
+                  <Twitter size={16} className="text-white" />
+                </Link>
               </div>
             </div>
 
             {/* Company Links */}
             <div>
               <h4 className="text-white font-semibold text-xl mb-6">Company</h4>
-              <div className="space-y-3">
-                <p className="text-[#F5F7FA] text-sm hover:text-white cursor-pointer transition-colors">
-                  About us
-                </p>
-                <p className="text-[#F5F7FA] text-sm hover:text-white cursor-pointer transition-colors">
-                  Contact us
-                </p>
-                <p className="text-[#F5F7FA] text-sm hover:text-white cursor-pointer transition-colors">
-                  Pricing
+              <div className="space-y-7">
+                <p className="text-[#F5F7FA] flex-row text-sm transition-colors">
+                Nakksha <br></br>
+A platform to start and grow online consultancy. We don’t just support, we take charge of your tech, marketing & growth.<br></br>
+The Naksha Group <br></br>
+Nagpur, Maharashtra - 440015 <br></br>
+P: +91-9307973337; E: <a href= "mailto:booking@nakksha.in"> booking@nakksha.in</a> <br></br>
+GST: 27BRKPN2343D1ZW
                 </p>
               </div>
             </div>
