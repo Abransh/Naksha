@@ -554,6 +554,8 @@ export const consultantApi = {
       userEmail?: string;
       connectedAt?: string;
       needsReconnection: boolean;
+      timeUntilExpiry?: number | null;
+      tokenHealth?: 'good' | 'warning' | 'expired' | null;
     }> {
       const response = await apiRequest<ApiResponse<{
         isConnected: boolean;
@@ -561,6 +563,8 @@ export const consultantApi = {
         userEmail?: string;
         connectedAt?: string;
         needsReconnection: boolean;
+        timeUntilExpiry?: number | null;
+        tokenHealth?: 'good' | 'warning' | 'expired' | null;
       }>>('/teams/status', {
         requireAuth: true,
       });

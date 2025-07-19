@@ -20,6 +20,8 @@ interface TeamsStatus {
   userEmail?: string;
   connectedAt?: string;
   needsReconnection: boolean;
+  timeUntilExpiry?: number | null;
+  tokenHealth?: 'good' | 'warning' | 'expired' | null;
 }
 
 // Teams Integration Component
@@ -164,34 +166,85 @@ export const TeamsIntegration: React.FC = () => {
     fetchStatus();
   }, []);
 
-  // Render connection status badge
+  // Format time until expiry in a human-readable way
+  const formatTimeUntilExpiry = (seconds: number): string => {
+    if (seconds <= 0) return 'Expired';
+    if (seconds < 60) return `${seconds}s`;
+    const minutes = Math.floor(seconds / 60);
+    if (minutes < 60) return `${minutes}m`;
+    const hours = Math.floor(minutes / 60);
+    if (hours < 24) return `${hours}h ${minutes % 60}m`;
+    const days = Math.floor(hours / 24);
+    return `${days}d ${hours % 24}h`;
+  };
+
+  // Render connection status badge with enhanced health indicators
   const renderStatusBadge = () => {
     if (!status) return null;
 
-    if (status.isConnected && !status.isExpired) {
+    if (!status.isConnected) {
       return (
-        <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
-          <CheckCircle className="w-3 h-3 mr-1" />
-          Connected
+        <Badge variant="secondary" className="bg-gray-100 text-gray-800 border-gray-300">
+          <XCircle className="w-3 h-3 mr-1" />
+          Not Connected
         </Badge>
       );
     }
 
-    if (status.isConnected && status.isExpired) {
-      return (
-        <Badge variant="destructive" className="bg-orange-100 text-orange-800 border-orange-300">
-          <AlertCircle className="w-3 h-3 mr-1" />
-          Expired
-        </Badge>
-      );
+    // Connected - show health-based status
+    switch (status.tokenHealth) {
+      case 'good':
+        return (
+          <div className="flex items-center gap-2">
+            <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
+              <CheckCircle className="w-3 h-3 mr-1" />
+              Connected
+            </Badge>
+            {status.timeUntilExpiry && (
+              <span className="text-xs text-green-600">
+                Expires in {formatTimeUntilExpiry(status.timeUntilExpiry)}
+              </span>
+            )}
+          </div>
+        );
+      case 'warning':
+        return (
+          <div className="flex items-center gap-2">
+            <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
+              <AlertCircle className="w-3 h-3 mr-1" />
+              Refresh Soon
+            </Badge>
+            {status.timeUntilExpiry && (
+              <span className="text-xs text-yellow-600">
+                Expires in {formatTimeUntilExpiry(status.timeUntilExpiry)}
+              </span>
+            )}
+          </div>
+        );
+      case 'expired':
+        return (
+          <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
+            <XCircle className="w-3 h-3 mr-1" />
+            Expired
+          </Badge>
+        );
+      default:
+        // Fallback for older status format
+        if (status.isExpired) {
+          return (
+            <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
+              <XCircle className="w-3 h-3 mr-1" />
+              Expired
+            </Badge>
+          );
+        }
+        return (
+          <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
+            <CheckCircle className="w-3 h-3 mr-1" />
+            Connected
+          </Badge>
+        );
     }
-
-    return (
-      <Badge variant="secondary" className="bg-gray-100 text-gray-800 border-gray-300">
-        <XCircle className="w-3 h-3 mr-1" />
-        Not Connected
-      </Badge>
-    );
   };
 
   return (
@@ -218,7 +271,7 @@ export const TeamsIntegration: React.FC = () => {
 
         {/* Connection Status */}
         {status && (
-          <div className="space-y-2">
+          <div className="space-y-3">
             <div className="flex items-center justify-between">
               <span className="text-sm font-medium">Status</span>
               {renderStatusBadge()}
@@ -235,8 +288,46 @@ export const TeamsIntegration: React.FC = () => {
               <div className="flex items-center justify-between">
                 <span className="text-sm font-medium">Connected At</span>
                 <span className="text-sm text-gray-600">
-                  {new Date(status.connectedAt).toLocaleDateString()}
+                  {new Date(status.connectedAt).toLocaleString()}
                 </span>
+              </div>
+            )}
+
+            {/* Token Health Information */}
+            {status.isConnected && status.tokenHealth && (
+              <div className="space-y-2">
+                {status.tokenHealth === 'warning' && (
+                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <AlertCircle className="h-4 w-4 text-yellow-600" />
+                      <span className="text-sm font-medium text-yellow-800">Token Refresh Recommended</span>
+                    </div>
+                    <p className="text-xs text-yellow-700 mt-1">
+                      Your Teams token will expire soon. Consider refreshing it to avoid interruption.
+                    </p>
+                  </div>
+                )}
+
+                {status.tokenHealth === 'expired' && (
+                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
+                    <div className="flex items-center gap-2">
+                      <XCircle className="h-4 w-4 text-red-600" />
+                      <span className="text-sm font-medium text-red-800">Token Expired</span>
+                    </div>
+                    <p className="text-xs text-red-700 mt-1">
+                      Your Teams integration has expired. Please refresh or reconnect to continue using Teams meetings.
+                    </p>
+                  </div>
+                )}
+
+                {status.timeUntilExpiry !== null && status.timeUntilExpiry !== undefined && status.timeUntilExpiry > 0 && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-medium">Token Expires In</span>
+                    <span className="text-sm text-gray-600">
+                      {formatTimeUntilExpiry(status.timeUntilExpiry)}
+                    </span>
+                  </div>
+                )}
               </div>
             )}
           </div>

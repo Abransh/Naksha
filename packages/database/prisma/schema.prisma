@@ -73,6 +73,7 @@ model Consultant {
   teamsAccessToken             String?   @map("teams_access_token")
   teamsRefreshToken            String?   @map("teams_refresh_token")
   teamsTokenExpiresAt          DateTime? @map("teams_token_expires_at")
+  teamsConnectedAt             DateTime? @map("teams_connected_at") // Actual connection timestamp
   teamsUserEmail               String?   @map("teams_user_email")
   teamsUserId                  String?   @map("teams_user_id")
   

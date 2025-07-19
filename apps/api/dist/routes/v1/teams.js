@@ -151,26 +151,34 @@ router.post('/oauth-callback', auth_1.authenticateConsultantBasic, (0, validatio
         console.log(`✅ Teams OAuth successful for: ${userInfo.mail || userInfo.userPrincipalName}`);
         // Store tokens in database
         const prisma = (0, database_1.getPrismaClient)();
+        // Calculate token expiration with 5-minute safety buffer to prevent clock skew issues
+        const tokenExpirationTime = new Date(Date.now() + (tokens.expires_in - 300) * 1000); // -300 seconds buffer
+        const connectionTime = new Date();
         await prisma.consultant.update({
             where: { id: consultantId },
             data: {
-                // We'll add these fields to the database schema
                 teamsAccessToken: tokens.access_token,
                 teamsRefreshToken: tokens.refresh_token,
-                teamsTokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+                teamsTokenExpiresAt: tokenExpirationTime,
+                teamsConnectedAt: connectionTime, // Store actual connection time
                 teamsUserEmail: userInfo.mail || userInfo.userPrincipalName,
                 teamsUserId: userInfo.id,
                 updatedAt: new Date()
             }
         });
-        console.log(`✅ Teams tokens stored for consultant: ${consultantId}`);
+        console.log(`✅ Teams tokens stored for consultant: ${consultantId}`, {
+            expiresAt: tokenExpirationTime.toISOString(),
+            connectedAt: connectionTime.toISOString(),
+            expiresInSeconds: tokens.expires_in,
+            bufferApplied: '5 minutes'
+        });
         res.json({
             success: true,
             message: 'Microsoft Teams integration connected successfully',
             data: {
                 userEmail: userInfo.mail || userInfo.userPrincipalName,
                 displayName: userInfo.displayName,
-                connectedAt: new Date().toISOString()
+                connectedAt: connectionTime.toISOString()
             }
         });
     }
@@ -233,6 +241,7 @@ router.get('/status', auth_1.authenticateConsultantBasic, async (req, res) => {
             select: {
                 teamsAccessToken: true,
                 teamsTokenExpiresAt: true,
+                teamsConnectedAt: true,
                 teamsUserEmail: true,
                 teamsUserId: true,
                 updatedAt: true
@@ -241,16 +250,44 @@ router.get('/status', auth_1.authenticateConsultantBasic, async (req, res) => {
         if (!consultant) {
             throw new errorHandler_1.NotFoundError('Consultant');
         }
+        const now = new Date();
         const isConnected = !!(consultant.teamsAccessToken && consultant.teamsTokenExpiresAt);
-        const isExpired = consultant.teamsTokenExpiresAt ? consultant.teamsTokenExpiresAt < new Date() : true;
+        // Enhanced expiration logic with early refresh trigger (10 minutes before expiry)
+        let isExpired = false;
+        let needsReconnection = false;
+        let timeUntilExpiry = null;
+        if (consultant.teamsTokenExpiresAt && isConnected) {
+            const expiresAt = consultant.teamsTokenExpiresAt;
+            const timeUntilExpiryMs = expiresAt.getTime() - now.getTime();
+            timeUntilExpiry = Math.floor(timeUntilExpiryMs / 1000); // seconds
+            isExpired = expiresAt < now;
+            // Trigger refresh 10 minutes (600 seconds) before actual expiry
+            needsReconnection = timeUntilExpiryMs < 600000; // 600,000ms = 10 minutes
+            console.log(`🔍 [TEAMS] Token status for consultant ${consultantId}:`, {
+                expiresAt: expiresAt.toISOString(),
+                currentTime: now.toISOString(),
+                timeUntilExpirySeconds: timeUntilExpiry,
+                isExpired,
+                needsReconnection,
+                bufferTrigger: '10 minutes before expiry'
+            });
+        }
+        else if (isConnected) {
+            // Connected but no expiration time - treat as expired
+            isExpired = true;
+            needsReconnection = true;
+        }
         res.json({
             success: true,
             data: {
                 isConnected,
                 isExpired: isConnected ? isExpired : null,
                 userEmail: consultant.teamsUserEmail,
-                connectedAt: consultant.updatedAt,
-                needsReconnection: isConnected && isExpired
+                connectedAt: consultant.teamsConnectedAt || consultant.updatedAt, // Use new timestamp or fallback
+                needsReconnection,
+                timeUntilExpiry: isConnected ? timeUntilExpiry : null,
+                tokenHealth: isConnected ? (isExpired ? 'expired' :
+                    needsReconnection ? 'warning' : 'good') : null
             }
         });
     }
@@ -277,6 +314,7 @@ router.delete('/disconnect', auth_1.authenticateConsultantBasic, async (req, res
                 teamsAccessToken: null,
                 teamsRefreshToken: null,
                 teamsTokenExpiresAt: null,
+                teamsConnectedAt: null,
                 teamsUserEmail: null,
                 teamsUserId: null,
                 updatedAt: new Date()
@@ -334,22 +372,28 @@ router.post('/refresh-token', auth_1.authenticateConsultantBasic, async (req, re
         if (!tokens.access_token) {
             throw new errorHandler_1.AppError('Failed to refresh Teams access token', 400, 'TEAMS_REFRESH_ERROR');
         }
+        // Calculate new token expiration with 5-minute safety buffer
+        const newTokenExpirationTime = new Date(Date.now() + (tokens.expires_in - 300) * 1000); // -300 seconds buffer
         // Update tokens in database
         await prisma.consultant.update({
             where: { id: consultantId },
             data: {
                 teamsAccessToken: tokens.access_token,
                 teamsRefreshToken: tokens.refresh_token || consultant.teamsRefreshToken, // Keep old refresh token if new one not provided
-                teamsTokenExpiresAt: new Date(Date.now() + tokens.expires_in * 1000),
+                teamsTokenExpiresAt: newTokenExpirationTime,
                 updatedAt: new Date()
             }
         });
-        console.log(`✅ Teams token refreshed for consultant: ${consultantId}`);
+        console.log(`✅ Teams token refreshed for consultant: ${consultantId}`, {
+            newExpiresAt: newTokenExpirationTime.toISOString(),
+            expiresInSeconds: tokens.expires_in,
+            bufferApplied: '5 minutes'
+        });
         res.json({
             success: true,
             message: 'Teams access token refreshed successfully',
             data: {
-                expiresAt: new Date(Date.now() + tokens.expires_in * 1000).toISOString()
+                expiresAt: newTokenExpirationTime.toISOString()
             }
         });
     }
