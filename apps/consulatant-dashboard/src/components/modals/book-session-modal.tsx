@@ -13,7 +13,7 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Calendar, Clock, AlertCircle } from "lucide-react";
+import { Loader2, Calendar, Clock, AlertCircle, CheckCircle } from "lucide-react";
 import { bookSession } from "@/lib/api";
 import { useAvailableSlots, useAvailabilityFormatter } from "@/hooks/useAvailableSlots";
 
@@ -62,81 +62,47 @@ export function BookSessionModal({
   });
 
   const [isOpen, setIsOpen] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
+  const [isBooking, setIsBooking] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [hasTriggeredFetch, setHasTriggeredFetch] = useState(false);
 
-  // Fetch real availability data with enhanced capabilities
+  // Initialize availability hook but don't fetch automatically
   const { 
     availableDates, 
     availableTimesForDate, 
     isLoading: availabilityLoading, 
     error: availabilityError,
-    refetch: refetchAvailability,
-    retry: retryAvailability,
+    triggerFetch,
     isCached,
-    cacheTimestamp,
-    loadMore,
-    hasMore
-  } = useAvailableSlots(consultantSlug, sessionType);
+    cacheTimestamp
+  } = useAvailableSlots(consultantSlug, sessionType, false); // false = don't auto-fetch
 
   const { formatDate, formatTime } = useAvailabilityFormatter();
 
   const handleInputChange = (field: keyof SessionBookingData, value: string | number) => {
-    setFormData((prev) => {
-      const updated = {
-        ...prev,
-        [field]: value,
-      };
-      
-      // Clear selected time when date changes (new date might have different available times)
-      if (field === 'selectedDate') {
-        updated.selectedTime = '';
-      }
-      
-      return updated;
-    });
+    setFormData((prev) => ({
+      ...prev,
+      [field]: value,
+      // Clear selected time when date changes
+      ...(field === 'selectedDate' ? { selectedTime: '' } : {})
+    }));
   };
 
   const handleNext = () => {
     if (currentStep < 3) {
-      // Enhanced step 1 -> 2 transition with better logic
+      // Step 1 -> 2: Trigger availability fetch
       if (currentStep === 1) {
-        // If still loading but taking too long, allow user to proceed with retry option
-        if (availabilityLoading) {
-          console.log('🔍 BookSessionModal: Loading availability, but allowing proceed with retry option');
-          // Allow proceeding if loading is taking too long (user can retry in step 2)
-          const loadingTime = Date.now() - (cacheTimestamp || Date.now());
-          if (loadingTime > 5000) { // 5 seconds threshold
-            console.log('🕐 BookSessionModal: Loading timeout exceeded, proceeding to step 2');
-            setCurrentStep(currentStep + 1);
-            return;
-          } else {
-            console.log('🔍 BookSessionModal: Still within loading threshold, waiting...');
-            return;
-          }
+        setCurrentStep(2);
+        // Trigger availability fetch when entering step 2
+        if (!hasTriggeredFetch) {
+          console.log('🎯 BookSessionModal: Entering Step 2, triggering availability fetch');
+          triggerFetch();
+          setHasTriggeredFetch(true);
         }
-        
-        // If there's an error but we have cached data, allow proceeding
-        if (availabilityError && availableDates.length > 0) {
-          console.log('🔍 BookSessionModal: Error present but cached data available, proceeding');
-          setCurrentStep(currentStep + 1);
-          return;
-        }
-        
-        // If there's an error and no data, block progression
-        if (availabilityError && availableDates.length === 0) {
-          console.log('🔍 BookSessionModal: Cannot proceed - error and no availability data');
-          return;
-        }
-        
-        // If no availability found, still allow proceeding (step 2 will show "no availability" message)
-        if (availableDates.length === 0) {
-          console.log('🔍 BookSessionModal: No availability found, but proceeding to show empty state');
-          setCurrentStep(currentStep + 1);
-          return;
-        }
+        return;
       }
       
+      // Step 2 -> 3: Proceed to final step
       setCurrentStep(currentStep + 1);
     }
   };
@@ -148,15 +114,15 @@ export function BookSessionModal({
   };
 
   const handleSubmit = async () => {
-    setIsLoading(true);
+    setIsBooking(true);
     try {
       const result = await bookSession({
         fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
         sessionType: formData.sessionType,
-        selectedDate: formData.selectedDate || '', // Handle manual booking case
-        selectedTime: formData.selectedTime || '', // Handle manual booking case
+        selectedDate: formData.selectedDate || '',
+        selectedTime: formData.selectedTime || '',
         duration: formData.duration,
         amount: formData.amount,
         clientNotes: formData.clientNotes + ((!formData.selectedDate || !formData.selectedTime) ? 
@@ -166,11 +132,13 @@ export function BookSessionModal({
       
       console.log('✅ Session booked successfully:', result);
       
+      // Reset modal state
       setIsOpen(false);
       setCurrentStep(1);
+      setHasTriggeredFetch(false);
       resetForm();
       
-      // Enhanced success message based on booking type
+      // Success message based on booking type
       const bookingType = (formData.selectedDate && formData.selectedTime) ? 'scheduled' : 'manual';
       const successMessage = bookingType === 'scheduled' 
         ? "Session booked successfully! You will receive a confirmation email with meeting details shortly."
@@ -183,7 +151,7 @@ export function BookSessionModal({
       const errorMessage = error instanceof Error ? error.message : "Failed to book session. Please try again.";
       alert(`Booking failed: ${errorMessage}`);
     } finally {
-      setIsLoading(false);
+      setIsBooking(false);
     }
   };
 
@@ -204,6 +172,7 @@ export function BookSessionModal({
   const handleCancel = () => {
     setIsOpen(false);
     setCurrentStep(1);
+    setHasTriggeredFetch(false);
     resetForm();
   };
 
@@ -212,63 +181,29 @@ export function BookSessionModal({
     ? availableTimesForDate(formData.selectedDate) 
     : [];
 
-  // Refresh availability when modal opens
-  useEffect(() => {
-    if (isOpen && consultantSlug) {
-      refetchAvailability();
-    }
-  }, [isOpen, consultantSlug, refetchAvailability]);
-
+  // Step validation - simplified logic
   const isStepValid = () => {
     switch (currentStep) {
       case 1:
-        return formData.fullName && formData.email && formData.phone;
+        // Step 1: Only validate form fields, no API dependency
+        return formData.fullName.trim() && formData.email.trim() && formData.phone.trim();
       case 2:
-        // Enhanced validation for step 2 - more flexible
-        // Allow proceeding if:
-        // 1. We have data and user has made selections
-        // 2. We're in an error state but user wants to retry
-        // 3. No availability but we want to show the empty state
-        
-        if (availabilityError) {
-          // If there's an error, user can proceed to see retry options
-          return true;
-        }
-        
-        if (availabilityLoading) {
-          // If still loading, don't allow proceeding
-          return false;
-        }
-        
-        if (availableDates.length === 0) {
-          // If no availability, allow proceeding to show "no availability" message
-          return true;
-        }
-        
-        // If we have availability, require selections
-        return formData.selectedDate && formData.selectedTime;
+        // Step 2: Allow proceeding even without selection (manual booking option)
+        return true;
       case 3:
+        // Step 3: Always valid (final review)
         return true;
       default:
         return false;
     }
   };
 
-  // Enhanced debug logging for availability states
-  useEffect(() => {
-    console.log('🔍 BookSessionModal: Availability state update', {
-      availabilityLoading,
-      availabilityError,
-      availableDatesCount: availableDates.length,
-      availableDates: availableDates.slice(0, 3), // First 3 dates for debugging
-      consultantSlug,
-      sessionType,
-      isCached,
-      cacheTimestamp: cacheTimestamp ? new Date(cacheTimestamp).toLocaleTimeString() : null,
-      hasMore,
-      modalStep: currentStep
-    });
-  }, [availabilityLoading, availabilityError, availableDates, consultantSlug, sessionType, isCached, cacheTimestamp, hasMore, currentStep]);
+  // Helper to determine if user can proceed to booking
+  const canProceedToBooking = () => {
+    const hasTimeSelection = formData.selectedDate && formData.selectedTime;
+    const allowsManualBooking = !hasTimeSelection && !availabilityLoading;
+    return hasTimeSelection || allowsManualBooking;
+  };
 
   return (
     <Dialog open={isOpen} onOpenChange={setIsOpen}>
@@ -377,68 +312,46 @@ export function BookSessionModal({
                 Schedule Your Session
               </h3>
 
-              {/* Enhanced Loading State */}
+              {/* Loading State */}
               {availabilityLoading && (
                 <div className="flex flex-col items-center justify-center py-8 space-y-4">
                   <div className="flex items-center gap-3 text-[var(--black-40)]">
                     <Loader2 className="h-5 w-5 animate-spin" />
-                    <span className="text-sm">Loading availability...</span>
+                    <span className="text-sm">Loading available time slots...</span>
                   </div>
                   {isCached && (
                     <div className="text-xs text-[var(--black-30)] text-center max-w-xs">
                       Using cached data while fetching latest availability
                     </div>
                   )}
-                  <div className="text-xs text-[var(--black-30)] text-center max-w-xs">
-                    This may take a few seconds...
-                  </div>
                 </div>
               )}
 
-              {/* Enhanced Error State */}
-              {availabilityError && (
+              {/* Error State */}
+              {availabilityError && !availabilityLoading && (
                 <div className="flex items-center gap-3 p-4 bg-amber-50 rounded-lg border border-amber-200">
                   <AlertCircle className="h-5 w-5 text-amber-600 flex-shrink-0" />
                   <div className="flex-1">
                     <p className="text-sm font-medium text-amber-800">
-                      {availableDates.length > 0 ? 'Using cached availability data' : 'Failed to load availability'}
+                      Unable to load availability
                     </p>
                     <p className="text-sm text-amber-700 mt-1">
-                      {availableDates.length > 0 
-                        ? 'The latest data could not be fetched, but cached availability is shown below.'
-                        : availabilityError
-                      }
+                      {availabilityError}
                     </p>
                     <div className="flex gap-2 mt-3">
                       <button 
-                        onClick={retryAvailability}
+                        onClick={() => triggerFetch()}
                         className="text-sm text-amber-800 bg-amber-100 px-3 py-1 rounded hover:bg-amber-200 transition-colors"
-                        disabled={availabilityLoading}
                       >
-                        {availabilityLoading ? 'Retrying...' : 'Retry'}
+                        Retry
                       </button>
-                      <button 
-                        onClick={refetchAvailability}
-                        className="text-sm text-amber-700 underline hover:no-underline"
-                        disabled={availabilityLoading}
-                      >
-                        Refresh
-                      </button>
-                      {availableDates.length === 0 && (
-                        <button 
-                          onClick={() => setCurrentStep(3)}
-                          className="text-sm text-amber-700 underline hover:no-underline ml-2"
-                        >
-                          Continue anyway
-                        </button>
-                      )}
                     </div>
                   </div>
                 </div>
               )}
 
-              {/* Enhanced No Availability State */}
-              {!availabilityLoading && !availabilityError && availableDates.length === 0 && (
+              {/* No Availability State */}
+              {!availabilityLoading && !availabilityError && availableDates.length === 0 && hasTriggeredFetch && (
                 <div className="flex flex-col items-center gap-4 py-8 text-center">
                   <Calendar className="h-12 w-12 text-[var(--black-30)]" />
                   <div>
@@ -448,27 +361,20 @@ export function BookSessionModal({
                     </p>
                     <div className="flex flex-col sm:flex-row gap-2 mt-4">
                       <button 
-                        onClick={refetchAvailability}
+                        onClick={() => triggerFetch()}
                         className="text-sm text-[var(--primary-100)] bg-[var(--primary-100)]/10 px-4 py-2 rounded-lg hover:bg-[var(--primary-100)]/20 transition-colors"
-                        disabled={availabilityLoading}
                       >
-                        {availabilityLoading ? 'Checking...' : 'Check again'}
-                      </button>
-                      <button 
-                        onClick={() => setCurrentStep(3)}
-                        className="text-sm text-[var(--black-60)] border border-[var(--black-20)] px-4 py-2 rounded-lg hover:bg-[var(--black-5)] transition-colors"
-                      >
-                        Continue with manual booking
+                        Check again
                       </button>
                     </div>
                     <p className="text-xs text-[var(--black-30)] mt-3">
-                      You can still provide your details and the consultant will contact you directly.
+                      You can still continue and the consultant will contact you directly.
                     </p>
                   </div>
                 </div>
               )}
 
-              {/* Available Slots */}
+              {/* Available Slots Selection */}
               {!availabilityLoading && !availabilityError && availableDates.length > 0 && (
                 <div className="space-y-4">
                   <div>
@@ -542,19 +448,23 @@ export function BookSessionModal({
                       )}
                     </div>
                   )}
+                </div>
+              )}
 
-                  {/* Load More Button */}
-                  {hasMore && availableDates.length > 0 && !availabilityLoading && (
-                    <div className="flex justify-center">
-                      <button 
-                        onClick={loadMore}
-                        className="text-sm text-[var(--primary-100)] bg-[var(--primary-100)]/10 px-4 py-2 rounded-lg hover:bg-[var(--primary-100)]/20 transition-colors"
-                        disabled={availabilityLoading}
-                      >
-                        Load more availability
-                      </button>
+              {/* Manual Booking Option */}
+              {!availabilityLoading && (!formData.selectedDate || !formData.selectedTime) && (
+                <div className="bg-blue-50 rounded-lg p-4 border border-blue-200">
+                  <div className="flex items-start gap-3">
+                    <CheckCircle className="h-5 w-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div>
+                      <p className="text-sm font-medium text-blue-800">
+                        Manual Scheduling Available
+                      </p>
+                      <p className="text-sm text-blue-700 mt-1">
+                        If you can't find a suitable time or prefer to discuss availability directly, you can proceed without selecting a specific time slot. The consultant will contact you to arrange a convenient time.
+                      </p>
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
             </div>
@@ -626,35 +536,17 @@ export function BookSessionModal({
                 disabled={!isStepValid()}
                 className="flex-1 h-12 bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white rounded-xl disabled:opacity-50"
                 style={{ fontFamily: "Inter, sans-serif" }}
-                title={
-                  currentStep === 1 && availabilityLoading ? "Loading availability..." :
-                  currentStep === 1 && availabilityError && availableDates.length === 0 ? "Connection error - you can retry or continue anyway" :
-                  currentStep === 1 && availableDates.length === 0 ? "No availability found - you can continue with manual booking" :
-                  currentStep === 2 && !formData.selectedDate && availableDates.length > 0 ? "Please select a date and time" :
-                  !isStepValid() ? "Please complete all required fields" : ""
-                }
               >
-                {currentStep === 1 && availabilityLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Loading...
-                  </>
-                ) : currentStep === 1 && availabilityError && availableDates.length === 0 ? (
-                  'Continue Anyway'
-                ) : currentStep === 1 && availableDates.length === 0 ? (
-                  'Continue'
-                ) : (
-                  'Next'
-                )}
+                Next
               </Button>
             ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={isLoading}
-                className="flex-1 h-12 bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white rounded-xl"
+                disabled={isBooking || !canProceedToBooking()}
+                className="flex-1 h-12 bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white rounded-xl disabled:opacity-50"
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
-                {isLoading ? (
+                {isBooking ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
                     Booking Session...
