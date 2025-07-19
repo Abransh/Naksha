@@ -5,8 +5,7 @@ import { availabilityApi, AvailabilitySlot } from '@/lib/api';
 
 // Cache configuration
 const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
-const DEBOUNCE_DELAY = 500; // 500ms
-const INITIAL_DAYS_TO_FETCH = 14; // Start with 2 weeks instead of 60 days
+const INITIAL_DAYS_TO_FETCH = 14; // Start with 2 weeks
 
 // Cache utility functions
 const getCacheKey = (consultantSlug: string, sessionType: string) => 
@@ -42,18 +41,6 @@ const setCachedData = (cacheKey: string, data: any) => {
   }
 };
 
-// Debounce utility
-const debounce = <T extends (...args: any[]) => any>(
-  func: T,
-  delay: number
-): ((...args: Parameters<T>) => void) => {
-  let timeoutId: NodeJS.Timeout;
-  return (...args: Parameters<T>) => {
-    clearTimeout(timeoutId);
-    timeoutId = setTimeout(() => func(...args), delay);
-  };
-};
-
 interface UseAvailableSlotsResult {
   slots: AvailabilitySlot[];
   slotsByDate: Record<string, AvailabilitySlot[]>;
@@ -62,7 +49,7 @@ interface UseAvailableSlotsResult {
   isLoading: boolean;
   error: string | null;
   refetch: () => void;
-  retry: () => Promise<void>;
+  triggerFetch: (daysToFetch?: number) => Promise<void>;
   isCached: boolean;
   cacheTimestamp: number | null;
   loadMore: () => Promise<void>;
@@ -71,11 +58,12 @@ interface UseAvailableSlotsResult {
 
 /**
  * Custom hook to fetch and manage available slots for a consultant
- * Used for client booking experience with real availability data
+ * Now supports lazy loading with optional auto-fetch
  */
 export const useAvailableSlots = (
   consultantSlug: string, 
-  sessionType: 'PERSONAL' | 'WEBINAR'
+  sessionType: 'PERSONAL' | 'WEBINAR',
+  autoFetch: boolean = true // NEW: Control auto-fetching
 ): UseAvailableSlotsResult => {
   const [slots, setSlots] = useState<AvailabilitySlot[]>([]);
   const [slotsByDate, setSlotsByDate] = useState<Record<string, AvailabilitySlot[]>>({});
@@ -87,23 +75,34 @@ export const useAvailableSlots = (
   const [hasMore, setHasMore] = useState(true);
   
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const retryCountRef = useRef(0);
-  const maxRetries = 3;
   const cacheKey = useMemo(() => getCacheKey(consultantSlug, sessionType), [consultantSlug, sessionType]);
   
-  // Timeout protection to prevent stuck loading states
+  // Load from cache on init if available
+  useEffect(() => {
+    if (consultantSlug && sessionType) {
+      const cachedData = getCachedData(cacheKey);
+      if (cachedData) {
+        console.log('🎯 useAvailableSlots: Loading cached data on init');
+        setSlots(cachedData.slots || []);
+        setSlotsByDate(cachedData.slotsByDate || {});
+        setIsCached(true);
+        setCacheTimestamp(cachedData.timestamp || Date.now());
+      }
+    }
+  }, [consultantSlug, sessionType, cacheKey]);
+
+  // Timeout protection for loading states
   useEffect(() => {
     if (isLoading) {
-      // Clear any existing timeout
       if (timeoutRef.current) {
         clearTimeout(timeoutRef.current);
       }
       
       timeoutRef.current = setTimeout(() => {
-        console.warn('⚠️ useAvailableSlots: Loading timeout reached, forcing completion');
+        console.warn('⚠️ useAvailableSlots: Loading timeout reached');
         setIsLoading(false);
         setError('Loading timeout - please try again');
-      }, 15000); // 15 second timeout
+      }, 10000); // 10 second timeout
 
       return () => {
         if (timeoutRef.current) {
@@ -143,8 +142,7 @@ export const useAvailableSlots = (
     console.log('🔍 useAvailableSlots: Starting fetch for:', { 
       consultantSlug, 
       sessionType,
-      daysToFetch,
-      retryCount: retryCountRef.current 
+      daysToFetch
     });
     
     setIsLoading(true);
@@ -152,7 +150,7 @@ export const useAvailableSlots = (
     setIsCached(false);
 
     try {
-      // Optimized date range - start with smaller range
+      // Calculate date range
       const today = new Date();
       const endDate = new Date();
       endDate.setDate(today.getDate() + daysToFetch);
@@ -160,7 +158,7 @@ export const useAvailableSlots = (
       const startDateStr = today.toISOString().split('T')[0];
       const endDateStr = endDate.toISOString().split('T')[0];
 
-      console.log('🔍 useAvailableSlots: Fetching with optimized params:', {
+      console.log('🔍 useAvailableSlots: Fetching with params:', {
         consultantSlug,
         sessionType,
         startDate: startDateStr,
@@ -207,7 +205,6 @@ export const useAvailableSlots = (
       setCacheTimestamp(Date.now());
       setCurrentDaysLoaded(daysToFetch);
       setHasMore(daysToFetch < 60); // Allow loading up to 60 days max
-      retryCountRef.current = 0; // Reset retry count on success
     } catch (err) {
       console.error('❌ useAvailableSlots: Failed to fetch available slots:', err);
       setError(err instanceof Error ? err.message : 'Failed to load availability');
@@ -218,9 +215,6 @@ export const useAvailableSlots = (
         setSlots([]);
         setSlotsByDate({});
       }
-      
-      // Increment retry count for potential retry mechanism
-      retryCountRef.current += 1;
     } finally {
       console.log('🔍 useAvailableSlots: Fetch complete, setting loading to false');
       setIsLoading(false);
@@ -231,15 +225,13 @@ export const useAvailableSlots = (
         timeoutRef.current = null;
       }
     }
-  }, [consultantSlug, sessionType, cacheKey, currentDaysLoaded]);
+  }, [consultantSlug, sessionType, cacheKey, currentDaysLoaded, isLoading]);
 
-  // Debounced fetch function to prevent rapid calls
-  const debouncedFetch = useMemo(
-    () => debounce((daysToFetch?: number, fromCache?: boolean) => {
-      fetchAvailableSlots(daysToFetch, fromCache);
-    }, DEBOUNCE_DELAY),
-    [fetchAvailableSlots]
-  );
+  // NEW: Manual trigger fetch method
+  const triggerFetch = useCallback(async (daysToFetch?: number) => {
+    console.log('🎯 useAvailableSlots: Manual fetch triggered');
+    await fetchAvailableSlots(daysToFetch || currentDaysLoaded, false);
+  }, [fetchAvailableSlots, currentDaysLoaded]);
 
   // Load more data function for pagination
   const loadMore = useCallback(async () => {
@@ -249,17 +241,21 @@ export const useAvailableSlots = (
     }
   }, [hasMore, isLoading, currentDaysLoaded, fetchAvailableSlots]);
 
-  // Fetch slots when consultant or session type changes
+  // Auto-fetch when consultant or session type changes (only if autoFetch is true)
   useEffect(() => {
-    console.log('🔄 useAvailableSlots: useEffect triggered', { consultantSlug, sessionType });
-    if (consultantSlug && sessionType) {
+    console.log('🔄 useAvailableSlots: useEffect triggered', { 
+      consultantSlug, 
+      sessionType, 
+      autoFetch 
+    });
+    
+    if (consultantSlug && sessionType && autoFetch) {
       // Reset state for new consultant/session type
       setCurrentDaysLoaded(INITIAL_DAYS_TO_FETCH);
       setHasMore(true);
-      // Use debounced fetch to prevent rapid calls
-      debouncedFetch();
+      fetchAvailableSlots();
     }
-  }, [consultantSlug, sessionType, debouncedFetch]);
+  }, [consultantSlug, sessionType, autoFetch, fetchAvailableSlots]);
 
   // Get available dates (dates that have at least one slot)
   const availableDates = Object.keys(slotsByDate).sort();
@@ -271,22 +267,6 @@ export const useAvailableSlots = (
       .map(slot => slot.startTime)
       .sort();
   };
-
-  // Enhanced retry mechanism with exponential backoff
-  const retryFetch = useCallback(async () => {
-    if (retryCountRef.current >= maxRetries) {
-      console.warn('⚠️ useAvailableSlots: Max retries reached, not retrying');
-      setError('Maximum retry attempts reached. Please refresh the page.');
-      return;
-    }
-
-    const retryDelay = Math.min(1000 * Math.pow(2, retryCountRef.current), 5000); // Exponential backoff, max 5s
-    console.log(`🔄 useAvailableSlots: Retrying fetch in ${retryDelay}ms (attempt ${retryCountRef.current + 1}/${maxRetries})`);
-    
-    setTimeout(() => {
-      fetchAvailableSlots();
-    }, retryDelay);
-  }, [fetchAvailableSlots, maxRetries]);
 
   // Cleanup effect on unmount
   useEffect(() => {
@@ -306,7 +286,7 @@ export const useAvailableSlots = (
     isLoading,
     error,
     refetch: () => fetchAvailableSlots(currentDaysLoaded, false),
-    retry: retryFetch,
+    triggerFetch, // NEW: Manual trigger method
     isCached,
     cacheTimestamp,
     loadMore,
