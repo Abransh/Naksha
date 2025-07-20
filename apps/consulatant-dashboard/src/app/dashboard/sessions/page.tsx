@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -14,6 +14,7 @@ import Navigator from "@/components/navigation/Navigator";
 import { useSessions, Session } from "@/hooks/useSessions";
 import { useAuth } from "@/app/providers";
 import { useConsultantProfile } from "@/hooks/useConsultantProfile";
+import { useDebouncedSearch } from "@/hooks/useDebounce";
 import { toast } from "sonner";
 
 import {
@@ -280,8 +281,10 @@ export default function SessionsPage() {
   const { user } = useAuth();
   const { profile, isLoading: profileLoading } = useConsultantProfile({ enabled: true });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [searchTerm, setSearchTerm] = useState("");
   const [selectedSessions, setSelectedSessions] = useState<string[]>([]);
+
+  // Use debounced search to prevent API calls on every keystroke
+  const { searchTerm, debouncedSearchTerm, isSearching, setSearchTerm } = useDebouncedSearch();
 
   // Use the sessions hook with auto-refresh
   const {

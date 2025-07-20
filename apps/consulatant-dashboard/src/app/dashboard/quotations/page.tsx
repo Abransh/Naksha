@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -11,6 +11,7 @@ import { CreateQuotationModal } from "@/components/modals/create-quotation-modal
 import Navigator from "@/components/navigation/Navigator";
 import { useQuotations, formatQuotationStatus, formatCurrency, getDaysUntilExpiry } from "@/hooks/useQuotations";
 import { useAuth } from "@/app/providers";
+import { useDebouncedSearch } from "@/hooks/useDebounce";
 
 import {
   Loader2,
@@ -20,10 +21,11 @@ import {
 
 export default function QuotationsPage() {
   const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("");
-
   const [selectedQuotations, setSelectedQuotations] = useState<string[]>([]);
+
+  // Use debounced search to prevent API calls on every keystroke
+  const { searchTerm, debouncedSearchTerm, isSearching, setSearchTerm } = useDebouncedSearch();
 
   // Use quotations hook for dynamic data
   const {
@@ -40,16 +42,16 @@ export default function QuotationsPage() {
     updateQuotationStatus,
     sendQuotation,
   } = useQuotations({
-    search: searchTerm,
+    search: debouncedSearchTerm,
     status: statusFilter,
   });
 
-  // Update filters when search or status changes
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setFilters({ ...filters, search: value });
-  };
+  // Update filters when debounced search term changes
+  useEffect(() => {
+    setFilters({ ...filters, search: debouncedSearchTerm || undefined });
+  }, [debouncedSearchTerm]);
 
+  // Update filters when status changes
   const handleStatusFilterChange = (status: string) => {
     setStatusFilter(status);
     setFilters({ ...filters, status: status || undefined });
@@ -438,10 +440,15 @@ export default function QuotationsPage() {
                         type="text"
                         placeholder="Search quotations..."
                         value={searchTerm}
-                        onChange={(e) => handleSearchChange(e.target.value)}
-                        className="pl-10 w-44 h-7 text-xs border-[var(--black-1)] text-[var(--black-2)] placeholder:text-[var(--black-2)]"
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 pr-10 w-44 h-7 text-xs border-[var(--black-1)] text-[var(--black-2)] placeholder:text-[var(--black-2)]"
                         style={{ fontFamily: "Inter, sans-serif" }}
                       />
+                      {isSearching && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <Loader2 className="h-3 w-3 animate-spin text-[var(--primary-100)]" />
+                        </div>
+                      )}
                     </div>
 
                     

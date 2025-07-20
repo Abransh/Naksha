@@ -2,13 +2,14 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { AddClientModal } from "@/components/modals/add-client-modal";
 import { useClients } from "@/hooks/useClients";
 import { useAuth } from "@/app/providers";
+import { useDebouncedSearch } from "@/hooks/useDebounce";
 import {
   AlertCircle,
   Loader2
@@ -21,10 +22,12 @@ import Navigator from "@/components/navigation/Navigator";
 
 export default function ClientsPage() {
   const { user } = useAuth();
-  const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
   const itemsPerPage = 10;
+
+  // Use debounced search to prevent API calls on every keystroke
+  const { searchTerm, debouncedSearchTerm, isSearching, setSearchTerm } = useDebouncedSearch();
 
   const {
     clients,
@@ -38,7 +41,7 @@ export default function ClientsPage() {
   } = useClients({
     page: currentPage,
     limit: itemsPerPage,
-    search: searchTerm || undefined,
+    search: debouncedSearchTerm || undefined,
     sortBy: 'createdAt',
     sortOrder: 'desc'
   });
@@ -64,11 +67,13 @@ export default function ClientsPage() {
     setSelectedClients([]); // Clear selections when changing pages
   };
 
-  const handleSearchChange = (value: string) => {
-    setSearchTerm(value);
-    setCurrentPage(1); // Reset to first page when searching
-    setSelectedClients([]); // Clear selections when searching
-  };
+  // Reset to first page when search term changes
+  useEffect(() => {
+    if (debouncedSearchTerm !== searchTerm) {
+      setCurrentPage(1);
+      setSelectedClients([]);
+    }
+  }, [debouncedSearchTerm, searchTerm]);
 
   const copyToClipboard = (text: string) => {
     navigator.clipboard.writeText(text);
@@ -432,10 +437,15 @@ export default function ClientsPage() {
                         type="text"
                         placeholder="Search"
                         value={searchTerm}
-                        onChange={(e) => handleSearchChange(e.target.value)}
-                        className="pl-10 w-44 h-7 text-xs border-[var(--black-1)] text-[var(--black-2)] placeholder:text-[var(--black-2)]"
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        className="pl-10 pr-10 w-44 h-7 text-xs border-[var(--black-1)] text-[var(--black-2)] placeholder:text-[var(--black-2)]"
                         style={{ fontFamily: "Inter, sans-serif" }}
                       />
+                      {isSearching && (
+                        <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+                          <Loader2 className="h-3 w-3 animate-spin text-[var(--primary-100)]" />
+                        </div>
+                      )}
                     </div>
 
                     <Button
