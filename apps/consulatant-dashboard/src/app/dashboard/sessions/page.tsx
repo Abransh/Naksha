@@ -3,6 +3,7 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import Image from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +13,7 @@ import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Navigator from "@/components/navigation/Navigator";
 import { useSessions, Session } from "@/hooks/useSessions";
 import { useAuth } from "@/app/providers";
+import { useConsultantProfile } from "@/hooks/useConsultantProfile";
 import { toast } from "sonner";
 
 import {
@@ -276,6 +278,7 @@ const ActionButton = ({
 
 export default function SessionsPage() {
   const { user } = useAuth();
+  const { profile, isLoading: profileLoading } = useConsultantProfile({ enabled: true });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
   const [selectedSessions, setSelectedSessions] = useState<string[]>([]);
@@ -455,7 +458,35 @@ export default function SessionsPage() {
                    
                   </div>
                   
-                  <div className="w-7 h-7 lg:w-8 lg:h-8 bg-gray-200 rounded-lg"></div>
+                  {/* Profile Image */}
+                  {profile?.profilePhotoUrl ? (
+                    <div className="relative w-7 h-7 lg:w-8 lg:h-8 rounded-lg overflow-hidden border border-gray-200">
+                      <Image
+                        src={profile.profilePhotoUrl}
+                        alt={`${profile.firstName} ${profile.lastName}`}
+                        fill
+                        className="object-cover"
+                        sizes="32px"
+                        onError={(e) => {
+                          // Fallback to placeholder if image fails to load
+                          e.currentTarget.style.display = 'none';
+                        }}
+                      />
+                    </div>
+                  ) : null}
+                  
+                  {/* Fallback placeholder or loading */}
+                  <div 
+                    className={`w-7 h-7 lg:w-8 lg:h-8 bg-gray-200 rounded-lg flex items-center justify-center ${profile?.profilePhotoUrl ? 'hidden' : ''}`}
+                  >
+                    {profileLoading ? (
+                      <Loader2 size={12} className="animate-spin text-gray-400" />
+                    ) : (
+                      <span className="text-gray-500 text-xs font-medium">
+                        {profile?.firstName ? profile.firstName.charAt(0).toUpperCase() : user?.firstName ? user.firstName.charAt(0).toUpperCase() : 'C'}
+                      </span>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>

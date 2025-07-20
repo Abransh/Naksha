@@ -36,10 +36,10 @@ import { AvailabilityModal } from "@/components/modals/availability-modal";
 export default function SettingsPage() {
   const router = useRouter();
   const [activeTab, setActiveTab] = useState("account");
- // const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
+  // const [profilePhotoFile, setProfilePhotoFile] = useState<File | null>(null);
   const [isUploading, setIsUploading] = useState(false);
   const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
-  
+
   const {
     profile,
     formData,
@@ -148,11 +148,11 @@ export default function SettingsPage() {
                   <span className="text-sm text-[var(--black-100)] font-inter">
                     {profile ? `${profile.firstName} ${profile.lastName}` : 'Loading...'}
                   </span>
-                 
+
                 </div>
-               
+
                 <img
-                  src="{profile ? `${profile.profilePhotoUrl}`"
+                  src=""
                   alt="Profile"
                   className="w-8 h-8 rounded-lg"
                 />
@@ -166,12 +166,7 @@ export default function SettingsPage() {
               <Home size={16} className="text-[var(--primary-100)]" />
               <span className="text-[var(--black-30)]">/</span>
               <span className="text-[var(--black-30)]">Settings</span>
-              <span className="text-[var(--black-30)]">/</span>
-              <span className="text-[var(--black-30)]">New Quotations</span>
-              <span className="text-[var(--black-30)]">/</span>
-              <span className="text-[var(--black-30)]">Page</span>
-              <span className="text-[var(--black-30)]">/</span>
-              <span className="text-[var(--black-30)]">Page</span>
+  
             </div>
           </div>
         </div>
@@ -184,11 +179,10 @@ export default function SettingsPage() {
               <div className="flex items-start w-[400px] h-[39px] mb-5">
                 <button
                   onClick={() => setActiveTab("account")}
-                  className={`flex-1 px-2.5 py-2.5 text-center border-b-4 ${
-                    activeTab === "account"
+                  className={`flex-1 px-2.5 py-2.5 text-center border-b-4 ${activeTab === "account"
                       ? "border-[var(--primary-100)] text-[var(--black-5)]"
                       : "border-transparent text-[var(--black-30)]"
-                  } font-inter text-base`}
+                    } font-inter text-base`}
                 >
                   Account
                 </button>
@@ -212,7 +206,7 @@ export default function SettingsPage() {
                     )}
                   </div>
                 </div>
-                <Button 
+                <Button
                   onClick={handleSaveProfile}
                   disabled={!hasChanges || isSaving}
                   className="bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white rounded-xl px-4 py-4 h-9 font-inter text-xl font-bold disabled:opacity-50"
@@ -308,7 +302,7 @@ export default function SettingsPage() {
                           <span className="text-base text-[var(--black-2)] font-inter">
                             {formData.phoneCountryCode || '+91'}
                           </span>
-                         
+
                         </div>
                         <Input
                           placeholder="Phone Number"
@@ -505,8 +499,8 @@ export default function SettingsPage() {
                           className="w-[142px] h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base text-[var(--black-4)] font-inter"
                         />
                         <label className="text-xs text-[var(--black-4)] font-inter px-1">
-                        Price for your Webinar
-                      </label>
+                          Price for your Webinar
+                        </label>
                         <Input
                           placeholder="₹150"
                           type="number"
@@ -553,11 +547,50 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                 
+
                 </div>
 
+
+              <div className="flex flex-row gap-8 items-start">
                 {/* Far Right - Upload & Action Buttons */}
-                <div className="flex flex-col items-end gap-6">
+                
+
+                  {/* Action Buttons */}
+                  <div className="flex flex-col gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsAvailabilityModalOpen(true)}
+                      className="w-[180px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
+                    >
+                      1-on-1 Slots
+                    </Button>
+                
+
+                  <Button
+                    variant="outline"
+                    className="w-[180px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
+                  >
+                    Webinar Date
+                  </Button>
+
+                  <Button
+                    onClick={handlePreviewPage}
+                    className="w-[172px] h-[37px] rounded-xl bg-[var(--primary-100)] text-white text-[15px] font-inter"
+                  >
+                    Preview Page
+                  </Button>
+
+                  <Button className="w-[172px] h-[37px] rounded-xl bg-[var(--primary-100)] text-white text-[15px] font-inter">
+                    Withdraw
+                  </Button>
+
+                  {/* Teams Integration Section */}
+                  <div className="w-full mt-8">
+                    <TeamsIntegration />
+                  </div>
+                  </div>
+
+                  <div className="flex flex-col gap-1">
                   {/* Upload Image */}
                   <Card className="w-[172px] h-[167px] rounded-xl border border-[var(--grey)] relative overflow-hidden">
                     {profile?.profilePhotoUrl ? (
@@ -594,43 +627,10 @@ export default function SettingsPage() {
                         </button>
                       )}
                     </div>
-                  </Card>
-                  
-                   {/* Action Buttons */}
-                   <div className="flex flex-col gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsAvailabilityModalOpen(true)}
-                      className="w-[180px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
-                    >
-                      1-on-1 Slots
-                    </Button>
+                   </Card>
                   </div>
-                
-                  <Button
-                    variant="outline"
-                    className="w-[180px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
-                  >
-                    Webinar Date
-                  </Button>
-
-                  <Button 
-                    onClick={handlePreviewPage}
-                    className="w-[172px] h-[37px] rounded-xl bg-[var(--primary-100)] text-white text-[15px] font-inter"
-                  >
-                    Preview Page
-                  </Button>
-
-                  <Button className="w-[172px] h-[37px] rounded-xl bg-[var(--primary-100)] text-white text-[15px] font-inter">
-                    Withdraw
-                  </Button>
-
-                    {/* Teams Integration Section */}
-                    <div className="w-full mt-8">
-                    <TeamsIntegration />
-                  </div>
-
-                </div>
+               </div>
+               
               </div>
             </CardContent>
           </Card>
