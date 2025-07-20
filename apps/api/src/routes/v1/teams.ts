@@ -293,6 +293,7 @@ router.get('/status',
           teamsConnectedAt: true,
           teamsUserEmail: true,
           teamsUserId: true,
+          teamsRefreshToken: true, 
           updatedAt: true
         }
       });
