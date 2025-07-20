@@ -12,8 +12,9 @@ import { Badge } from '@/components/ui/badge';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Loader2, ExternalLink, AlertCircle, CheckCircle, XCircle } from 'lucide-react';
 import { toast } from 'sonner';
+import { useTeamsAutoRefresh } from '@/hooks/useTeamsAutoRefresh';
 
-// Teams Integration Status Type
+// Teams Integration Status Type with Auto-Refresh Support
 interface TeamsStatus {
   isConnected: boolean;
   isExpired: boolean;
@@ -21,7 +22,9 @@ interface TeamsStatus {
   connectedAt?: string;
   needsReconnection: boolean;
   timeUntilExpiry?: number | null;
-  tokenHealth?: 'good' | 'warning' | 'expired' | null;
+  tokenHealth?: 'good' | 'warning' | 'expired' | 'refresh-needed' | null;
+  shouldAutoRefresh?: boolean;
+  hasRefreshToken?: boolean;
 }
 
 // Teams Integration Component
@@ -49,6 +52,13 @@ export const TeamsIntegration: React.FC = () => {
       setIsLoading(false);
     }
   };
+
+  // Auto-refresh hook for seamless token management
+  const { manualRefresh, isAutoRefreshEnabled } = useTeamsAutoRefresh({
+    status,
+    onStatusChange: fetchStatus,
+    enabled: true
+  });
 
   // Connect to Microsoft Teams
   const connectTeams = async () => {
@@ -140,48 +150,17 @@ export const TeamsIntegration: React.FC = () => {
     }
   };
 
-  // Refresh expired token
-  const refreshToken = async () => {
-    try {
-      setIsLoading(true);
-      setError(null);
-
-      // Use API client for token refresh
-      const { consultantApi } = await import('@/lib/api');
-      await consultantApi.teams.refreshToken();
-
-      toast.success('Teams token refreshed successfully');
-      fetchStatus();
-    } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to refresh token';
-      setError(errorMessage);
-      toast.error(errorMessage);
-    } finally {
-      setIsLoading(false);
-    }
-  };
 
   // Load status on component mount
   useEffect(() => {
     fetchStatus();
   }, []);
 
-  // Format time until expiry in a human-readable way
-  const formatTimeUntilExpiry = (seconds: number): string => {
-    if (seconds <= 0) return 'Expired';
-    if (seconds < 60) return `${seconds}s`;
-    const minutes = Math.floor(seconds / 60);
-    if (minutes < 60) return `${minutes}m`;
-    const hours = Math.floor(minutes / 60);
-    if (hours < 24) return `${hours}h ${minutes % 60}m`;
-    const days = Math.floor(hours / 24);
-    return `${days}d ${hours % 24}h`;
-  };
-
-  // Render connection status badge with enhanced health indicators
+  // Render simplified connection status badge (no expiry warnings)
   const renderStatusBadge = () => {
     if (!status) return null;
 
+    // Simplified status: just Connected or Disconnected
     if (!status.isConnected) {
       return (
         <Badge variant="secondary" className="bg-gray-100 text-gray-800 border-gray-300">
@@ -191,60 +170,32 @@ export const TeamsIntegration: React.FC = () => {
       );
     }
 
-    // Connected - show health-based status
-    switch (status.tokenHealth) {
-      case 'good':
-        return (
-          <div className="flex items-center gap-2">
-            <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
-              <CheckCircle className="w-3 h-3 mr-1" />
-              Connected
-            </Badge>
-            {status.timeUntilExpiry && (
-              <span className="text-xs text-green-600">
-                Expires in {formatTimeUntilExpiry(status.timeUntilExpiry)}
-              </span>
-            )}
-          </div>
-        );
-      case 'warning':
-        return (
-          <div className="flex items-center gap-2">
-            <Badge className="bg-yellow-100 text-yellow-800 border-yellow-300">
-              <AlertCircle className="w-3 h-3 mr-1" />
-              Refresh Soon
-            </Badge>
-            {status.timeUntilExpiry && (
-              <span className="text-xs text-yellow-600">
-                Expires in {formatTimeUntilExpiry(status.timeUntilExpiry)}
-              </span>
-            )}
-          </div>
-        );
-      case 'expired':
-        return (
-          <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
-            <XCircle className="w-3 h-3 mr-1" />
-            Expired
-          </Badge>
-        );
-      default:
-        // Fallback for older status format
-        if (status.isExpired) {
-          return (
-            <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
-              <XCircle className="w-3 h-3 mr-1" />
-              Expired
-            </Badge>
-          );
-        }
-        return (
-          <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
-            <CheckCircle className="w-3 h-3 mr-1" />
-            Connected
-          </Badge>
-        );
+    // Check if token is truly expired (not just needs refresh)
+    const needsReconnection = status.isExpired && status.tokenHealth === 'expired';
+    
+    if (needsReconnection) {
+      return (
+        <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
+          <XCircle className="w-3 h-3 mr-1" />
+          Connection Required
+        </Badge>
+      );
     }
+
+    // Show simple connected status with auto-refresh indicator
+    return (
+      <div className="flex items-center gap-2">
+        <Badge variant="default" className="bg-green-100 text-green-800 border-green-300">
+          <CheckCircle className="w-3 h-3 mr-1" />
+          Connected
+        </Badge>
+        {isAutoRefreshEnabled && (
+          <span className="text-xs text-green-600 italic">
+            Auto-managed
+          </span>
+        )}
+      </div>
+    );
   };
 
   return (
@@ -269,7 +220,7 @@ export const TeamsIntegration: React.FC = () => {
           </Alert>
         )}
 
-        {/* Connection Status */}
+        {/* Simplified Connection Status */}
         {status && (
           <div className="space-y-3">
             <div className="flex items-center justify-between">
@@ -293,48 +244,37 @@ export const TeamsIntegration: React.FC = () => {
               </div>
             )}
 
-            {/* Token Health Information */}
-            {status.isConnected && status.tokenHealth && (
-              <div className="space-y-2">
-                {status.tokenHealth === 'warning' && (
-                  <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2">
-                      <AlertCircle className="h-4 w-4 text-yellow-600" />
-                      <span className="text-sm font-medium text-yellow-800">Token Refresh Recommended</span>
-                    </div>
-                    <p className="text-xs text-yellow-700 mt-1">
-                      Your Teams token will expire soon. Consider refreshing it to avoid interruption.
-                    </p>
-                  </div>
-                )}
+            {/* Only show critical reconnection message */}
+            {status.isConnected && status.isExpired && status.tokenHealth === 'expired' && (
+              <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 text-blue-600" />
+                  <span className="text-sm font-medium text-blue-800">Reconnection Required</span>
+                </div>
+                <p className="text-xs text-blue-700 mt-1">
+                  Your Teams integration needs to be reconnected to continue creating Teams meetings.
+                </p>
+              </div>
+            )}
 
-                {status.tokenHealth === 'expired' && (
-                  <div className="bg-red-50 border border-red-200 rounded-lg p-3">
-                    <div className="flex items-center gap-2">
-                      <XCircle className="h-4 w-4 text-red-600" />
-                      <span className="text-sm font-medium text-red-800">Token Expired</span>
-                    </div>
-                    <p className="text-xs text-red-700 mt-1">
-                      Your Teams integration has expired. Please refresh or reconnect to continue using Teams meetings.
-                    </p>
-                  </div>
-                )}
-
-                {status.timeUntilExpiry !== null && status.timeUntilExpiry !== undefined && status.timeUntilExpiry > 0 && (
-                  <div className="flex items-center justify-between">
-                    <span className="text-sm font-medium">Token Expires In</span>
-                    <span className="text-sm text-gray-600">
-                      {formatTimeUntilExpiry(status.timeUntilExpiry)}
-                    </span>
-                  </div>
-                )}
+            {/* Auto-refresh status */}
+            {status.isConnected && !status.isExpired && isAutoRefreshEnabled && (
+              <div className="bg-green-50 border border-green-200 rounded-lg p-3">
+                <div className="flex items-center gap-2">
+                  <CheckCircle className="h-4 w-4 text-green-600" />
+                  <span className="text-sm font-medium text-green-800">Auto-Managed Connection</span>
+                </div>
+                <p className="text-xs text-green-700 mt-1">
+                  Your Teams integration is automatically maintained. No action needed.
+                </p>
               </div>
             )}
           </div>
         )}
 
-        {/* Action Buttons */}
+        {/* Simplified Action Buttons */}
         <div className="flex flex-col gap-2">
+          {/* Connect button when not connected */}
           {!status?.isConnected && (
             <Button
               onClick={connectTeams}
@@ -356,7 +296,8 @@ export const TeamsIntegration: React.FC = () => {
             </Button>
           )}
 
-          {status?.isConnected && !status?.isExpired && (
+          {/* Disconnect button when connected and working */}
+          {status?.isConnected && (!status?.isExpired || status?.tokenHealth !== 'expired') && (
             <Button
               onClick={disconnectTeams}
               disabled={isLoading}
@@ -378,57 +319,37 @@ export const TeamsIntegration: React.FC = () => {
             </Button>
           )}
 
-          {status?.needsReconnection && (
-            <div className="space-y-2">
-              <Button
-                onClick={refreshToken}
-                disabled={isLoading}
-                variant="outline"
-                className="w-full"
-                size="lg"
-              >
-                {isLoading ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Refreshing...
-                  </>
-                ) : (
-                  <>
-                    <AlertCircle className="w-4 h-4 mr-2" />
-                    Refresh Token
-                  </>
-                )}
-              </Button>
-              
-              <Button
-                onClick={connectTeams}
-                disabled={isConnecting || isLoading}
-                className="w-full"
-                size="lg"
-              >
-                {isConnecting ? (
-                  <>
-                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Reconnecting...
-                  </>
-                ) : (
-                  <>
-                    <ExternalLink className="w-4 h-4 mr-2" />
-                    Reconnect Teams
-                  </>
-                )}
-              </Button>
-            </div>
+          {/* Reconnect button only when truly expired (not just needs refresh) */}
+          {status?.isConnected && status?.isExpired && status?.tokenHealth === 'expired' && (
+            <Button
+              onClick={connectTeams}
+              disabled={isConnecting || isLoading}
+              className="w-full"
+              size="lg"
+            >
+              {isConnecting ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Reconnecting...
+                </>
+              ) : (
+                <>
+                  <ExternalLink className="w-4 h-4 mr-2" />
+                  Reconnect Teams
+                </>
+              )}
+            </Button>
           )}
         </div>
 
-        {/* Help Text */}
+        {/* Updated Help Text */}
         <div className="text-sm text-gray-500 bg-gray-50 p-3 rounded-md">
           <p className="mb-2">
             <strong>Microsoft Teams Integration</strong> allows you to automatically create Teams meetings when clients book sessions.
           </p>
           <ul className="list-disc list-inside space-y-1 text-xs">
             <li>Connect your Microsoft account to enable Teams meetings</li>
+            <li>Your connection is automatically maintained - no need to reconnect regularly</li>
             <li>Meetings are automatically created when you select Teams as the platform</li>
             <li>Meeting links are included in confirmation emails</li>
             <li>You can disconnect at any time in your settings</li>

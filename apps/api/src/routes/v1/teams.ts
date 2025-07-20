@@ -304,10 +304,11 @@ router.get('/status',
       const now = new Date();
       const isConnected = !!(consultant.teamsAccessToken && consultant.teamsTokenExpiresAt);
       
-      // Enhanced expiration logic with early refresh trigger (10 minutes before expiry)
+      // Enhanced expiration logic with automatic refresh capability
       let isExpired = false;
       let needsReconnection = false;
       let timeUntilExpiry = null;
+      let shouldAutoRefresh = false;
       
       if (consultant.teamsTokenExpiresAt && isConnected) {
         const expiresAt = consultant.teamsTokenExpiresAt;
@@ -315,21 +316,38 @@ router.get('/status',
         timeUntilExpiry = Math.floor(timeUntilExpiryMs / 1000); // seconds
         
         isExpired = expiresAt < now;
-        // Trigger refresh 10 minutes (600 seconds) before actual expiry
-        needsReconnection = timeUntilExpiryMs < 600000; // 600,000ms = 10 minutes
+        
+        // Auto-refresh when 30+ minutes remaining (frontend handles this)
+        shouldAutoRefresh = timeUntilExpiryMs < 1800000 && timeUntilExpiryMs > 0; // 30 minutes
+        
+        // Only trigger manual reconnection if token is truly expired and can't be refreshed
+        needsReconnection = isExpired && !consultant.teamsRefreshToken;
         
         console.log(`🔍 [TEAMS] Token status for consultant ${consultantId}:`, {
           expiresAt: expiresAt.toISOString(),
           currentTime: now.toISOString(),
           timeUntilExpirySeconds: timeUntilExpiry,
           isExpired,
+          shouldAutoRefresh,
           needsReconnection,
-          bufferTrigger: '10 minutes before expiry'
+          autoRefreshTrigger: '30 minutes before expiry'
         });
       } else if (isConnected) {
         // Connected but no expiration time - treat as expired
         isExpired = true;
         needsReconnection = true;
+      }
+
+      // Simplified token health for auto-refresh system
+      let tokenHealth = null;
+      if (isConnected) {
+        if (isExpired && !consultant.teamsRefreshToken) {
+          tokenHealth = 'expired'; // Truly expired, needs reconnection
+        } else if (isExpired && consultant.teamsRefreshToken) {
+          tokenHealth = 'refresh-needed'; // Can be auto-refreshed
+        } else {
+          tokenHealth = 'good'; // Working fine
+        }
       }
 
       res.json({
@@ -341,10 +359,9 @@ router.get('/status',
           connectedAt: consultant.teamsConnectedAt || consultant.updatedAt, // Use new timestamp or fallback
           needsReconnection,
           timeUntilExpiry: isConnected ? timeUntilExpiry : null,
-          tokenHealth: isConnected ? (
-            isExpired ? 'expired' : 
-            needsReconnection ? 'warning' : 'good'
-          ) : null
+          tokenHealth,
+          shouldAutoRefresh: isConnected ? shouldAutoRefresh : false,
+          hasRefreshToken: isConnected ? !!consultant.teamsRefreshToken : false
         }
       });
 
@@ -423,7 +440,7 @@ router.post('/refresh-token',
         throw new AppError('No Teams refresh token found. Please reconnect your Microsoft account.', 400, 'TEAMS_NO_REFRESH_TOKEN');
       }
 
-      console.log(`🔄 Refreshing Teams token for consultant: ${consultantId}`);
+      console.log(`🔄 [TEAMS AUTO-REFRESH] Refreshing Teams token for consultant: ${consultantId}`);
 
       // Validate environment configuration
       if (!process.env.MICROSOFT_CLIENT_ID || !process.env.MICROSOFT_CLIENT_SECRET || !process.env.MICROSOFT_TENANT_ID) {
@@ -465,10 +482,11 @@ router.post('/refresh-token',
         }
       });
 
-      console.log(`✅ Teams token refreshed for consultant: ${consultantId}`, {
+      console.log(`✅ [TEAMS AUTO-REFRESH] Teams token refreshed successfully for consultant: ${consultantId}`, {
         newExpiresAt: newTokenExpirationTime.toISOString(),
         expiresInSeconds: tokens.expires_in,
-        bufferApplied: '5 minutes'
+        bufferApplied: '5 minutes',
+        autoRefreshEnabled: true
       });
 
       res.json({

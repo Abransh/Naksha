@@ -546,7 +546,7 @@ export const consultantApi = {
    */
   teams: {
     /**
-     * Get Teams integration status
+     * Get Teams integration status with auto-refresh support
      */
     async getStatus(): Promise<{
       isConnected: boolean;
@@ -555,7 +555,9 @@ export const consultantApi = {
       connectedAt?: string;
       needsReconnection: boolean;
       timeUntilExpiry?: number | null;
-      tokenHealth?: 'good' | 'warning' | 'expired' | null;
+      tokenHealth?: 'good' | 'warning' | 'expired' | 'refresh-needed' | null;
+      shouldAutoRefresh?: boolean;
+      hasRefreshToken?: boolean;
     }> {
       const response = await apiRequest<ApiResponse<{
         isConnected: boolean;
@@ -564,7 +566,9 @@ export const consultantApi = {
         connectedAt?: string;
         needsReconnection: boolean;
         timeUntilExpiry?: number | null;
-        tokenHealth?: 'good' | 'warning' | 'expired' | null;
+        tokenHealth?: 'good' | 'warning' | 'expired' | 'refresh-needed' | null;
+        shouldAutoRefresh?: boolean;
+        hasRefreshToken?: boolean;
       }>>('/teams/status', {
         requireAuth: true,
       });
@@ -958,7 +962,7 @@ export const sessionApi = {
     scheduledTime: string;
     durationMinutes: number;
     amount: number;
-    platform: 'ZOOM' | 'MEET' | 'TEAMS';
+    platform: 'TEAMS' | 'ZOOM' | 'MEET';
     notes?: string;
     paymentMethod: 'online' | 'cash' | 'bank_transfer';
   }): Promise<any> {

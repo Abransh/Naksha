@@ -553,16 +553,7 @@ export default function SettingsPage() {
                     </div>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-col gap-3">
-                    <Button
-                      variant="outline"
-                      onClick={() => setIsAvailabilityModalOpen(true)}
-                      className="w-[180px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
-                    >
-                      1-on-1 Slots
-                    </Button>
-                  </div>
+                 
                 </div>
 
                 {/* Far Right - Upload & Action Buttons */}
@@ -604,12 +595,18 @@ export default function SettingsPage() {
                       )}
                     </div>
                   </Card>
-
-                  {/* Teams Integration Section */}
-                  <div className="w-full mt-8">
-                    <TeamsIntegration />
+                  
+                   {/* Action Buttons */}
+                   <div className="flex flex-col gap-3">
+                    <Button
+                      variant="outline"
+                      onClick={() => setIsAvailabilityModalOpen(true)}
+                      className="w-[180px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
+                    >
+                      1-on-1 Slots
+                    </Button>
                   </div>
-
+                
                   <Button
                     variant="outline"
                     className="w-[180px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
@@ -627,6 +624,12 @@ export default function SettingsPage() {
                   <Button className="w-[172px] h-[37px] rounded-xl bg-[var(--primary-100)] text-white text-[15px] font-inter">
                     Withdraw
                   </Button>
+
+                    {/* Teams Integration Section */}
+                    <div className="w-full mt-8">
+                    <TeamsIntegration />
+                  </div>
+
                 </div>
               </div>
             </CardContent>

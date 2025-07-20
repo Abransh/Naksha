@@ -55,7 +55,7 @@ const createSessionSchema = z.object({
   scheduledTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
   durationMinutes: z.number().min(15).max(480).optional().default(60),
   amount: z.number().positive('Amount must be positive'),
-  platform: z.enum(['ZOOM', 'MEET', 'TEAMS']),
+  platform: z.enum(['TEAMS']),
   notes: z.string().max(1000).optional(),
   paymentMethod: z.enum(['online', 'cash', 'bank_transfer']).optional().default('online')
 });
@@ -66,7 +66,7 @@ const updateSessionSchema = z.object({
   scheduledTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
   durationMinutes: z.number().min(15).max(480).optional(),
   amount: z.number().positive().optional(),
-  platform: z.enum(['ZOOM', 'MEET', 'TEAMS']).optional(),
+  platform: z.enum(['TEAMS']).optional(),
   status: z.enum(['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'RETURNED', 'ABANDONED', 'NO_SHOW']).optional(),
   paymentStatus: z.enum(['PENDING', 'PAID', 'REFUNDED', 'FAILED']).optional(),
   notes: z.string().max(1000).optional(),
