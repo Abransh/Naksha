@@ -21,32 +21,49 @@ export default function LoginPage() {
   const { login, error, clearError, user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
+  // Debug auth state changes
+  useEffect(() => {
+    console.log('🔍 Auth state changed:', { 
+      isAuthenticated, 
+      hasUser: !!user, 
+      authLoading,
+      userApproved: user?.isApprovedByAdmin,
+      profileCompleted: user?.profileCompleted 
+    });
+  }, [isAuthenticated, user, authLoading]);
+
   // Handle redirect after successful login
   useEffect(() => {
+    console.log('🚀 Redirect useEffect triggered:', { isAuthenticated, hasUser: !!user, authLoading });
+    
     if (isAuthenticated && user && !authLoading) {
-      console.log('Login successful, redirecting...', { user, isAuthenticated });
+      console.log('✅ All conditions met for redirect:', { user, isAuthenticated });
       
       // Clear form loading state since we're about to redirect
       setIsLoading(false);
       
-      // Check if user is approved by admin first
-      if (!user.isApprovedByAdmin) {
-        // User is not approved yet - redirect to pending approval page
-        console.log('User not approved by admin yet - redirecting to pending approval');
-        router.replace('/dashboard/pending-approval');
-        return;
-      }
-      
-      // Redirect based on profile completion status
-      if (!user.profileCompleted) {
-        console.log('Redirecting to settings for profile completion');
-        router.replace('/dashboard/settings');
-      } else {
-        console.log('Redirecting to dashboard');
-        router.replace('/dashboard');
-      }
+      // Use a small delay to ensure state is properly updated
+      setTimeout(() => {
+        console.log('🎯 Executing redirect logic...');
+        // Check if user is approved by admin first
+        if (!user.isApprovedByAdmin) {
+          // User is not approved yet - redirect to pending approval page
+          console.log('❌ User not approved by admin yet - redirecting to pending approval');
+          window.location.href = '/dashboard/pending-approval';
+          return;
+        }
+        
+        // Redirect based on profile completion status
+        if (!user.profileCompleted) {
+          console.log('⚠️ Profile incomplete - redirecting to settings');
+          window.location.href = '/dashboard/settings';
+        } else {
+          console.log('✅ Profile complete - redirecting to dashboard');
+          window.location.href = '/dashboard';
+        }
+      }, 100);
     }
-  }, [isAuthenticated, user, authLoading, router]);
+  }, [isAuthenticated, user, authLoading]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -59,9 +76,45 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
-      console.log('Attempting login...');
+      console.log('🔐 Attempting login...');
       await login(formData.email.trim(), formData.password);
-      console.log('Login successful, auth state should update and trigger redirect');
+      console.log('✅ Login successful, checking auth state...');
+      
+      // Add a small delay and then check if redirect happened
+      setTimeout(() => {
+        console.log('🔍 Checking if redirect happened...');
+        // If we're still on the login page after 500ms, force redirect
+        if (window.location.pathname === '/login') {
+          console.log('⚠️ Still on login page, forcing redirect check...');
+          // Get current auth state and force redirect
+          try {
+            console.log('🔍 Checking localStorage contents...');
+            const userItem = localStorage.getItem('user');
+            const accessToken = localStorage.getItem('accessToken');
+            console.log('LocalStorage contents:', { 
+              userItem: userItem, 
+              userType: typeof userItem,
+              accessToken: accessToken ? 'present' : 'missing'
+            });
+            
+            if (userItem && userItem !== 'undefined' && userItem !== 'null') {
+              const currentUser = JSON.parse(userItem);
+              console.log('🔄 Manual redirect with user:', currentUser);
+              if (!currentUser.isApprovedByAdmin) {
+                window.location.href = '/dashboard/pending-approval';
+              } else if (!currentUser.profileCompleted) {
+                window.location.href = '/dashboard/settings';
+              } else {
+                window.location.href = '/dashboard';
+              }
+            } else {
+              console.log('❌ No valid user data in localStorage');
+            }
+          } catch (error) {
+            console.error('❌ Error parsing user data:', error);
+          }
+        }
+      }, 500);
       
       // Don't set isLoading to false here - let the redirect happen first
       // The user will be updated in auth state after successful login

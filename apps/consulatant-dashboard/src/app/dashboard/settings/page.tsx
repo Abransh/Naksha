@@ -152,7 +152,7 @@ export default function SettingsPage() {
                 </div>
 
                 <img
-                  src=""
+                  src="user.profile ?image"
                   alt="Profile"
                   className="w-8 h-8 rounded-lg"
                 />

@@ -206,7 +206,7 @@ export const authApi = {
       method: 'POST',
       body: data,
     });
-    console.log('✅ API: Login response received:', response);
+    console.log('✅ API: Login response received:');
     return response.data!;
   },
 

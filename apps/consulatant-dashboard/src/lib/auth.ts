@@ -149,13 +149,22 @@ const tokenManager = {
       console.log('🔐 AuthService: Attempting login API call...');
       const response = await authApi.login({ email, password });
       console.log('✅ AuthService: API response received:', response);
+      console.log('🔍 Response structure:', {
+        hasUser: 'user' in response,
+        hasConsultant: 'consultant' in response,
+        hasTokens: 'tokens' in response,
+        keys: Object.keys(response)
+      });
       
       // Store tokens and user data
+      const userData = response.user || response.consultant;
+      console.log('👤 User data to store:', userData);
+      
       tokenManager.setTokens(response.tokens);
-      userManager.setUser(response.user);
+      userManager.setUser(userData);
       console.log('💾 AuthService: Tokens and user data stored');
       
-      return response.user;
+      return userData;
     } catch (error) {
       console.error('❌ AuthService: Login failed:', error);
       throw error;
