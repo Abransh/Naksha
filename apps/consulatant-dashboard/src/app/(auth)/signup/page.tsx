@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -17,9 +17,63 @@ export default function SignupPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [redirectTimer, setRedirectTimer] = useState<number | null>(null);
+  const [countdown, setCountdown] = useState(3);
 
-  const { signup, error, clearError } = useAuth();
+  const { signup, error, clearError, user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
+
+  // Handle redirect for already authenticated users
+  useEffect(() => {
+    if (isAuthenticated && user && !authLoading) {
+      console.log('User already authenticated, redirecting from signup...', { user });
+      
+      // Check if user is approved by admin first
+      if (!user.isApprovedByAdmin) {
+        console.log('Redirecting to pending approval from signup');
+        window.location.href = '/dashboard/pending-approval';
+        return;
+      }
+      
+      // Redirect based on profile completion status
+      if (!user.profileCompleted) {
+        console.log('Redirecting to settings from signup');
+        window.location.href = '/dashboard/settings';
+      } else {
+        console.log('Redirecting to dashboard from signup');
+        window.location.href = '/dashboard';
+      }
+    }
+  }, [isAuthenticated, user, authLoading]);
+
+  // Handle redirect after successful signup
+  useEffect(() => {
+    if (success && !redirectTimer) {
+      console.log('Signup successful, starting redirect timer to login...');
+      
+      // Start countdown
+      const countdownInterval = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            clearInterval(countdownInterval);
+            console.log('Redirecting to login page...');
+            window.location.href = '/login';
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+      
+      setRedirectTimer(countdownInterval);
+    }
+
+    // Cleanup timer on unmount
+    return () => {
+      if (redirectTimer) {
+        clearInterval(redirectTimer);
+      }
+    };
+  }, [success, redirectTimer]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -108,7 +162,10 @@ export default function SignupPage() {
                 <CheckCircle size={20} className="text-green-600" />
                 <div className="flex-1">
                   <p className="text-green-800 font-medium">Account created successfully!</p>
-                  <p className="text-green-600 text-sm">Please check your email to verify your account. Redirecting to login...</p>
+                  <p className="text-green-600 text-sm">
+                    Please check your email to verify your account. 
+                    Redirecting to login in {countdown} second{countdown !== 1 ? 's' : ''}...
+                  </p>
                 </div>
               </div>
             )}

@@ -38,7 +38,8 @@ export interface AuthTokens {
 }
 
 export interface LoginResponse {
-  user: Consultant;
+  user?: Consultant;
+  consultant?: Consultant;
   tokens: AuthTokens;
 }
 
