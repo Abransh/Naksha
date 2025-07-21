@@ -188,10 +188,12 @@ export const authApi = {
     email: string;
     password: string;
   }): Promise<SignupResponse> {
+    console.log('📡 API: Making signup request with data:', data);
     const response = await apiRequest<ApiResponse<SignupResponse>>('/auth/signup', {
       method: 'POST',
       body: data,
     });
+    console.log('✅ API: Signup response received:', response);
     return response.data!;
   },
 

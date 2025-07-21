@@ -110,6 +110,8 @@ class App {
       origin: [
         'http://localhost:3000', // Dashboard dev
         'http://localhost:3001', // Public site dev
+        'https://naksha-teal.vercel.app', // Production frontend
+        'https://nakksha-guqgp.ondigitalocean.app', // Production API domain (for internal calls)
         process.env.FRONTEND_URL || '',
         process.env.DASHBOARD_URL || '',
       ],

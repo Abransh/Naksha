@@ -180,12 +180,14 @@ const tokenManager = {
    */
   async signup(name: string, email: string, password: string): Promise<Consultant> {
     try {
+      console.log('🔐 AuthService: Attempting signup with:', { name, email, passwordLength: password.length });
       const response = await authApi.signup({ name, email, password });
+      console.log('✅ AuthService: Signup response received:', response);
       
       // Note: No tokens returned on signup, user needs to verify email first
       return response.user;
     } catch (error) {
-      console.error('Signup failed:', error);
+      console.error('❌ AuthService: Signup failed:', error);
       throw error;
     }
   },

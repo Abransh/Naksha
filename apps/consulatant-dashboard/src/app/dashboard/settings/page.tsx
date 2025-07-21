@@ -151,11 +151,17 @@ export default function SettingsPage() {
 
                 </div>
 
-                <img
-                  src="user.profile ?image"
-                  alt="Profile"
-                  className="w-8 h-8 rounded-lg"
-                />
+                {profile?.profilePhotoUrl ? (
+                  <img
+                    src={profile.profilePhotoUrl}
+                    alt="Profile"
+                    className="w-8 h-8 rounded-lg object-cover"
+                  />
+                ) : (
+                  <div className="w-8 h-8 rounded-lg bg-gray-100 flex items-center justify-center">
+                    <User size={16} className="text-gray-400" />
+                  </div>
+                )}
               </div>
             </div>
           </div>
