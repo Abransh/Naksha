@@ -160,6 +160,10 @@ const tokenManager = {
       const userData = response.user || response.consultant;
       console.log('👤 User data to store:', userData);
       
+      if (!userData) {
+        throw new Error('No user data received from login response');
+      }
+      
       tokenManager.setTokens(response.tokens);
       userManager.setUser(userData);
       console.log('💾 AuthService: Tokens and user data stored');

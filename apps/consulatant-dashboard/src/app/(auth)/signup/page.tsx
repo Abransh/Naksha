@@ -17,7 +17,7 @@ export default function SignupPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [redirectTimer, setRedirectTimer] = useState<number | null>(null);
+  const [redirectTimer, setRedirectTimer] = useState<NodeJS.Timeout | null>(null);
   const [countdown, setCountdown] = useState(3);
 
   const { signup, error, clearError, user, isAuthenticated, isLoading: authLoading } = useAuth();
