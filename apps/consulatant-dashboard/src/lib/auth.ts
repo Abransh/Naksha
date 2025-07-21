@@ -146,15 +146,18 @@ const tokenManager = {
    */
   async login(email: string, password: string): Promise<Consultant> {
     try {
+      console.log('🔐 AuthService: Attempting login API call...');
       const response = await authApi.login({ email, password });
+      console.log('✅ AuthService: API response received:', response);
       
       // Store tokens and user data
       tokenManager.setTokens(response.tokens);
       userManager.setUser(response.user);
+      console.log('💾 AuthService: Tokens and user data stored');
       
       return response.user;
     } catch (error) {
-      console.error('Login failed:', error);
+      console.error('❌ AuthService: Login failed:', error);
       throw error;
     }
   },

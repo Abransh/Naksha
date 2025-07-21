@@ -51,16 +51,19 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   // Login function
   const login = async (email: string, password: string): Promise<void> => {
     try {
+      console.log('🚀 AuthProvider: Starting login process...', { email });
       setError(null);
       updateAuthState({ isLoading: true });
       
       const user = await authService.login(email, password);
+      console.log('✅ AuthProvider: Login successful, user data:', user);
       
       updateAuthState({
         isAuthenticated: true,
         user,
         isLoading: false,
       });
+      console.log('✅ AuthProvider: Auth state updated');
     } catch (err) {
       let errorMessage = 'Login failed. Please try again.';
       

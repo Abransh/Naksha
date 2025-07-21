@@ -191,7 +191,7 @@ export const TeamsIntegration: React.FC = () => {
         </Badge>
         {isAutoRefreshEnabled && (
           <span className="text-xs text-green-600 italic">
-            Auto-managed
+           
           </span>
         )}
       </div>

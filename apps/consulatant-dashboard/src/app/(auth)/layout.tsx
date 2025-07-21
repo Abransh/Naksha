@@ -17,13 +17,6 @@ export default function AuthLayout({
   const { isAuthenticated, user, isLoading } = useAuth();
   const router = useRouter();
 
-  useEffect(() => {
-    // If already authenticated, redirect to dashboard
-    if (!isLoading && isAuthenticated && user) {
-      router.replace('/dashboard');
-    }
-  }, [isAuthenticated, user, isLoading, router]);
-
   // Show loading while checking auth state
   if (isLoading) {
     return (
@@ -34,11 +27,6 @@ export default function AuthLayout({
         </div>
       </div>
     );
-  }
-
-  // Don't render auth pages if already authenticated
-  if (isAuthenticated && user) {
-    return null;
   }
 
   return (

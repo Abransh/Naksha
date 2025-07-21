@@ -18,20 +18,35 @@ export default function LoginPage() {
   
   const [isLoading, setIsLoading] = useState(false);
   
-  const { login, error, clearError, user, isAuthenticated } = useAuth();
+  const { login, error, clearError, user, isAuthenticated, isLoading: authLoading } = useAuth();
   const router = useRouter();
 
   // Handle redirect after successful login
   useEffect(() => {
-    if (isAuthenticated && user) {
+    if (isAuthenticated && user && !authLoading) {
+      console.log('Login successful, redirecting...', { user, isAuthenticated });
+      
+      // Clear form loading state since we're about to redirect
+      setIsLoading(false);
+      
+      // Check if user is approved by admin first
+      if (!user.isApprovedByAdmin) {
+        // User is not approved yet - redirect to pending approval page
+        console.log('User not approved by admin yet - redirecting to pending approval');
+        router.replace('/dashboard/pending-approval');
+        return;
+      }
+      
       // Redirect based on profile completion status
       if (!user.profileCompleted) {
-        router.push('/dashboard/settings');
+        console.log('Redirecting to settings for profile completion');
+        router.replace('/dashboard/settings');
       } else {
-        router.push('/dashboard');
+        console.log('Redirecting to dashboard');
+        router.replace('/dashboard');
       }
     }
-  }, [isAuthenticated, user, router]);
+  }, [isAuthenticated, user, authLoading, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -44,14 +59,16 @@ export default function LoginPage() {
     setIsLoading(true);
     
     try {
+      console.log('Attempting login...');
       await login(formData.email.trim(), formData.password);
+      console.log('Login successful, auth state should update and trigger redirect');
       
+      // Don't set isLoading to false here - let the redirect happen first
       // The user will be updated in auth state after successful login
       // We'll handle redirect in useEffect when user state changes
     } catch (err) {
       // Error is handled by the auth context
       console.error('Login error:', err);
-    } finally {
       setIsLoading(false);
     }
   };

@@ -24,8 +24,8 @@ export interface Consultant {
   lastName: string;
   slug: string;
   isEmailVerified: boolean;
-  isApprovedByAdmin?: boolean;
-  profileCompleted?: boolean;
+  isApprovedByAdmin: boolean;
+  profileCompleted: boolean;
   subscriptionPlan?: string;
   subscriptionExpiresAt?: string;
   createdAt?: string;
@@ -201,10 +201,12 @@ export const authApi = {
     email: string;
     password: string;
   }): Promise<LoginResponse> {
+    console.log('📡 API: Making login request to /auth/login...');
     const response = await apiRequest<ApiResponse<LoginResponse>>('/auth/login', {
       method: 'POST',
       body: data,
     });
+    console.log('✅ API: Login response received:', response);
     return response.data!;
   },
 

@@ -222,6 +222,8 @@ router.post('/login',
           slug: true,
           isActive: true,
           isEmailVerified: true,
+          isApprovedByAdmin: true,
+          profileCompleted: true,
           subscriptionPlan: true,
           subscriptionExpiresAt: true
         }
@@ -311,6 +313,8 @@ router.post('/login',
             lastName: user.lastName,
             slug: user.slug,
             isEmailVerified: user.isEmailVerified,
+            isApprovedByAdmin: user.isApprovedByAdmin,
+            profileCompleted: user.profileCompleted,
             subscriptionPlan: user.subscriptionPlan,
             subscriptionExpiresAt: user.subscriptionExpiresAt
           },
