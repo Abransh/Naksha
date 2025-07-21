@@ -108,7 +108,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
   // Desktop Sidebar Content
   const DesktopSidebarContent = () => (
     <div
-      className={`fixed left-0 top-0 h-full bg-white z-10 flex flex-col transition-all duration-300 ease-in-out shadow-sm border-r border-[var(--stroke)] ${
+      className={`fixed left-0 top-0 h-screen bg-white z-50 flex flex-col transition-all duration-300 ease-in-out shadow-sm border-r border-[var(--stroke)] ${
         isExpanded ? "w-80" : "w-[88px]"
       }`}
       onMouseEnter={() => setIsExpanded(true)}
@@ -132,7 +132,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
       </div>
 
       {/* Navigation Menu */}
-      <div className={`flex-1 ${isExpanded ? "px-8" : "px-4"} transition-all duration-300`}>
+      <div className={`flex-1 ${isExpanded ? "px-8" : "px-4"} transition-all duration-300 overflow-y-auto`}>
         <nav className={`space-y-${isExpanded ? "6" : "3"} transition-all duration-300`}>
           {navigationItems.map((item) => {
             const isActive = isRouteActive(item.href);
@@ -195,58 +195,60 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
           })}
         </nav>
 
-        {/* Contact Support */}
-        <div className={`${isExpanded ? "mt-8" : "mt-12"} transition-all duration-300`}>
-          {isExpanded ? (
-            <a 
-              href="mailto:booking@nakksha.in" 
-              className="block bg-gray-100 rounded-2xl p-4 cursor-pointer hover:bg-gray-200 transition-colors"
-            >
-              <div className="flex items-center gap-3">
-                <Headphones size={20} className="text-[var(--black-100)]" />
-                <span className="text-[var(--black-100)] font-inter text-sm">
-                  Contact Support
-                </span>
-              </div>
-            </a>
-          ) : (
-            <a 
-              href="mailto:booking@nakksha.in" 
-              className="flex items-center justify-center w-14 h-12 rounded-2xl bg-[rgba(94,99,102,0.1)] hover:bg-gray-200 cursor-pointer transition-colors"
-            >
-              <Headphones size={24} className="text-black" />
-            </a>
-          )}
-        </div>
+        <div className="space-y-4 mt-8">
+          {/* Contact Support */}
+          <div className="transition-all duration-300">
+            {isExpanded ? (
+              <a 
+                href="mailto:booking@nakksha.in" 
+                className="block bg-gray-100 rounded-2xl p-4 cursor-pointer hover:bg-gray-200 transition-colors"
+              >
+                <div className="flex items-center gap-3">
+                  <Headphones size={20} className="text-[var(--black-100)]" />
+                  <span className="text-[var(--black-100)] font-inter text-sm">
+                    Contact Support
+                  </span>
+                </div>
+              </a>
+            ) : (
+              <a 
+                href="mailto:booking@nakksha.in" 
+                className="flex items-center justify-center w-14 h-12 rounded-2xl bg-[rgba(94,99,102,0.1)] hover:bg-gray-200 cursor-pointer transition-colors"
+              >
+                <Headphones size={24} className="text-black" />
+              </a>
+            )}
+          </div>
 
-        {/* Gift Banner */}
-        <div className={`${isExpanded ? "mt-5" : "mt-3"} transition-all duration-300`}>
-          {isExpanded ? (
-            <div className="bg-[var(--secondary-20)] rounded-2xl p-4 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">
-              <div className="flex items-start gap-3">
-                <Gift size={20} className="text-[var(--black-100)] mt-1" />
-                <div className="flex-1">
-                  <p className="text-[var(--black-100)] font-inter text-sm font-medium">
-                  Upgrade your account to access your personal marketing team.                  </p>
-                  <div className="flex items-center justify-between mt-2">
-                    <p className="text-[var(--black-40)] font-inter text-xs">
-                      Upgrade your account
-                    </p>
-                    <ChevronRight size={12} className="text-[var(--black-40)]" />
+          {/* Gift Banner */}
+          <div className="transition-all duration-300">
+            {isExpanded ? (
+              <div className="bg-[var(--secondary-20)] rounded-2xl p-4 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">
+                <div className="flex items-start gap-3">
+                  <Gift size={20} className="text-[var(--black-100)] mt-1" />
+                  <div className="flex-1">
+                    <p className="text-[var(--black-100)] font-inter text-sm font-medium">
+                    Upgrade your account to access your personal marketing team.                    </p>
+                    <div className="flex items-center justify-between mt-2">
+                      <p className="text-[var(--black-40)] font-inter text-xs">
+                        Upgrade your account
+                      </p>
+                      <ChevronRight size={12} className="text-[var(--black-40)]" />
+                    </div>
                   </div>
                 </div>
               </div>
-            </div>
-          ) : (
-            <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-[rgba(255,204,145,0.2)] hover:bg-[rgba(255,204,145,0.3)] cursor-pointer transition-colors">
-              <Gift size={24} className="text-black" />
-            </div>
-          )}
+            ) : (
+              <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-[rgba(255,204,145,0.2)] hover:bg-[rgba(255,204,145,0.3)] cursor-pointer transition-colors">
+                <Gift size={24} className="text-black" />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 
       {/* Logout */}
-      <div className={`${isExpanded ? "p-8" : "p-4"} transition-all duration-300`}>
+      <div className={`${isExpanded ? "p-8" : "p-4"} transition-all duration-300 border-t border-gray-100 mt-auto`}>
         {isExpanded ? (
           <button
             onClick={handleLogout}
@@ -260,9 +262,9 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
         ) : (
           <div
             onClick={handleLogout}
-            className="flex items-center justify-center w-12 h-12 rounded-2xl hover:bg-gray-100 cursor-pointer transition-colors"
+            className="flex items-center justify-center w-14 h-12 rounded-2xl hover:bg-red-50 cursor-pointer transition-colors"
           >
-            <LogOut size={24} className="text-[var(--action-red)]" />
+            <LogOut size={20} className="text-[var(--action-red)]" />
           </div>
         )}
       </div>
@@ -282,7 +284,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
       </div>
 
       {/* Navigation Menu */}
-      <div className="flex-1 px-8">
+      <div className="flex-1 px-8 overflow-y-auto">
         <nav className="space-y-6">
           {navigationItems.map((item) => {
             const isActive = isRouteActive(item.href);
@@ -321,32 +323,34 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
           })}
         </nav>
 
-        {/* Contact Support */}
-        <a 
-          href="mailto:booking@nakksha.in" 
-          className="block mt-8 bg-gray-100 rounded-2xl p-4 cursor-pointer hover:bg-gray-200 transition-colors"
-        >
-          <div className="flex items-center gap-3">
-            <Headphones size={20} className="text-[var(--black-100)]" />
-            <span className="text-[var(--black-100)] font-inter text-sm">
-              Contact Support
-            </span>
-          </div>
-        </a>
+        <div className="space-y-4 mt-8">
+          {/* Contact Support */}
+          <a 
+            href="mailto:booking@nakksha.in" 
+            className="block bg-gray-100 rounded-2xl p-4 cursor-pointer hover:bg-gray-200 transition-colors"
+          >
+            <div className="flex items-center gap-3">
+              <Headphones size={20} className="text-[var(--black-100)]" />
+              <span className="text-[var(--black-100)] font-inter text-sm">
+                Contact Support
+              </span>
+            </div>
+          </a>
 
-        {/* Gift Banner */}
-        <div className="mt-5 bg-[var(--secondary-20)] rounded-2xl p-4 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">
-          <div className="flex items-start gap-3">
-            <Gift size={20} className="text-[var(--black-100)] mt-1" />
-            <div className="flex-1">
-              <p className="text-[var(--black-100)] font-inter text-sm font-medium">
-                Free Gift Awaits You!
-              </p>
-              <div className="flex items-center justify-between mt-2">
-                <p className="text-[var(--black-40)] font-inter text-xs">
-                  Upgrade your account
+          {/* Gift Banner */}
+          <div className="bg-[var(--secondary-20)] rounded-2xl p-4 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">
+            <div className="flex items-start gap-3">
+              <Gift size={20} className="text-[var(--black-100)] mt-1" />
+              <div className="flex-1">
+                <p className="text-[var(--black-100)] font-inter text-sm font-medium">
+                  Free Gift Awaits You!
                 </p>
-                <ChevronRight size={12} className="text-[var(--black-40)]" />
+                <div className="flex items-center justify-between mt-2">
+                  <p className="text-[var(--black-40)] font-inter text-xs">
+                    Upgrade your account
+                  </p>
+                  <ChevronRight size={12} className="text-[var(--black-40)]" />
+                </div>
               </div>
             </div>
           </div>
@@ -354,7 +358,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
       </div>
 
       {/* Logout */}
-      <div className="p-8">
+      <div className="p-8 border-t border-gray-100 mt-auto">
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 p-3 hover:bg-red-50 rounded-lg transition-colors w-full text-left"
