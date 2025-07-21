@@ -195,16 +195,16 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
           })}
         </nav>
 
-        <div className="space-y-4 mt-8">
+        <div className="space-y-3 mt-6 mb-4">
           {/* Contact Support */}
           <div className="transition-all duration-300">
             {isExpanded ? (
               <a 
                 href="mailto:booking@nakksha.in" 
-                className="block bg-gray-100 rounded-2xl p-4 cursor-pointer hover:bg-gray-200 transition-colors"
+                className="block bg-gray-100 rounded-2xl p-3 cursor-pointer hover:bg-gray-200 transition-colors"
               >
                 <div className="flex items-center gap-3">
-                  <Headphones size={20} className="text-[var(--black-100)]" />
+                  <Headphones size={18} className="text-[var(--black-100)]" />
                   <span className="text-[var(--black-100)] font-inter text-sm">
                     Contact Support
                   </span>
@@ -215,7 +215,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
                 href="mailto:booking@nakksha.in" 
                 className="flex items-center justify-center w-14 h-12 rounded-2xl bg-[rgba(94,99,102,0.1)] hover:bg-gray-200 cursor-pointer transition-colors"
               >
-                <Headphones size={24} className="text-black" />
+                <Headphones size={20} className="text-black" />
               </a>
             )}
           </div>
@@ -223,9 +223,9 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
           {/* Gift Banner */}
           <div className="transition-all duration-300">
             {isExpanded ? (
-              <div className="bg-[var(--secondary-20)] rounded-2xl p-4 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">
+              <div className="bg-[var(--secondary-20)] rounded-2xl p-3 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">
                 <div className="flex items-start gap-3">
-                  <Gift size={20} className="text-[var(--black-100)] mt-1" />
+                  <Gift size={18} className="text-[var(--black-100)] mt-1" />
                   <div className="flex-1">
                     <p className="text-[var(--black-100)] font-inter text-sm font-medium">
                     Upgrade your account to access your personal marketing team.                    </p>
@@ -239,8 +239,8 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center w-14 h-14 rounded-2xl bg-[rgba(255,204,145,0.2)] hover:bg-[rgba(255,204,145,0.3)] cursor-pointer transition-colors">
-                <Gift size={24} className="text-black" />
+              <div className="flex items-center justify-center w-14 h-12 rounded-2xl bg-[rgba(255,204,145,0.2)] hover:bg-[rgba(255,204,145,0.3)] cursor-pointer transition-colors">
+                <Gift size={20} className="text-black" />
               </div>
             )}
           </div>
@@ -248,7 +248,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
       </div>
 
       {/* Logout */}
-      <div className={`${isExpanded ? "p-8" : "p-4"} transition-all duration-300 border-t border-gray-100 mt-auto`}>
+      <div className={`${isExpanded ? "px-8 py-4" : "px-4 py-4"} transition-all duration-300 border-t border-gray-100 mt-auto`}>
         {isExpanded ? (
           <button
             onClick={handleLogout}
@@ -323,14 +323,14 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
           })}
         </nav>
 
-        <div className="space-y-4 mt-8">
+        <div className="space-y-3 mt-6 mb-4">
           {/* Contact Support */}
           <a 
             href="mailto:booking@nakksha.in" 
-            className="block bg-gray-100 rounded-2xl p-4 cursor-pointer hover:bg-gray-200 transition-colors"
+            className="block bg-gray-100 rounded-2xl p-3 cursor-pointer hover:bg-gray-200 transition-colors"
           >
             <div className="flex items-center gap-3">
-              <Headphones size={20} className="text-[var(--black-100)]" />
+              <Headphones size={18} className="text-[var(--black-100)]" />
               <span className="text-[var(--black-100)] font-inter text-sm">
                 Contact Support
               </span>
@@ -338,9 +338,9 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
           </a>
 
           {/* Gift Banner */}
-          <div className="bg-[var(--secondary-20)] rounded-2xl p-4 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">
+          <div className="bg-[var(--secondary-20)] rounded-2xl p-3 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">
             <div className="flex items-start gap-3">
-              <Gift size={20} className="text-[var(--black-100)] mt-1" />
+              <Gift size={18} className="text-[var(--black-100)] mt-1" />
               <div className="flex-1">
                 <p className="text-[var(--black-100)] font-inter text-sm font-medium">
                   Free Gift Awaits You!
@@ -358,7 +358,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
       </div>
 
       {/* Logout */}
-      <div className="p-8 border-t border-gray-100 mt-auto">
+      <div className="px-8 py-4 border-t border-gray-100 mt-auto">
         <button
           onClick={handleLogout}
           className="flex items-center gap-3 p-3 hover:bg-red-50 rounded-lg transition-colors w-full text-left"
