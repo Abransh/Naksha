@@ -13,9 +13,10 @@ import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
-import { Loader2, Calendar, Clock, AlertCircle, CheckCircle } from "lucide-react";
+import { Loader2, Calendar, Clock, AlertCircle, CheckCircle, CreditCard } from "lucide-react";
 import { bookSession } from "@/lib/api";
 import { useAvailableSlots, useAvailabilityFormatter } from "@/hooks/useAvailableSlots";
+import { useRazorpayPayment } from "@/hooks/useRazorpayPayment";
 
 interface SessionBookingData {
   // Client Information
@@ -78,6 +79,7 @@ export function BookSessionModal({
   } = useAvailableSlots(consultantSlug, sessionType, false); // false = don't auto-fetch
 
   const { formatDate, formatTime } = useAvailabilityFormatter();
+  const { processPayment, isLoading: paymentLoading } = useRazorpayPayment();
 
   const handleInputChange = (field: keyof SessionBookingData, value: string | number) => {
     setFormData((prev) => ({
@@ -115,8 +117,10 @@ export function BookSessionModal({
 
   const handleSubmit = async () => {
     setIsBooking(true);
+    
     try {
-      const result = await bookSession({
+      // First, create the session to get a session ID (without payment)
+      const sessionResult = await bookSession({
         fullName: formData.fullName,
         email: formData.email,
         phone: formData.phone,
@@ -130,21 +134,55 @@ export function BookSessionModal({
         consultantSlug
       });
       
-      console.log('✅ Session booked successfully:', result);
+      console.log('✅ Session created successfully:', sessionResult);
       
-      // Reset modal state
-      setIsOpen(false);
-      setCurrentStep(1);
-      setHasTriggeredFetch(false);
-      resetForm();
+      // Check if we have session scheduling or manual booking
+      const hasTimeSelection = formData.selectedDate && formData.selectedTime;
       
-      // Success message based on booking type
-      const bookingType = (formData.selectedDate && formData.selectedTime) ? 'scheduled' : 'manual';
-      const successMessage = bookingType === 'scheduled' 
-        ? "Session booked successfully! You will receive a confirmation email with meeting details shortly."
-        : "Booking request submitted! The consultant will contact you directly to schedule your session.";
-      
-      alert(successMessage);
+      if (hasTimeSelection) {
+        // Process payment for scheduled sessions
+        console.log('💳 Initiating payment for scheduled session...');
+        
+        await processPayment(
+          {
+            sessionId: sessionResult.session?.id,
+            amount: formData.amount,
+            clientEmail: formData.email,
+            clientName: formData.fullName,
+            notes: {
+              sessionType: formData.sessionType,
+              phone: formData.phone,
+            }
+          },
+          // Payment success callback
+          (paymentData) => {
+            console.log('✅ Payment successful:', paymentData);
+            
+            // Reset modal state
+            setIsOpen(false);
+            setCurrentStep(1);
+            setHasTriggeredFetch(false);
+            resetForm();
+          },
+          // Payment failure callback
+          (error) => {
+            console.error('❌ Payment failed:', error);
+            // Keep modal open so user can retry or cancel
+          }
+        );
+        
+      } else {
+        // Manual booking - no payment required yet
+        console.log('📋 Manual booking submitted (no payment)');
+        
+        // Reset modal state
+        setIsOpen(false);
+        setCurrentStep(1);
+        setHasTriggeredFetch(false);
+        resetForm();
+        
+        alert("Booking request submitted! The consultant will contact you directly to schedule your session and arrange payment.");
+      }
       
     } catch (error) {
       console.error("❌ Session booking error:", error);
@@ -416,11 +454,19 @@ export function BookSessionModal({
                       </SelectTrigger>
                       <SelectContent>
                         {availableTimesForSelectedDate.length > 0 ? (
-                          availableTimesForSelectedDate.map((time) => (
-                            <SelectItem key={time} value={time}>
-                              {formatTime(time)}
-                            </SelectItem>
-                          ))
+                          availableTimesForSelectedDate.map((time) => {
+                            // Calculate end time (1-hour sessions)
+                            const [hours, minutes] = time.split(':').map(Number);
+                            const endHour = (hours + 1) % 24;
+                            const endTime = `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                            const timeRange = formatTimeRange(time, endTime);
+                            
+                            return (
+                              <SelectItem key={time} value={time}>
+                                {timeRange}
+                              </SelectItem>
+                            );
+                          })
                         ) : (
                           formData.selectedDate && (
                             <div className="p-2 text-sm text-[var(--black-40)] text-center">
@@ -499,16 +545,27 @@ export function BookSessionModal({
                     <div>Date: {formData.selectedDate ? new Date(formData.selectedDate).toLocaleDateString() : (
                       <span className="text-amber-600 font-medium">To be scheduled by consultant</span>
                     )}</div>
-                    <div>Time: {formData.selectedTime ? formatTime(formData.selectedTime) : (
+                    <div>Time: {formData.selectedTime ? (() => {
+                      // Calculate end time for time range display (1-hour sessions)
+                      const [hours, minutes] = formData.selectedTime.split(':').map(Number);
+                      const endHour = (hours + 1) % 24;
+                      const endTime = `${endHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+                      return formatTimeRange(formData.selectedTime, endTime);
+                    })() : (
                       <span className="text-amber-600 font-medium">To be scheduled by consultant</span>
                     )}</div>
                     <div>Duration: {formData.duration} minutes</div>
                     <div className="font-medium text-[var(--black-60)]">
                       Total: ₹{amount.toLocaleString('en-IN')}
                     </div>
-                    {(!formData.selectedDate || !formData.selectedTime) && (
+                    {(formData.selectedDate && formData.selectedTime) ? (
+                      <div className="text-xs text-blue-700 bg-blue-50 p-2 rounded mt-2 flex items-center gap-2">
+                        <CreditCard className="w-4 h-4" />
+                        Payment will be processed securely via Razorpay when you click "Pay & Book Session"
+                      </div>
+                    ) : (
                       <div className="text-xs text-amber-700 bg-amber-50 p-2 rounded mt-2">
-                        📅 The consultant will contact you directly to schedule this session based on mutual availability.
+                        📅 The consultant will contact you directly to schedule this session and arrange payment.
                       </div>
                     )}
                   </div>
@@ -542,17 +599,26 @@ export function BookSessionModal({
             ) : (
               <Button
                 onClick={handleSubmit}
-                disabled={isBooking || !canProceedToBooking()}
+                disabled={isBooking || paymentLoading || !canProceedToBooking()}
                 className="flex-1 h-12 bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white rounded-xl disabled:opacity-50"
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
-                {isBooking ? (
+                {isBooking || paymentLoading ? (
                   <>
                     <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                    Booking Session...
+                    {paymentLoading ? 'Processing Payment...' : 'Creating Session...'}
                   </>
                 ) : (
-                  'Book Session'
+                  <>
+                    {formData.selectedDate && formData.selectedTime ? (
+                      <>
+                        <CreditCard className="w-4 h-4 mr-2" />
+                        Pay & Book Session
+                      </>
+                    ) : (
+                      'Submit Booking Request'
+                    )}
+                  </>
                 )}
               </Button>
             )}

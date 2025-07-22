@@ -40,6 +40,7 @@ import quotationRoutes from './routes/v1/quotations';
 import adminRoutes from './routes/v1/admin';
 import teamsRoutes from './routes/v1/teams';
 import availabilityRoutes from './routes/v1/availability';
+import paymentRoutes from './routes/v1/payments';
 
 // Controller imports for direct routing
 import { 
@@ -230,6 +231,7 @@ class App {
     this.app.use('/api/v1/quotations', authenticateConsultant, quotationRoutes);
     this.app.use('/api/v1/teams', teamsRoutes);
     this.app.use('/api/v1/availability', availabilityRoutes);
+    this.app.use('/api/v1/payments', paymentRoutes);
 
     // Admin routes (admin authentication required)
     this.app.use('/api/v1/admin', authenticateAdmin, adminRoutes);
@@ -296,6 +298,13 @@ class App {
               'PUT /api/v1/quotations/:id - Update quotation',
               'DELETE /api/v1/quotations/:id - Delete quotation',
               'POST /api/v1/quotations/:id/send - Send quotation to client'
+            ],
+            payments: [
+              'POST /api/v1/payments/create-order - Create payment order for session/quotation',
+              'POST /api/v1/payments/verify - Verify payment and process transaction',
+              'POST /api/v1/payments/failed - Handle failed payment notification',
+              'POST /api/v1/payments/webhook - Handle Razorpay webhook events',
+              'GET /api/v1/payments/config - Get payment configuration for frontend'
             ],
             admin: [
               'GET /api/v1/admin/dashboard - Admin dashboard overview',

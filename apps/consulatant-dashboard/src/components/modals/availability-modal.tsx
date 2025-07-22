@@ -59,10 +59,9 @@ const DAYS_OF_WEEK = [
   { value: 6, label: 'Saturday', short: 'Sat' },
 ];
 
-const TIME_OPTIONS = Array.from({ length: 24 * 2 }, (_, i) => {
-  const hour = Math.floor(i / 2);
-  const minute = (i % 2) * 30;
-  const time = `${hour.toString().padStart(2, '0')}:${minute.toString().padStart(2, '0')}`;
+const TIME_OPTIONS = Array.from({ length: 24 }, (_, i) => {
+  const hour = i;
+  const time = `${hour.toString().padStart(2, '0')}:00`;
   const displayTime = new Date(`2000-01-01T${time}`).toLocaleTimeString('en-US', {
     hour: 'numeric',
     minute: '2-digit',
@@ -155,9 +154,21 @@ export function AvailabilityModal({
       if (pattern.dayOfWeek === dayOfWeek && pattern.sessionType === selectedSessionType) {
         return {
           ...pattern,
-          slots: pattern.slots.map(slot => 
-            slot.id === slotId ? { ...slot, [field]: value } : slot
-          )
+          slots: pattern.slots.map(slot => {
+            if (slot.id === slotId) {
+              const updatedSlot = { ...slot, [field]: value };
+              
+              // Automatically calculate endTime when startTime changes (1-hour sessions)
+              if (field === 'startTime' && value) {
+                const [hours, minutes] = value.split(':').map(Number);
+                const nextHour = (hours + 1) % 24;
+                updatedSlot.endTime = `${nextHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+              }
+              
+              return updatedSlot;
+            }
+            return slot;
+          })
         };
       }
       return pattern;
