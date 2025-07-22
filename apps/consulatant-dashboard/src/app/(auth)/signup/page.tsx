@@ -17,7 +17,6 @@ export default function SignupPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [redirectTimer, setRedirectTimer] = useState<NodeJS.Timeout | null>(null);
   const [countdown, setCountdown] = useState(3);
 
   const { signup, error, clearError, user, isAuthenticated, isLoading: authLoading } = useAuth();
@@ -26,54 +25,38 @@ export default function SignupPage() {
   // Handle redirect for already authenticated users
   useEffect(() => {
     if (isAuthenticated && user && !authLoading) {
-      console.log('User already authenticated, redirecting from signup...', { user });
+      // Determine redirect path based on user status
+      let redirectPath = '/dashboard';
       
-      // Check if user is approved by admin first
       if (!user.isApprovedByAdmin) {
-        console.log('Redirecting to pending approval from signup');
-        window.location.href = '/dashboard/pending-approval';
-        return;
+        redirectPath = '/dashboard/pending-approval';
+      } else if (!user.profileCompleted) {
+        redirectPath = '/dashboard/settings';
       }
       
-      // Redirect based on profile completion status
-      if (!user.profileCompleted) {
-        console.log('Redirecting to settings from signup');
-        window.location.href = '/dashboard/settings';
-      } else {
-        console.log('Redirecting to dashboard from signup');
-        window.location.href = '/dashboard';
-      }
+      router.push(redirectPath);
     }
-  }, [isAuthenticated, user, authLoading]);
+  }, [isAuthenticated, user, authLoading, router]);
 
   // Handle redirect after successful signup
   useEffect(() => {
-    if (success && !redirectTimer) {
-      console.log('Signup successful, starting redirect timer to login...');
-      
-      // Start countdown
+    if (success) {
+      // Start countdown and redirect to login
       const countdownInterval = setInterval(() => {
         setCountdown((prev) => {
           if (prev <= 1) {
             clearInterval(countdownInterval);
-            console.log('Redirecting to login page...');
-            window.location.href = '/login';
+            router.push('/login');
             return 0;
           }
           return prev - 1;
         });
       }, 1000);
       
-      setRedirectTimer(countdownInterval);
+      // Cleanup on unmount
+      return () => clearInterval(countdownInterval);
     }
-
-    // Cleanup timer on unmount
-    return () => {
-      if (redirectTimer) {
-        clearInterval(redirectTimer);
-      }
-    };
-  }, [success, redirectTimer]);
+  }, [success, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -88,13 +71,9 @@ export default function SignupPage() {
     try {
       await signup(formData.fullName.trim(), formData.email.trim(), formData.password);
       setSuccess(true);
-
-      // Show success message, user needs to verify email before accessing dashboard
-      // After email verification and login, they'll be redirected to /dashboard/settings
+      // Success state will trigger redirect countdown
     } catch (err) {
       // Error is handled by the auth context
-      console.error('Signup error:', err);
-    } finally {
       setIsLoading(false);
     }
   };
