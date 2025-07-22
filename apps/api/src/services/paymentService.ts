@@ -58,10 +58,17 @@ const paymentConfig = {
 /**
  * Initialize Razorpay instance
  */
-const razorpay = new Razorpay({
-  key_id: paymentConfig.razorpay.keyId,
-  key_secret: paymentConfig.razorpay.keySecret,
-});
+let razorpay: Razorpay | null = null;
+
+// Only initialize Razorpay if credentials are provided
+if (paymentConfig.razorpay.keyId && paymentConfig.razorpay.keySecret) {
+  razorpay = new Razorpay({
+    key_id: paymentConfig.razorpay.keyId,
+    key_secret: paymentConfig.razorpay.keySecret,
+  });
+} else {
+  console.warn('⚠️  Razorpay credentials not found. Payment functionality will be limited.');
+}
 
 /**
  * Payment interfaces
@@ -130,6 +137,10 @@ export const createPaymentOrder = async (orderData: PaymentOrderData): Promise<a
     const receipt = orderData.receipt || `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
     // Create Razorpay order
+    if (!razorpay) {
+      throw new AppError('Payment service not initialized. Please configure Razorpay credentials.', 503);
+    }
+    
     const razorpayOrder = await razorpay.orders.create({
       amount: amountInPaise,
       currency: orderData.currency || paymentConfig.defaultCurrency,
@@ -230,6 +241,10 @@ export const processSuccessfulPayment = async (
     }
 
     // Get payment details from Razorpay
+    if (!razorpay) {
+      throw new AppError('Payment service not initialized. Please configure Razorpay credentials.', 503);
+    }
+    
     const razorpayPayment = await razorpay.payments.fetch(razorpayPaymentId);
     
     if (razorpayPayment.status !== 'captured') {
@@ -417,6 +432,10 @@ export const processRefund = async (refundData: RefundData): Promise<any> => {
     const refundAmountInPaise = Math.round(refundAmount * 100);
 
     // Process refund with Razorpay
+    if (!razorpay) {
+      throw new AppError('Payment service not initialized. Please configure Razorpay credentials.', 503);
+    }
+    
     const razorpayRefund = await razorpay.payments.refund(refundData.paymentId, {
       amount: refundAmountInPaise,
       notes: {
