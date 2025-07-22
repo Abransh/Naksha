@@ -584,14 +584,25 @@ export const forgotPassword = async (req: Request, res: Response): Promise<void>
       60 * 60 // 1 hour
     );
 
-    // Send password reset email
-    // await sendEmail('password_reset', {
-    //   to: consultant.email,
-    //   data: {
-    //     firstName: consultant.firstName,
-    //     resetLink: `${process.env.CONSULTANT_DASHBOARD_URL}/auth/reset-password?token=${resetToken}`
-    //   }
-    // });
+    // Send password reset email using Resend API
+    try {
+      const resetLink = `${process.env.FRONTEND_URL || 'https://naksha-teal.vercel.app'}/reset-password?token=${resetToken}`;
+      
+      const emailResult = await sendPasswordResetEmail({
+        firstName: consultant.firstName,
+        email: consultant.email,
+        resetLink: resetLink
+      });
+
+      if (!emailResult.success) {
+        logger.error(`Failed to send password reset email to ${consultant.email}:`, emailResult.error);
+      } else {
+        logger.info(`Password reset email sent successfully to ${consultant.email} - Email ID: ${emailResult.emailId}`);
+      }
+    } catch (emailError) {
+      logger.error(`Error sending password reset email to ${consultant.email}:`, emailError);
+      // Don't throw error - we still want to return success for security
+    }
 
     logger.info(`Password reset requested for: ${consultant.email}`);
 

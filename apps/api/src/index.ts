@@ -41,6 +41,7 @@ import adminRoutes from './routes/v1/admin';
 import teamsRoutes from './routes/v1/teams';
 import availabilityRoutes from './routes/v1/availability';
 import paymentRoutes from './routes/v1/payments';
+import bookingRoutes from './routes/v1/booking';
 
 // Controller imports for direct routing
 import { 
@@ -223,6 +224,9 @@ class App {
     this.app.post('/api/v1/auth/refresh', refreshTokens);
     this.app.post('/api/v1/auth/logout', authenticate, logout);
     
+    // Public booking routes (no authentication required) - v1 API
+    this.app.use('/api/v1/book', bookingRoutes);
+    
     // Protected routes (authentication required)
     this.app.use('/api/v1/consultant', consultantRoutes);
     this.app.use('/api/v1/dashboard', authenticateConsultant, dashboardRoutes);
@@ -277,12 +281,15 @@ class App {
               'GET /api/v1/dashboard/recent-activity - Get recent activity',
               'GET /api/v1/dashboard/summary - Get quick summary stats'
             ],
+            booking: [
+              'POST /api/v1/book - Book a session (public endpoint)'
+            ],
             sessions: [
-              'GET /api/v1/sessions - List sessions',
-              'POST /api/v1/sessions - Create new session',
-              'GET /api/v1/sessions/:id - Get session details',
-              'PUT /api/v1/sessions/:id - Update session',
-              'DELETE /api/v1/sessions/:id - Cancel session'
+              'GET /api/v1/sessions - List sessions (protected)',
+              'POST /api/v1/sessions - Create new session (protected)',
+              'GET /api/v1/sessions/:id - Get session details (protected)',
+              'PUT /api/v1/sessions/:id - Update session (protected)',
+              'DELETE /api/v1/sessions/:id - Cancel session (protected)'
             ],
             clients: [
               'GET /api/v1/clients - List clients',

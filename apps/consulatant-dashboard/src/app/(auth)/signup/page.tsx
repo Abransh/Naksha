@@ -60,6 +60,8 @@ export default function SignupPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     clearError();
 
     if (!formData.fullName.trim() || !formData.email.trim() || !formData.password.trim()) {
@@ -71,6 +73,7 @@ export default function SignupPage() {
     try {
       await signup(formData.fullName.trim(), formData.email.trim(), formData.password);
       setSuccess(true);
+      setIsLoading(false);
       // Success state will trigger redirect countdown
     } catch (err) {
       // Error is handled by the auth context
@@ -160,6 +163,7 @@ export default function SignupPage() {
             <form
               onSubmit={handleSubmit}
               className="flex flex-col items-center gap-3 w-full"
+              noValidate
             >
               {/* Input Fields */}
               <div className="flex flex-col items-start gap-[30px] w-full">

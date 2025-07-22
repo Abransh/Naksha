@@ -89,7 +89,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         user: null,
         isLoading: false,
       });
-      throw new Error(errorMessage);
+      throw err; // Re-throw original error instead of creating new one
     }
   };
 
@@ -121,7 +121,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       
       setError(errorMessage);
       updateAuthState({ isLoading: false });
-      throw new Error(errorMessage);
+      throw err; // Re-throw original error
     }
   };
 

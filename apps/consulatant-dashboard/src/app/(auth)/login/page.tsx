@@ -23,6 +23,9 @@ export default function LoginPage() {
   // Handle redirect after successful authentication
   useEffect(() => {
     if (isAuthenticated && user && !authLoading) {
+      // Clear any loading state when redirecting
+      setIsLoading(false);
+      
       // Determine redirect path based on user status
       let redirectPath = '/dashboard';
       
@@ -39,6 +42,8 @@ export default function LoginPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
+    
     clearError();
     
     if (!formData.email.trim() || !formData.password.trim()) {
@@ -50,8 +55,9 @@ export default function LoginPage() {
     try {
       await login(formData.email.trim(), formData.password);
       // Login successful - useEffect will handle redirect
+      // Don't set isLoading to false here - let redirect happen
     } catch (err) {
-      // Error is handled by the auth context
+      // Error is handled by the auth context and will be displayed
       setIsLoading(false);
     }
   };
@@ -120,6 +126,7 @@ export default function LoginPage() {
             <form
               onSubmit={handleSubmit}
               className="flex flex-col items-center gap-3 w-full"
+              noValidate
             >
               {/* Input Fields */}
               <div className="flex flex-col items-start gap-[30px] w-full">
