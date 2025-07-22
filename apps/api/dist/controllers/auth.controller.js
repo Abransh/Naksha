@@ -16,6 +16,7 @@ const logger_1 = require("../utils/logger");
 const appError_1 = require("../utils/appError");
 const auth_1 = require("../middleware/auth");
 const redis_1 = require("../config/redis");
+const resendEmailService_1 = require("../services/resendEmailService");
 const helpers_1 = require("../utils/helpers");
 // Using shared prisma instance from @nakksha/database
 // ============================================================================
@@ -517,14 +518,25 @@ const forgotPassword = async (req, res) => {
             type: 'password_reset'
         }, 60 * 60 // 1 hour
         );
-        // Send password reset email
-        // await sendEmail('password_reset', {
-        //   to: consultant.email,
-        //   data: {
-        //     firstName: consultant.firstName,
-        //     resetLink: `${process.env.CONSULTANT_DASHBOARD_URL}/auth/reset-password?token=${resetToken}`
-        //   }
-        // });
+        // Send password reset email using Resend API
+        try {
+            const resetLink = `${process.env.FRONTEND_URL || 'https://naksha-teal.vercel.app'}/reset-password?token=${resetToken}`;
+            const emailResult = await (0, resendEmailService_1.sendPasswordResetEmail)({
+                firstName: consultant.firstName,
+                email: consultant.email,
+                resetLink: resetLink
+            });
+            if (!emailResult.success) {
+                logger_1.logger.error(`Failed to send password reset email to ${consultant.email}:`, emailResult.error);
+            }
+            else {
+                logger_1.logger.info(`Password reset email sent successfully to ${consultant.email} - Email ID: ${emailResult.emailId}`);
+            }
+        }
+        catch (emailError) {
+            logger_1.logger.error(`Error sending password reset email to ${consultant.email}:`, emailError);
+            // Don't throw error - we still want to return success for security
+        }
         logger_1.logger.info(`Password reset requested for: ${consultant.email}`);
         res.json({
             message: 'If an account with this email exists, a password reset link has been sent'

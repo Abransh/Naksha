@@ -225,22 +225,50 @@ router.put('/patterns/:id', auth_1.authenticateConsultant, (0, validation_1.vali
 });
 /**
  * DELETE /availability/patterns/:id
- * Delete a weekly availability pattern
+ * Delete a weekly availability pattern and cleanup related slots
  */
 router.delete('/patterns/:id', auth_1.authenticateConsultant, async (req, res) => {
     try {
         const prisma = (0, database_1.getPrismaClient)();
         const consultantId = req.user.id;
         const patternId = req.params.id;
-        // Verify pattern ownership
+        // Verify pattern ownership and get pattern details
         const existingPattern = await prisma.weeklyAvailabilityPattern.findFirst({
             where: { id: patternId, consultantId }
         });
         if (!existingPattern) {
             throw new errorHandler_1.NotFoundError('Availability pattern not found');
         }
-        await prisma.weeklyAvailabilityPattern.delete({
-            where: { id: patternId }
+        // Start transaction to ensure data consistency
+        await prisma.$transaction(async (tx) => {
+            // 1. Delete the pattern
+            await tx.weeklyAvailabilityPattern.delete({
+                where: { id: patternId }
+            });
+            // 2. Mark related unbooked availability slots as blocked (soft delete)
+            // This prevents them from being bookable while preserving booked slots
+            const updatedSlots = await tx.availabilitySlot.updateMany({
+                where: {
+                    consultantId,
+                    sessionType: existingPattern.sessionType,
+                    startTime: existingPattern.startTime,
+                    isBooked: false, // Only update unbooked slots
+                    date: {
+                        gte: new Date() // Only future slots
+                    }
+                },
+                data: {
+                    isBlocked: true // Mark as blocked instead of hard delete
+                }
+            });
+            console.log('🧹 Pattern deleted with cleanup:', {
+                patternId,
+                consultantId,
+                sessionType: existingPattern.sessionType,
+                dayOfWeek: existingPattern.dayOfWeek,
+                startTime: existingPattern.startTime,
+                slotsBlocked: updatedSlots.count
+            });
         });
         // Clear all related caches
         const cacheKeysToDelete = [
@@ -250,7 +278,11 @@ router.delete('/patterns/:id', auth_1.authenticateConsultant, async (req, res) =
         ];
         await Promise.all(cacheKeysToDelete.map(key => redis_1.cacheUtils.delete(key)));
         res.json({
-            message: 'Weekly availability pattern deleted successfully'
+            message: 'Weekly availability pattern deleted successfully',
+            data: {
+                patternId,
+                cleanupPerformed: true
+            }
         });
     }
     catch (error) {
@@ -273,17 +305,64 @@ router.post('/patterns/bulk', auth_1.authenticateConsultant, (0, validation_1.va
         for (const pattern of patterns) {
             validateTimeRange(pattern.startTime, pattern.endTime);
         }
-        // Clear existing patterns for this consultant
-        await prisma.weeklyAvailabilityPattern.deleteMany({
-            where: { consultantId }
-        });
-        // Create new patterns
-        const createdPatterns = await prisma.$transaction(patterns.map((pattern) => prisma.weeklyAvailabilityPattern.create({
-            data: {
-                consultantId,
-                ...pattern
+        // Start transaction to ensure data consistency
+        const result = await prisma.$transaction(async (tx) => {
+            // 1. Get existing patterns for comparison
+            const existingPatterns = await tx.weeklyAvailabilityPattern.findMany({
+                where: { consultantId },
+                select: {
+                    sessionType: true,
+                    dayOfWeek: true,
+                    startTime: true,
+                    endTime: true
+                }
+            });
+            // 2. Clear existing patterns
+            await tx.weeklyAvailabilityPattern.deleteMany({
+                where: { consultantId }
+            });
+            // 3. Create new patterns
+            const createdPatterns = await Promise.all(patterns.map((pattern) => tx.weeklyAvailabilityPattern.create({
+                data: {
+                    consultantId,
+                    ...pattern
+                }
+            })));
+            // 4. Cleanup orphaned availability slots
+            // Mark unbooked future slots as blocked if they don't match any new patterns
+            const newPatternKeys = new Set(patterns.map(p => `${p.sessionType}-${p.dayOfWeek}-${p.startTime}`));
+            const existingPatternKeys = new Set(existingPatterns.map(p => `${p.sessionType}-${p.dayOfWeek}-${p.startTime}`));
+            // Find patterns that were removed
+            const removedPatternKeys = [...existingPatternKeys].filter(key => !newPatternKeys.has(key));
+            // Block slots for removed patterns
+            let totalBlockedSlots = 0;
+            for (const patternKey of removedPatternKeys) {
+                const [sessionType, dayOfWeek, startTime] = patternKey.split('-');
+                const blocked = await tx.availabilitySlot.updateMany({
+                    where: {
+                        consultantId,
+                        sessionType: sessionType,
+                        startTime,
+                        isBooked: false,
+                        date: {
+                            gte: new Date() // Only future slots
+                        }
+                    },
+                    data: {
+                        isBlocked: true
+                    }
+                });
+                totalBlockedSlots += blocked.count;
             }
-        })));
+            console.log('🧹 Bulk pattern update with cleanup:', {
+                consultantId,
+                patternsCreated: createdPatterns.length,
+                removedPatterns: removedPatternKeys.length,
+                slotsBlocked: totalBlockedSlots
+            });
+            return { createdPatterns, slotsBlocked: totalBlockedSlots };
+        });
+        const createdPatterns = result.createdPatterns;
         // Clear all related caches
         const cacheKeysToDelete = [
             `availability:${consultantId}`,
@@ -294,14 +373,16 @@ router.post('/patterns/bulk', auth_1.authenticateConsultant, (0, validation_1.va
         console.log('✅ Bulk patterns updated:', {
             consultantId,
             patternsCreated: createdPatterns.length,
-            patternsDeleted: 'all_existing'
+            slotsBlocked: result.slotsBlocked
         });
         res.json({
             message: 'Weekly availability patterns updated successfully',
             data: {
                 patterns: createdPatterns,
                 totalCreated: createdPatterns.length,
-                operation: 'bulk_replace'
+                slotsBlocked: result.slotsBlocked,
+                operation: 'bulk_replace',
+                cleanupPerformed: true
             }
         });
     }

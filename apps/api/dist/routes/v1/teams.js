@@ -244,7 +244,7 @@ router.get('/status', auth_1.authenticateConsultantBasic, async (req, res) => {
                 teamsConnectedAt: true,
                 teamsUserEmail: true,
                 teamsUserId: true,
-                teamsRefreshToken: true, // Added this property
+                teamsRefreshToken: true,
                 updatedAt: true
             }
         });

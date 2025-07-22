@@ -41,6 +41,8 @@ const quotations_1 = __importDefault(require("./routes/v1/quotations"));
 const admin_1 = __importDefault(require("./routes/v1/admin"));
 const teams_1 = __importDefault(require("./routes/v1/teams"));
 const availability_1 = __importDefault(require("./routes/v1/availability"));
+const payments_1 = __importDefault(require("./routes/v1/payments"));
+const booking_1 = __importDefault(require("./routes/v1/booking"));
 // Controller imports for direct routing
 const auth_controller_1 = require("./controllers/auth.controller");
 const auth_2 = require("./middleware/auth");
@@ -91,6 +93,8 @@ class App {
             origin: [
                 'http://localhost:3000', // Dashboard dev
                 'http://localhost:3001', // Public site dev
+                'https://naksha-teal.vercel.app', // Production frontend
+                'https://nakksha-guqgp.ondigitalocean.app', // Production API domain (for internal calls)
                 process.env.FRONTEND_URL || '',
                 process.env.DASHBOARD_URL || '',
             ],
@@ -189,6 +193,8 @@ class App {
         this.app.get('/api/v1/auth/me', auth_1.authenticate, auth_controller_1.getCurrentUser);
         this.app.post('/api/v1/auth/refresh', auth_2.refreshTokens);
         this.app.post('/api/v1/auth/logout', auth_1.authenticate, auth_2.logout);
+        // Public booking routes (no authentication required) - v1 API
+        this.app.use('/api/v1/book', booking_1.default);
         // Protected routes (authentication required)
         this.app.use('/api/v1/consultant', consultant_1.default);
         this.app.use('/api/v1/dashboard', auth_1.authenticateConsultant, dashboard_1.default);
@@ -197,6 +203,7 @@ class App {
         this.app.use('/api/v1/quotations', auth_1.authenticateConsultant, quotations_1.default);
         this.app.use('/api/v1/teams', teams_1.default);
         this.app.use('/api/v1/availability', availability_1.default);
+        this.app.use('/api/v1/payments', payments_1.default);
         // Admin routes (admin authentication required)
         this.app.use('/api/v1/admin', auth_1.authenticateAdmin, admin_1.default);
         // API documentation (if in development)
@@ -240,12 +247,15 @@ class App {
                             'GET /api/v1/dashboard/recent-activity - Get recent activity',
                             'GET /api/v1/dashboard/summary - Get quick summary stats'
                         ],
+                        booking: [
+                            'POST /api/v1/book - Book a session (public endpoint)'
+                        ],
                         sessions: [
-                            'GET /api/v1/sessions - List sessions',
-                            'POST /api/v1/sessions - Create new session',
-                            'GET /api/v1/sessions/:id - Get session details',
-                            'PUT /api/v1/sessions/:id - Update session',
-                            'DELETE /api/v1/sessions/:id - Cancel session'
+                            'GET /api/v1/sessions - List sessions (protected)',
+                            'POST /api/v1/sessions - Create new session (protected)',
+                            'GET /api/v1/sessions/:id - Get session details (protected)',
+                            'PUT /api/v1/sessions/:id - Update session (protected)',
+                            'DELETE /api/v1/sessions/:id - Cancel session (protected)'
                         ],
                         clients: [
                             'GET /api/v1/clients - List clients',
@@ -261,6 +271,13 @@ class App {
                             'PUT /api/v1/quotations/:id - Update quotation',
                             'DELETE /api/v1/quotations/:id - Delete quotation',
                             'POST /api/v1/quotations/:id/send - Send quotation to client'
+                        ],
+                        payments: [
+                            'POST /api/v1/payments/create-order - Create payment order for session/quotation',
+                            'POST /api/v1/payments/verify - Verify payment and process transaction',
+                            'POST /api/v1/payments/failed - Handle failed payment notification',
+                            'POST /api/v1/payments/webhook - Handle Razorpay webhook events',
+                            'GET /api/v1/payments/config - Get payment configuration for frontend'
                         ],
                         admin: [
                             'GET /api/v1/admin/dashboard - Admin dashboard overview',

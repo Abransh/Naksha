@@ -399,7 +399,7 @@ router.post('/patterns/bulk',
         // 4. Cleanup orphaned availability slots
         // Mark unbooked future slots as blocked if they don't match any new patterns
         const newPatternKeys = new Set(
-          patterns.map(p => `${p.sessionType}-${p.dayOfWeek}-${p.startTime}`)
+          patterns.map((p:any) => `${p.sessionType}-${p.dayOfWeek}-${p.startTime}`)
         );
 
         const existingPatternKeys = new Set(

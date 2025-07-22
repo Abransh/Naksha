@@ -53,10 +53,17 @@ const paymentConfig = {
 /**
  * Initialize Razorpay instance
  */
-const razorpay = new razorpay_1.default({
-    key_id: paymentConfig.razorpay.keyId,
-    key_secret: paymentConfig.razorpay.keySecret,
-});
+let razorpay = null;
+// Only initialize Razorpay if credentials are provided
+if (paymentConfig.razorpay.keyId && paymentConfig.razorpay.keySecret) {
+    razorpay = new razorpay_1.default({
+        key_id: paymentConfig.razorpay.keyId,
+        key_secret: paymentConfig.razorpay.keySecret,
+    });
+}
+else {
+    console.warn('⚠️  Razorpay credentials not found. Payment functionality will be limited.');
+}
 /**
  * Create payment order
  */
@@ -80,6 +87,9 @@ const createPaymentOrder = async (orderData) => {
         // Generate unique receipt
         const receipt = orderData.receipt || `${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
         // Create Razorpay order
+        if (!razorpay) {
+            throw new errorHandler_1.AppError('Payment service not initialized. Please configure Razorpay credentials.', 503);
+        }
         const razorpayOrder = await razorpay.orders.create({
             amount: amountInPaise,
             currency: orderData.currency || paymentConfig.defaultCurrency,
@@ -165,6 +175,9 @@ const processSuccessfulPayment = async (verificationData) => {
             throw new errorHandler_1.ValidationError('Invalid payment signature');
         }
         // Get payment details from Razorpay
+        if (!razorpay) {
+            throw new errorHandler_1.AppError('Payment service not initialized. Please configure Razorpay credentials.', 503);
+        }
         const razorpayPayment = await razorpay.payments.fetch(razorpayPaymentId);
         if (razorpayPayment.status !== 'captured') {
             throw new errorHandler_1.ValidationError('Payment not captured');
@@ -327,6 +340,9 @@ const processRefund = async (refundData) => {
         const refundAmount = refundData.amount || Number(transaction.amount);
         const refundAmountInPaise = Math.round(refundAmount * 100);
         // Process refund with Razorpay
+        if (!razorpay) {
+            throw new errorHandler_1.AppError('Payment service not initialized. Please configure Razorpay credentials.', 503);
+        }
         const razorpayRefund = await razorpay.payments.refund(refundData.paymentId, {
             amount: refundAmountInPaise,
             notes: {
