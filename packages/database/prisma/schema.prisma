@@ -1,5 +1,5 @@
 // Nakksha Consulting Platform - Complete Database Schema
-// Implements full schema from day 1 as per CTO decision
+// Implements full schema from day 1 
 // Supports consultant admin approval workflow and all core features
 
 generator client {

@@ -359,6 +359,25 @@ router.post('/patterns/bulk',
         validateTimeRange(pattern.startTime, pattern.endTime);
       }
 
+      // Helper function to generate hourly time slots from a time range
+      const generateHourlySlots = (startTime: string, endTime: string): string[] => {
+        const slots = [];
+        const [startHour, startMin] = startTime.split(':').map(Number);
+        const [endHour, endMin] = endTime.split(':').map(Number);
+        
+        const startTotalMin = startHour * 60 + startMin;
+        const endTotalMin = endHour * 60 + endMin;
+        
+        for (let currentMin = startTotalMin; currentMin < endTotalMin; currentMin += 60) {
+          const slotHour = Math.floor(currentMin / 60);
+          const slotMinute = currentMin % 60;
+          const timeSlot = `${slotHour.toString().padStart(2, '0')}:${slotMinute.toString().padStart(2, '0')}`;
+          slots.push(timeSlot);
+        }
+        
+        return slots;
+      };
+
       // Start transaction to ensure data consistency
       const result = await prisma.$transaction(async (tx) => {
         // 1. Get existing patterns for comparison
@@ -396,47 +415,154 @@ router.post('/patterns/bulk',
           )
         );
 
-        // 4. Cleanup orphaned availability slots
-        // Mark unbooked future slots as blocked if they don't match any new patterns
-        const newPatternKeys = new Set(
-          patterns.map((p:any) => `${p.sessionType}-${p.dayOfWeek}-${p.startTime}`)
-        );
-
-        const existingPatternKeys = new Set(
-          existingPatterns.map(p => `${p.sessionType}-${p.dayOfWeek}-${p.startTime}`)
-        );
-
-        // Find patterns that were removed
-        const removedPatternKeys = [...existingPatternKeys].filter(
-          key => !newPatternKeys.has(key)
-        );
-
-        // Block slots for removed patterns
-        let totalBlockedSlots = 0;
-        for (const patternKey of removedPatternKeys) {
-          const [sessionType, dayOfWeek, startTime] = patternKey.split('-');
-          const blocked = await tx.availabilitySlot.updateMany({
-            where: {
-              consultantId,
-              sessionType: sessionType as 'PERSONAL' | 'WEBINAR',
-              startTime,
-              isBooked: false,
-              date: {
-                gte: new Date() // Only future slots
-              }
-            },
-            data: {
-              isBlocked: true
-            }
+        // 4. ENHANCED cleanup for availability slots - handles both startTime and endTime changes
+        // Create comprehensive pattern maps with full time ranges
+        const newPatternMap = new Map();
+        patterns.forEach((p: any) => {
+          const key = `${p.sessionType}-${p.dayOfWeek}`;
+          if (!newPatternMap.has(key)) {
+            newPatternMap.set(key, []);
+          }
+          newPatternMap.get(key).push({
+            startTime: p.startTime,
+            endTime: p.endTime
           });
-          totalBlockedSlots += blocked.count;
+        });
+
+        const existingPatternMap = new Map();
+        existingPatterns.forEach(p => {
+          const key = `${p.sessionType}-${p.dayOfWeek}`;
+          if (!existingPatternMap.has(key)) {
+            existingPatternMap.set(key, []);
+          }
+          existingPatternMap.get(key).push({
+            startTime: p.startTime,
+            endTime: p.endTime
+          });
+        });
+
+        console.log('🔧 Pattern comparison:', {
+          consultantId,
+          newPatterns: Object.fromEntries(newPatternMap),
+          existingPatterns: Object.fromEntries(existingPatternMap)
+        });
+
+        // Find slots that should be blocked due to pattern changes
+        let totalBlockedSlots = 0;
+        
+        // Check each day/session type combination
+        for (const [daySessionKey, newTimeRanges] of newPatternMap.entries()) {
+          const [sessionType, dayOfWeek] = daySessionKey.split('-');
+          const existingTimeRanges = existingPatternMap.get(daySessionKey) || [];
+          
+          // Create sets of valid time slots for comparison
+          const newValidTimes = new Set<string>();
+          newTimeRanges.forEach((range: { startTime: string; endTime: string }) => {
+            const slots = generateHourlySlots(range.startTime, range.endTime);
+            slots.forEach(slot => newValidTimes.add(slot));
+          });
+          
+          const existingValidTimes = new Set<string>();
+          existingTimeRanges.forEach((range: { startTime: string; endTime: string }) => {
+            const slots = generateHourlySlots(range.startTime, range.endTime);
+            slots.forEach(slot => existingValidTimes.add(slot));
+          });
+          
+          // Find time slots that were removed (exist in old but not in new)
+          const removedTimeSlots = [...existingValidTimes].filter(time => !newValidTimes.has(time));
+          
+          console.log('📊 Time slot analysis:', {
+            daySessionKey,
+            sessionType,
+            dayOfWeek,
+            newValidTimes: Array.from(newValidTimes).sort(),
+            existingValidTimes: Array.from(existingValidTimes).sort(),
+            removedTimeSlots: removedTimeSlots.sort()
+          });
+          
+          // Block the removed time slots
+          for (const removedTime of removedTimeSlots) {
+            const blocked = await tx.availabilitySlot.updateMany({
+              where: {
+                consultantId,
+                sessionType: sessionType as 'PERSONAL' | 'WEBINAR',
+                startTime: removedTime,
+                isBooked: false, // Only block unbooked slots
+                date: {
+                  gte: new Date() // Only future slots
+                }
+              },
+              data: {
+                isBlocked: true
+              }
+            });
+            
+            totalBlockedSlots += blocked.count;
+            
+            if (blocked.count > 0) {
+              console.log('🚫 Blocked slots:', {
+                sessionType,
+                dayOfWeek,
+                timeSlot: removedTime,
+                slotsBlocked: blocked.count
+              });
+            }
+          }
+        }
+        
+        // Also handle completely removed day/session combinations
+        for (const [daySessionKey, existingTimeRanges] of existingPatternMap.entries()) {
+          if (!newPatternMap.has(daySessionKey)) {
+            const [sessionType, dayOfWeekStr] = daySessionKey.split('-');
+            const dayOfWeek = parseInt(dayOfWeekStr);
+            
+            // Calculate future dates that match this day of week
+            const today = new Date();
+            const futureDates = [];
+            for (let i = 0; i < 60; i++) { // Check next 60 days
+              const checkDate = new Date(today);
+              checkDate.setDate(today.getDate() + i);
+              if (checkDate.getDay() === dayOfWeek) {
+                futureDates.push(checkDate);
+              }
+            }
+            
+            // Block all slots for this removed day/session combination on matching days
+            let dayTotalBlocked = 0;
+            for (const targetDate of futureDates) {
+              const blocked = await tx.availabilitySlot.updateMany({
+                where: {
+                  consultantId,
+                  sessionType: sessionType as 'PERSONAL' | 'WEBINAR',
+                  date: targetDate,
+                  isBooked: false
+                },
+                data: {
+                  isBlocked: true
+                }
+              });
+              dayTotalBlocked += blocked.count;
+            }
+            
+            totalBlockedSlots += dayTotalBlocked;
+            
+            console.log('🚫 Blocked entire day/session combination:', {
+              sessionType,
+              dayOfWeek: dayOfWeekStr,
+              futureDatesChecked: futureDates.length,
+              slotsBlocked: dayTotalBlocked
+            });
+          }
         }
 
-        console.log('🧹 Bulk pattern update with cleanup:', {
+
+        console.log('🧹 ENHANCED bulk pattern update with time-range cleanup:', {
           consultantId,
           patternsCreated: createdPatterns.length,
-          removedPatterns: removedPatternKeys.length,
-          slotsBlocked: totalBlockedSlots
+          totalSlotsBlocked: totalBlockedSlots,
+          cleanupType: 'time_range_based',
+          newPatternCount: newPatternMap.size,
+          existingPatternCount: existingPatternMap.size
         });
 
         return { createdPatterns, slotsBlocked: totalBlockedSlots };
@@ -471,20 +597,33 @@ router.post('/patterns/bulk',
         cacheKeysToDelete.map(key => cacheUtils.delete(key))
       );
 
-      console.log('✅ Bulk patterns updated:', {
+      console.log('✅ ENHANCED bulk patterns updated with smart cleanup:', {
         consultantId,
         patternsCreated: createdPatterns.length,
-        slotsBlocked: result.slotsBlocked
+        slotsBlocked: result.slotsBlocked,
+        cleanupFeatures: [
+          'start_time_changes',
+          'end_time_changes', 
+          'time_range_modifications',
+          'day_removal_handling'
+        ]
       });
 
       res.json({
-        message: 'Weekly availability patterns updated successfully',
+        message: 'Weekly availability patterns updated successfully with enhanced time-range cleanup',
         data: { 
           patterns: createdPatterns,
           totalCreated: createdPatterns.length,
           slotsBlocked: result.slotsBlocked,
-          operation: 'bulk_replace',
-          cleanupPerformed: true
+          operation: 'bulk_replace_with_enhanced_cleanup',
+          cleanupPerformed: true,
+          cleanupFeatures: [
+            'Handles start time changes',
+            'Handles end time changes', 
+            'Handles time range modifications',
+            'Preserves booked slots',
+            'Real-time slot blocking'
+          ]
         }
       });
     } catch (error) {
