@@ -569,10 +569,10 @@ export default function Dashboard() {
                           see here.
                         </p>
                       </div>
-                      <Button className="bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white rounded-xl px-6 py-4 font-inter text-base">
+                      {/* <Button className="bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white rounded-xl px-6 py-4 font-inter text-base">
                         <Plus size={20} className="mr-2" />
                         New Client
-                      </Button>
+                      </Button> */}
                     </div>
                   </div>
                 )}

@@ -481,11 +481,32 @@ export default function SettingsPage() {
                       <label className="text-xs text-[var(--black-4)] font-inter px-1">
                         Experience in Months
                       </label>
-                      <div className="w-[142px] h-[52px] bg-[var(--input-defaultBackground)] rounded-lg px-4 flex items-center justify-between">
-                        <span className="text-base text-[var(--black-2)] font-inter">
-                          {formData.experienceMonths || 0} months
+                      <div className="flex items-center gap-2">
+                        <Input
+                          placeholder="0"
+                          type="number"
+                          min="0"
+                          max="600"
+                          value={formData.experienceMonths || ''}
+                          onChange={(e) => {
+                            const value = e.target.value;
+                            // Convert to number, default to 0 if empty or invalid
+                            const numValue = value === '' ? 0 : parseInt(value, 10);
+                            if (!isNaN(numValue) && numValue >= 0) {
+                              handleInputChange("experienceMonths", numValue);
+                            }
+                          }}
+                          className="w-[120px] h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 text-base text-[var(--black-4)] font-inter"
+                        />
+                        <span className="text-base text-[var(--black-40)] font-inter">
+                          months
                         </span>
-                        <ChevronDown size={16} className="text-black" />
+                      </div>
+                      <div className="text-xs text-[var(--black-30)] px-1">
+                        {formData.experienceMonths ? 
+                          `${Math.floor((formData.experienceMonths || 0) / 12)} years, ${(formData.experienceMonths || 0) % 12} months` :
+                          'Enter your total experience in months'
+                        }
                       </div>
                     </div>
 
