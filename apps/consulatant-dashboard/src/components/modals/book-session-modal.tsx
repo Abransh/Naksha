@@ -78,7 +78,8 @@ export function BookSessionModal({
     cacheTimestamp
   } = useAvailableSlots(consultantSlug, sessionType, false); // false = don't auto-fetch
 
-  const { formatDate, formatTime } = useAvailabilityFormatter();
+  // Get formatting functions
+  const { formatTimeRange, formatDate } = useAvailabilityFormatter();
   const { processPayment, isLoading: paymentLoading } = useRazorpayPayment();
 
   const handleInputChange = (field: keyof SessionBookingData, value: string | number) => {

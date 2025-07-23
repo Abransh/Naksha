@@ -267,11 +267,11 @@ export const useRazorpayPayment = () => {
       // Initialize and open Razorpay
       const razorpayInstance = new window.Razorpay(options);
       
-      razorpayInstance.on('payment.failed', async (response: any) => {
-        console.error('💳 Payment failed:', response.error);
-        await handlePaymentFailure(paymentOrder.orderId, response.error);
-        toast.error(`Payment failed: ${response.error.description}`);
-        onFailure?.(response.error);
+      razorpayInstance.on('payment.failed', () => {
+        console.error('💳 Payment failed');
+        handlePaymentFailure(paymentOrder.orderId, 'Payment failed').catch(console.error);
+        toast.error('Payment failed. Please try again.');
+        onFailure?.('Payment failed');
       });
 
       razorpayInstance.open();
