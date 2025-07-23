@@ -14,30 +14,59 @@ const getCacheKey = (consultantSlug: string, sessionType: string) =>
 const getCachedData = (cacheKey: string) => {
   try {
     const cached = localStorage.getItem(cacheKey);
-    if (!cached) return null;
+    if (!cached) {
+      console.log('📋 Cache miss for key:', cacheKey);
+      return null;
+    }
     
     const { data, timestamp } = JSON.parse(cached);
     const isExpired = Date.now() - timestamp > CACHE_TTL;
     
     if (isExpired) {
+      console.log('⏰ Cache expired for key:', cacheKey, 'Age:', Math.round((Date.now() - timestamp) / 1000), 'seconds');
       localStorage.removeItem(cacheKey);
       return null;
     }
     
+    console.log('✅ Cache hit for key:', cacheKey, 'Age:', Math.round((Date.now() - timestamp) / 1000), 'seconds');
     return data;
-  } catch {
+  } catch (error) {
+    console.warn('❌ Cache error for key:', cacheKey, error);
     return null;
   }
 };
 
 const setCachedData = (cacheKey: string, data: any) => {
   try {
-    localStorage.setItem(cacheKey, JSON.stringify({
+    const cacheData = {
       data,
       timestamp: Date.now()
-    }));
+    };
+    localStorage.setItem(cacheKey, JSON.stringify(cacheData));
+    console.log('📋 Data cached successfully:', cacheKey, 'Data size:', JSON.stringify(cacheData).length, 'bytes');
   } catch (error) {
-    console.warn('Failed to cache availability data:', error);
+    console.warn('❌ Failed to cache availability data:', cacheKey, error);
+  }
+};
+
+const clearAllAvailabilityCache = (consultantSlug: string) => {
+  try {
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (key && key.startsWith(`availability_cache_${consultantSlug}_`)) {
+        keysToRemove.push(key);
+      }
+    }
+    
+    keysToRemove.forEach(key => {
+      localStorage.removeItem(key);
+      console.log('🧹 Cleared cache key:', key);
+    });
+    
+    console.log('✅ Cleared all availability cache for consultant:', consultantSlug, 'Keys removed:', keysToRemove.length);
+  } catch (error) {
+    console.warn('❌ Failed to clear availability cache:', error);
   }
 };
 
@@ -54,6 +83,7 @@ interface UseAvailableSlotsResult {
   cacheTimestamp: number | null;
   loadMore: () => Promise<void>;
   hasMore: boolean;
+  clearCache: () => void;
 }
 
 /**
@@ -172,13 +202,28 @@ export const useAvailableSlots = (
         endDate: endDateStr
       });
 
-      console.log('🔍 useAvailableSlots: API response:', {
+      console.log('🔍 useAvailableSlots: Raw API response:', {
+        consultantSlug,
+        sessionType,
+        dateRange: `${startDateStr} to ${endDateStr}`,
         hasSlots: Array.isArray(response?.slots),
         slotsLength: response?.slots?.length || 0,
         hasSlotsByDate: typeof response?.slotsByDate === 'object',
         slotsByDateKeys: Object.keys(response?.slotsByDate || {}),
-        totalSlots: response?.totalSlots
+        totalSlots: response?.totalSlots,
+        rawResponse: response
       });
+
+      // Log detailed slot breakdown
+      if (response?.slotsByDate) {
+        console.log('📊 useAvailableSlots: Detailed slots by date:', 
+          Object.entries(response.slotsByDate).map(([date, slots]) => ({
+            date,
+            slotsCount: Array.isArray(slots) ? slots.length : 0,
+            timeSlots: Array.isArray(slots) ? slots.map((s: any) => `${s.startTime}-${s.endTime}`) : []
+          }))
+        );
+      }
 
       // Ensure we have valid data structure
       const slots = Array.isArray(response?.slots) ? response.slots : [];
@@ -186,10 +231,15 @@ export const useAvailableSlots = (
         ? response.slotsByDate 
         : {};
 
-      console.log('🔍 useAvailableSlots: Processed data:', {
+      console.log('🔍 useAvailableSlots: Processed data before state update:', {
         slotsCount: slots.length,
         dateCount: Object.keys(slotsByDate).length,
-        availableDates: Object.keys(slotsByDate)
+        availableDates: Object.keys(slotsByDate),
+        processedSlots: slots.slice(0, 5).map(slot => ({
+          date: slot.date,
+          time: `${slot.startTime}-${slot.endTime}`,
+          type: slot.sessionType
+        }))
       });
 
       // Cache the successful response
@@ -200,11 +250,19 @@ export const useAvailableSlots = (
       };
       setCachedData(cacheKey, dataToCache);
 
+      // Update component state
       setSlots(slots);
       setSlotsByDate(slotsByDate);
       setCacheTimestamp(Date.now());
       setCurrentDaysLoaded(daysToFetch);
       setHasMore(daysToFetch < 60); // Allow loading up to 60 days max
+
+      console.log('✅ useAvailableSlots: State updated successfully:', {
+        slotsInState: slots.length,
+        datesInState: Object.keys(slotsByDate).length,
+        cacheTimestamp: Date.now(),
+        hasMore: daysToFetch < 60
+      });
     } catch (err) {
       console.error('❌ useAvailableSlots: Failed to fetch available slots:', err);
       setError(err instanceof Error ? err.message : 'Failed to load availability');
@@ -263,9 +321,22 @@ export const useAvailableSlots = (
   // Get available times for a specific date
   const availableTimesForDate = (date: string): string[] => {
     const slotsForDate = slotsByDate[date] || [];
-    return slotsForDate
+    const times = slotsForDate
       .map(slot => slot.startTime)
       .sort();
+    
+    console.log('🕐 useAvailableSlots: Getting times for date:', {
+      date,
+      slotsFound: slotsForDate.length,
+      timesExtracted: times,
+      fullSlots: slotsForDate.map(slot => ({
+        id: slot.id,
+        time: `${slot.startTime}-${slot.endTime}`,
+        type: slot.sessionType
+      }))
+    });
+    
+    return times;
   };
 
   // Cleanup effect on unmount
@@ -290,7 +361,8 @@ export const useAvailableSlots = (
     isCached,
     cacheTimestamp,
     loadMore,
-    hasMore
+    hasMore,
+    clearCache: () => clearAllAvailabilityCache(consultantSlug) // NEW: Clear cache method
   };
 };
 

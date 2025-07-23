@@ -741,16 +741,31 @@ export const availabilityApi = {
     sessionType?: 'PERSONAL' | 'WEBINAR';
     startDate?: string;
     endDate?: string;
+    limit?: number;
+    offset?: number;
   } = {}): Promise<{
     slots: AvailabilitySlot[];
     slotsByDate: Record<string, AvailabilitySlot[]>;
     totalSlots: number;
   }> {
     const params = new URLSearchParams();
-    Object.entries(filters).forEach(([key, value]) => {
+    
+    // Set default high limit to ensure we get all slots for the date range
+    const defaultFilters = {
+      limit: 500, // Increased from default 100 to ensure all slots are fetched
+      offset: 0,
+      ...filters
+    };
+    
+    Object.entries(defaultFilters).forEach(([key, value]) => {
       if (value !== undefined) {
         params.append(key, String(value));
       }
+    });
+
+    console.log('🔍 API: Calling getAvailableSlots with params:', {
+      consultantSlug,
+      params: Object.fromEntries(params.entries())
     });
 
     const response = await apiRequest<ApiResponse<{
@@ -758,6 +773,14 @@ export const availabilityApi = {
       slotsByDate: Record<string, AvailabilitySlot[]>;
       totalSlots: number;
     }>>(`/availability/slots/${consultantSlug}?${params}`);
+    
+    console.log('🔍 API: getAvailableSlots response:', {
+      consultantSlug,
+      slotsReceived: response.data?.slots?.length || 0,
+      totalSlots: response.data?.totalSlots || 0,
+      datesWithSlots: Object.keys(response.data?.slotsByDate || {}).length
+    });
+    
     return response.data!;
   },
 };
@@ -802,7 +825,7 @@ export const bookSession = async (bookingData: {
   clientNotes?: string;
   consultantSlug: string;
 }) => {
-  const response = await fetch(`${API_URL}/sessions/book`, {
+  const response = await fetch(`${API_URL}/book`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

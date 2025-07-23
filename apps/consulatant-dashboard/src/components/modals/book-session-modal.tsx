@@ -2,7 +2,7 @@
 
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -219,6 +219,19 @@ export function BookSessionModal({
   const availableTimesForSelectedDate = formData.selectedDate 
     ? availableTimesForDate(formData.selectedDate) 
     : [];
+
+  // Add logging to track available times processing
+  useEffect(() => {
+    if (formData.selectedDate) {
+      console.log('📅 BookSessionModal: Processing available times for date:', {
+        selectedDate: formData.selectedDate,
+        availableTimesCount: availableTimesForSelectedDate.length,
+        availableTimes: availableTimesForSelectedDate,
+        totalAvailableDates: availableDates.length,
+        allAvailableDates: availableDates
+      });
+    }
+  }, [formData.selectedDate, availableTimesForSelectedDate, availableDates]);
 
   // Step validation - simplified logic
   const isStepValid = () => {

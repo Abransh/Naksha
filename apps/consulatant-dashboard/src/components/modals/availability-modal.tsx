@@ -125,7 +125,7 @@ export function AvailabilityModal({
         const newSlot: TimeSlot = {
           id: `slot_${Date.now()}_${Math.random()}`,
           startTime: '09:00',
-          endTime: '10:00',
+          endTime: '17:00', // Default 8-hour availability block
           isActive: true,
         };
         return {
@@ -158,12 +158,8 @@ export function AvailabilityModal({
             if (slot.id === slotId) {
               const updatedSlot = { ...slot, [field]: value };
               
-              // Automatically calculate endTime when startTime changes (1-hour sessions)
-              if (field === 'startTime' && value) {
-                const [hours, minutes] = value.split(':').map(Number);
-                const nextHour = (hours + 1) % 24;
-                updatedSlot.endTime = `${nextHour.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
-              }
+              // Allow consultants to set their own time ranges
+              // Backend will generate individual hourly slots from this range
               
               return updatedSlot;
             }

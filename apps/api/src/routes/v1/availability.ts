@@ -444,12 +444,28 @@ router.post('/patterns/bulk',
 
       const createdPatterns = result.createdPatterns;
 
-      // Clear all related caches
+      // Clear all related caches - ENHANCED for complete cleanup
       const cacheKeysToDelete = [
         `availability:${consultantId}`,
         `patterns:${consultantId}`,
-        `slots:${consultantId}:*` // Pattern prefix for all slots cache
+        `slots:${consultantId}:*`, // All slots cache for this consultant
       ];
+      
+      // Also clear consultant-specific public cache (using consultant object from earlier)
+      const consultant = await prisma.consultant.findUnique({
+        where: { id: consultantId },
+        select: { slug: true }
+      });
+      
+      if (consultant?.slug) {
+        cacheKeysToDelete.push(`slots:${consultant.slug}:*`); // Clear public availability cache
+      }
+      
+      console.log('🧹 Clearing caches after bulk pattern update:', {
+        consultantId,
+        consultantSlug: consultant?.slug,
+        cacheKeysToDelete
+      });
       
       await Promise.all(
         cacheKeysToDelete.map(key => cacheUtils.delete(key))
@@ -582,20 +598,71 @@ router.post('/generate-slots',
         const matchingPatterns = patterns.filter(p => p.dayOfWeek === dayOfWeek);
         
         for (const pattern of matchingPatterns) {
-          const slotKey = `${dateStr}-${pattern.startTime}-${pattern.sessionType}`;
+          // Generate individual 1-hour slots from the time range
+          const [startHour, startMin] = pattern.startTime.split(':').map(Number);
+          const [endHour, endMin] = pattern.endTime.split(':').map(Number);
           
-          // Check if slot already exists using our efficient lookup
-          if (!existingSlotKeys.has(slotKey)) {
-            slotsToCreate.push({
-              consultantId,
-              sessionType: pattern.sessionType,
-              date,
-              startTime: pattern.startTime,
-              endTime: pattern.endTime,
-              isBooked: false,
-              isBlocked: false
-            });
+          const startTotalMin = startHour * 60 + startMin;
+          const endTotalMin = endHour * 60 + endMin;
+          
+          console.log(`🔧 Generating slots for pattern:`, {
+            patternId: pattern.id,
+            sessionType: pattern.sessionType,
+            dayOfWeek: pattern.dayOfWeek,
+            timeRange: `${pattern.startTime}-${pattern.endTime}`,
+            startTotalMin,
+            endTotalMin,
+            expectedSlots: Math.floor((endTotalMin - startTotalMin) / 60),
+            date: dateStr
+          });
+          
+          // Generate hourly slots within the time range
+          let slotsGeneratedForPattern = 0;
+          for (let currentMin = startTotalMin; currentMin < endTotalMin; currentMin += 60) {
+            const slotHour = Math.floor(currentMin / 60);
+            const slotMinute = currentMin % 60;
+            const nextHour = Math.floor((currentMin + 60) / 60);
+            const nextMinute = (currentMin + 60) % 60;
+            
+            const slotStartTime = `${slotHour.toString().padStart(2, '0')}:${slotMinute.toString().padStart(2, '0')}`;
+            const slotEndTime = `${nextHour.toString().padStart(2, '0')}:${nextMinute.toString().padStart(2, '0')}`;
+            
+            const slotKey = `${dateStr}-${slotStartTime}-${pattern.sessionType}`;
+            
+            // Check if slot already exists using our efficient lookup
+            if (!existingSlotKeys.has(slotKey)) {
+              slotsToCreate.push({
+                consultantId,
+                sessionType: pattern.sessionType,
+                date,
+                startTime: slotStartTime,
+                endTime: slotEndTime,
+                isBooked: false,
+                isBlocked: false
+              });
+              slotsGeneratedForPattern++;
+              
+              console.log(`✅ Slot queued for creation:`, {
+                date: dateStr,
+                timeSlot: `${slotStartTime}-${slotEndTime}`,
+                sessionType: pattern.sessionType,
+                slotKey
+              });
+            } else {
+              console.log(`🔄 Slot already exists:`, {
+                date: dateStr,
+                timeSlot: `${slotStartTime}-${slotEndTime}`,
+                sessionType: pattern.sessionType,
+                slotKey
+              });
+            }
           }
+          
+          console.log(`📊 Pattern slot generation complete:`, {
+            patternId: pattern.id,
+            slotsGeneratedForPattern,
+            totalSlotsInQueue: slotsToCreate.length
+          });
         }
       }
 
@@ -621,11 +688,29 @@ router.post('/generate-slots',
         }
       }
 
-      // Clear relevant caches
+      // Clear relevant caches - ENHANCED for complete cleanup
       const cacheKeysToDelete = [
         `availability:${consultantId}`,
         `slots:${consultantId}:*`, // Clear all slots cache for this consultant
+        `patterns:${consultantId}`, // Clear patterns cache
       ];
+      
+      // Also clear consultant-specific public cache
+      const consultant = await prisma.consultant.findUnique({
+        where: { id: consultantId },
+        select: { slug: true }
+      });
+      
+      if (consultant?.slug) {
+        cacheKeysToDelete.push(`slots:${consultant.slug}:*`); // Clear public availability cache
+      }
+      
+      console.log('🧹 Clearing caches after slot generation:', {
+        consultantId,
+        consultantSlug: consultant?.slug,
+        slotsGenerated: createdSlots.length,
+        cacheKeysToDelete
+      });
       
       await Promise.all(
         cacheKeysToDelete.map(key => cacheUtils.delete(key))
@@ -722,6 +807,17 @@ router.get('/slots/:consultantSlug', async (req, res: Response): Promise<void> =
       ...(sessionType && typeof sessionType === 'string' && { sessionType: sessionType as 'PERSONAL' | 'WEBINAR' })
     };
 
+    // PERFORMANCE NOTE: This query would benefit from a composite index:
+    // @@index([consultantId, isBooked, isBlocked, date, sessionType])
+    // This covers the exact where clause pattern used most frequently
+
+    console.log('🔍 Executing availability slots query:', {
+      consultantSlug,
+      whereClause,
+      pageLimit,
+      pageOffset
+    });
+
     // Optimized query with proper field selection and limits
     const [availableSlots, totalCount] = await Promise.all([
       prisma.availabilitySlot.findMany({
@@ -746,6 +842,21 @@ router.get('/slots/:consultantSlug', async (req, res: Response): Promise<void> =
       })
     ]);
 
+    console.log('📊 Availability slots query results:', {
+      consultantSlug,
+      sessionType: sessionType || 'all',
+      dateRange: `${dateFilter.gte?.toISOString().split('T')[0]} to ${dateFilter.lte?.toISOString().split('T')[0]}`,
+      slotsFound: availableSlots.length,
+      totalCount,
+      pageLimit,
+      pageOffset,
+      samples: availableSlots.slice(0, 3).map(slot => ({
+        date: slot.date.toISOString().split('T')[0],
+        time: `${slot.startTime}-${slot.endTime}`,
+        type: slot.sessionType
+      }))
+    });
+
     // Efficiently group slots by date
     const slotsByDate = availableSlots.reduce((acc, slot) => {
       const dateKey = slot.date.toISOString().split('T')[0];
@@ -755,6 +866,16 @@ router.get('/slots/:consultantSlug', async (req, res: Response): Promise<void> =
       acc[dateKey].push(slot);
       return acc;
     }, {} as Record<string, typeof availableSlots>);
+
+    console.log('📋 Slots grouped by date:', {
+      consultantSlug,
+      totalDatesWithSlots: Object.keys(slotsByDate).length,
+      dateBreakdown: Object.entries(slotsByDate).map(([date, slots]) => ({
+        date,
+        slotsCount: slots.length,
+        timeSlots: slots.map(s => `${s.startTime}-${s.endTime}`)
+      }))
+    });
 
     const responseData = {
       message: 'Available slots retrieved successfully',
@@ -773,6 +894,15 @@ router.get('/slots/:consultantSlug', async (req, res: Response): Promise<void> =
         }
       }
     };
+
+    console.log('🚀 Final API response structure:', {
+      consultantSlug,
+      totalSlots: responseData.data.totalSlots,
+      totalAvailable: responseData.data.totalAvailable,
+      datesWithSlots: Object.keys(responseData.data.slotsByDate).length,
+      hasMore: responseData.data.pagination.hasMore,
+      consultantName: responseData.data.consultant.name
+    });
 
     // Cache the response for 30 seconds
     await cacheUtils.set(cacheKey, responseData, 30);
