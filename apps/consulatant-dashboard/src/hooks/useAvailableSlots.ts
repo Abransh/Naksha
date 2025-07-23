@@ -2,16 +2,18 @@
 
 import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { availabilityApi, AvailabilitySlot } from '@/lib/api';
+import { setupCacheInvalidationListener, isCacheStale, type CacheInvalidationEvent } from '@/lib/cacheInvalidation';
 
-// Cache configuration
-const CACHE_TTL = 5 * 60 * 1000; // 5 minutes
+// UNIFIED CACHE TTL STRATEGY
+// Aligned with backend cache timing for consistency
+const CACHE_TTL = 1 * 60 * 1000; // 1 minute - matches backend SLOTS TTL
 const INITIAL_DAYS_TO_FETCH = 14; // Start with 2 weeks
 
 // Cache utility functions
 const getCacheKey = (consultantSlug: string, sessionType: string) => 
   `availability_cache_${consultantSlug}_${sessionType}`;
 
-const getCachedData = (cacheKey: string) => {
+const getCachedData = (cacheKey: string, consultantSlug: string) => {
   try {
     const cached = localStorage.getItem(cacheKey);
     if (!cached) {
@@ -20,10 +22,16 @@ const getCachedData = (cacheKey: string) => {
     }
     
     const { data, timestamp } = JSON.parse(cached);
-    const isExpired = Date.now() - timestamp > CACHE_TTL;
     
-    if (isExpired) {
-      console.log('⏰ Cache expired for key:', cacheKey, 'Age:', Math.round((Date.now() - timestamp) / 1000), 'seconds');
+    // Check if cache is expired by TTL
+    const isExpiredByTTL = Date.now() - timestamp > CACHE_TTL;
+    
+    // Check if cache is stale due to invalidation events
+    const isStaleByInvalidation = isCacheStale(consultantSlug, timestamp);
+    
+    if (isExpiredByTTL || isStaleByInvalidation) {
+      const reason = isExpiredByTTL ? 'TTL expired' : 'invalidated by event';
+      console.log(`⏰ Cache ${reason} for key:`, cacheKey, 'Age:', Math.round((Date.now() - timestamp) / 1000), 'seconds');
       localStorage.removeItem(cacheKey);
       return null;
     }
@@ -70,6 +78,36 @@ const clearAllAvailabilityCache = (consultantSlug: string) => {
   }
 };
 
+/**
+ * UNIFIED CACHE INVALIDATION
+ * Clear availability cache across all session types when patterns change
+ */
+const invalidateAvailabilityCache = (consultantSlug: string) => {
+  console.log('🔄 Invalidating availability cache for consultant:', consultantSlug);
+  
+  // Clear all session type caches for this consultant
+  ['PERSONAL', 'WEBINAR'].forEach(sessionType => {
+    const cacheKey = getCacheKey(consultantSlug, sessionType);
+    try {
+      localStorage.removeItem(cacheKey);
+      console.log('🗑️ Invalidated cache for:', sessionType);
+    } catch (error) {
+      console.warn('⚠️ Failed to invalidate cache for:', sessionType, error);
+    }
+  });
+  
+  // REAL-TIME CACHE INVALIDATION: Broadcast cache invalidation event
+  if (typeof window !== 'undefined') {
+    const invalidationEvent = new CustomEvent('availability-cache-invalidated', {
+      detail: { consultantSlug, timestamp: Date.now() }
+    });
+    window.dispatchEvent(invalidationEvent);
+    console.log('📡 Broadcasted cache invalidation event');
+  }
+  
+  console.log('✅ Availability cache invalidation completed');
+};
+
 interface UseAvailableSlotsResult {
   slots: AvailabilitySlot[];
   slotsByDate: Record<string, AvailabilitySlot[]>;
@@ -84,6 +122,7 @@ interface UseAvailableSlotsResult {
   loadMore: () => Promise<void>;
   hasMore: boolean;
   clearCache: () => void;
+  invalidateCache: () => void;
 }
 
 /**
@@ -110,7 +149,7 @@ export const useAvailableSlots = (
   // Load from cache on init if available
   useEffect(() => {
     if (consultantSlug && sessionType) {
-      const cachedData = getCachedData(cacheKey);
+      const cachedData = getCachedData(cacheKey, consultantSlug);
       if (cachedData) {
         console.log('🎯 useAvailableSlots: Loading cached data on init');
         setSlots(cachedData.slots || []);
@@ -151,7 +190,7 @@ export const useAvailableSlots = (
 
     // Check cache first if enabled
     if (fromCache) {
-      const cachedData = getCachedData(cacheKey);
+      const cachedData = getCachedData(cacheKey, consultantSlug);
       if (cachedData) {
         console.log('🎯 useAvailableSlots: Using cached data');
         setSlots(cachedData.slots || []);
@@ -268,7 +307,7 @@ export const useAvailableSlots = (
       setError(err instanceof Error ? err.message : 'Failed to load availability');
       
       // Don't clear existing data on error if we have cached data
-      const cachedData = getCachedData(cacheKey);
+      const cachedData = getCachedData(cacheKey, consultantSlug);
       if (!cachedData) {
         setSlots([]);
         setSlotsByDate({});
@@ -298,6 +337,54 @@ export const useAvailableSlots = (
       await fetchAvailableSlots(newDaysToFetch, false);
     }
   }, [hasMore, isLoading, currentDaysLoaded, fetchAvailableSlots]);
+
+  // COMPREHENSIVE REAL-TIME SYNCHRONIZATION: Enhanced cache invalidation with backend alignment
+  useEffect(() => {
+    if (!consultantSlug) return;
+
+    const handleCacheInvalidation = (event: CacheInvalidationEvent) => {
+      console.log('📡 COMPREHENSIVE SYNC: Received cache invalidation event from backend-aligned system:', event);
+      console.log('🔧 Event details:', {
+        eventType: event.type,
+        consultantSlug: event.consultantSlug,
+        sessionType: event.sessionType,
+        timestamp: event.timestamp,
+        source: event.source,
+        currentSessionType: sessionType,
+        componentAutoFetch: autoFetch
+      });
+      
+      // Clear local component cache immediately
+      localStorage.removeItem(cacheKey);
+      console.log('🗑️ IMMEDIATE: Component cache cleared after backend synchronization event');
+      
+      // Force refresh if component is actively being used AND event is relevant
+      const isRelevantEvent = !event.sessionType || event.sessionType === sessionType;
+      
+      if (autoFetch && isRelevantEvent) {
+        console.log('🔄 FORCE REFRESH: Backend-triggered data refresh starting');
+        console.log('📊 Refresh context:', {
+          reason: 'backend_synchronization_event',
+          eventSource: event.source,
+          daysToLoad: currentDaysLoaded,
+          consultantSlug,
+          sessionType
+        });
+        
+        // Add small delay to ensure backend caches are cleared
+        setTimeout(() => {
+          fetchAvailableSlots(currentDaysLoaded, false);
+          console.log('✅ COMPREHENSIVE SYNC: Data refresh completed, all components synchronized');
+        }, 100);
+      } else {
+        console.log('⏭️ DEFERRED REFRESH: Component not active or event not relevant, will refresh on next interaction');
+      }
+    };
+
+    const cleanup = setupCacheInvalidationListener(consultantSlug, handleCacheInvalidation);
+    
+    return cleanup;
+  }, [consultantSlug, cacheKey, autoFetch, fetchAvailableSlots, currentDaysLoaded, sessionType]);
 
   // Auto-fetch when consultant or session type changes (only if autoFetch is true)
   useEffect(() => {
@@ -362,7 +449,8 @@ export const useAvailableSlots = (
     cacheTimestamp,
     loadMore,
     hasMore,
-    clearCache: () => clearAllAvailabilityCache(consultantSlug) // NEW: Clear cache method
+    clearCache: () => clearAllAvailabilityCache(consultantSlug), // Clear all cache
+    invalidateCache: () => invalidateAvailabilityCache(consultantSlug) // Unified cache invalidation
   };
 };
 

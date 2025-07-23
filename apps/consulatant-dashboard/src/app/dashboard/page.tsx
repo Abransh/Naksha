@@ -21,7 +21,7 @@ import {
   ChevronDown,
   Home,
 
-  Plus,
+  
 } from "lucide-react";
 
 // Removed SidebarContent - now using Navigator component

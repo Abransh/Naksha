@@ -708,14 +708,31 @@ export const availabilityApi = {
 
   /**
    * Create or update multiple weekly availability patterns (bulk operation)
+   * ENHANCED: Now includes atomic slot generation
    */
-  async saveBulkPatterns(patterns: Omit<WeeklyAvailabilityPattern, 'id' | 'consultantId' | 'createdAt' | 'updatedAt'>[]): Promise<WeeklyAvailabilityPattern[]> {
-    const response = await apiRequest<ApiResponse<{ patterns: WeeklyAvailabilityPattern[] }>>('/availability/patterns/bulk', {
+  async saveBulkPatterns(patterns: Omit<WeeklyAvailabilityPattern, 'id' | 'consultantId' | 'createdAt' | 'updatedAt'>[]): Promise<{
+    patterns: WeeklyAvailabilityPattern[];
+    totalCreated: number;
+    slotsBlocked: number;
+    slotsCreated: number;
+    operation: string;
+    cleanupPerformed: boolean;
+    features: string[];
+  }> {
+    const response = await apiRequest<ApiResponse<{
+      patterns: WeeklyAvailabilityPattern[];
+      totalCreated: number;
+      slotsBlocked: number;
+      slotsCreated: number;
+      operation: string;
+      cleanupPerformed: boolean;
+      features: string[];
+    }>>('/availability/patterns/bulk', {
       method: 'POST',
       body: { patterns },
       requireAuth: true,
     });
-    return response.data!.patterns;
+    return response.data!;
   },
 
   /**

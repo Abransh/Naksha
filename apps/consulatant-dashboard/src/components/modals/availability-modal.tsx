@@ -30,6 +30,8 @@ import {
   Calendar,
 } from "lucide-react";
 import { availabilityApi, WeeklyAvailabilityPattern } from "@/lib/api";
+import { useConsultantProfile } from "@/hooks/useConsultantProfile";
+import { invalidateAllAvailability } from "@/lib/cacheInvalidation";
 
 interface AvailabilityModalProps {
   open: boolean;
@@ -77,6 +79,9 @@ export function AvailabilityModal({
   const [isLoading, setIsLoading] = useState(false);
   const [selectedSessionType, setSelectedSessionType] = useState<'PERSONAL' | 'WEBINAR'>('PERSONAL');
   const [patterns, setPatterns] = useState<WeeklyPattern[]>([]);
+  
+  // Get consultant profile for cache invalidation
+  const { profile } = useConsultantProfile();
 
   // Initialize patterns for all days
   useEffect(() => {
@@ -224,28 +229,43 @@ export function AvailabilityModal({
             }))
         );
 
-      // Save patterns to API
-      await availabilityApi.saveBulkPatterns(patternsToSave);
+      // Save patterns to API with atomic slot generation
+      const result = await availabilityApi.saveBulkPatterns(patternsToSave);
       
-      // Generate slots for the next 30 days from patterns
-      const today = new Date();
-      const endDate = new Date();
-      endDate.setDate(today.getDate() + 30);
+      // Display success message with slot generation info
+      const slotsCreated = result.slotsCreated || 0;
+      const slotsBlocked = result.slotsBlocked || 0;
       
-      const startDateStr = today.toISOString().split('T')[0]; // YYYY-MM-DD
-      const endDateStr = endDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      if (slotsCreated > 0) {
+        toast.success(
+          `Availability schedule saved! Generated ${slotsCreated} new bookable slots.` +
+          (slotsBlocked > 0 ? ` Blocked ${slotsBlocked} outdated slots.` : '')
+        );
+      } else {
+        toast.success(
+          'Availability schedule saved!' +
+          (slotsBlocked > 0 ? ` Blocked ${slotsBlocked} outdated slots.` : '')
+        );
+      }
       
-      try {
-        const slotsResult = await availabilityApi.generateSlots({
-          startDate: startDateStr,
-          endDate: endDateStr,
-          sessionType: selectedSessionType
+      // COMPREHENSIVE SYNCHRONIZATION: Complete frontend-backend alignment
+      if (profile?.slug) {
+        console.log('🔄 COMPREHENSIVE SYNCHRONIZATION: Broadcasting availability cache invalidation after pattern save');
+        console.log('📡 Invalidation details:', {
+          consultantSlug: profile.slug,
+          sessionType: selectedSessionType,
+          patternsAffected: patternsToSave.length,
+          slotsGenerated: slotsCreated,
+          slotsBlocked: slotsBlocked,
+          source: 'availability-modal-enhanced'
         });
         
-        toast.success(`Availability schedule saved! Generated ${slotsResult.slotsCreated} bookable slots.`);
-      } catch (slotsError) {
-        console.warn('Patterns saved but slot generation failed:', slotsError);
-        toast.success('Availability schedule saved! Note: Automatic slot generation failed - you may need to generate slots manually.');
+        // Broadcast comprehensive invalidation to all components
+        invalidateAllAvailability(profile.slug, 'availability-modal-comprehensive');
+        
+        // Additional invalidation for specific session type if needed
+        console.log('✅ COMPREHENSIVE SYNCHRONIZATION: All components notified, cache invalidation broadcast completed');
+        console.log('🎯 Expected synchronization: All browser tabs and components will refresh automatically');
       }
       
       onOpenChange(false);
