@@ -2,6 +2,7 @@
 // apps/consulatant-dashboard/src/app/dashboard/page.tsx
 "use client";
 
+import Image from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 
@@ -10,6 +11,7 @@ import { useAuth } from "@/app/providers";
 import { useDashboardMetrics, useRecentSessions } from "@/hooks/useDashboard";
 import { useClientSummary } from "@/hooks/useClients";
 import { useQuotationSummary } from "@/hooks/useQuotations";
+import { useConsultantProfile } from "@/hooks/useConsultantProfile";
 import Navigator from "@/components/navigation/Navigator";
 import { Timeline } from "@/components/ui/timeline";
 import { RevenueSplitChart } from "@/components/charts/revenue-split-chart";
@@ -20,7 +22,7 @@ import {
   FolderOpen,
   ChevronDown,
   Home,
-
+  Loader2,
   
 } from "lucide-react";
 
@@ -28,6 +30,7 @@ import {
 
 export default function Dashboard() {
   const { user } = useAuth();
+  const { profile, isLoading: profileLoading } = useConsultantProfile({ enabled: true });
   const {
     revenue,
     clients,
@@ -112,7 +115,35 @@ export default function Dashboard() {
                 
                 </div>
                
-                <div className="w-7 h-7 lg:w-8 lg:h-8 bg-gray-200 rounded-lg"></div>
+                {/* Profile Image */}
+                {profile?.profilePhotoUrl ? (
+                  <div className="relative w-7 h-7 lg:w-8 lg:h-8 rounded-lg overflow-hidden border border-gray-200">
+                    <Image
+                      src={profile.profilePhotoUrl}
+                      alt={`${profile.firstName} ${profile.lastName}`}
+                      fill
+                      className="object-cover"
+                      sizes="32px"
+                      onError={(e) => {
+                        // Fallback to placeholder if image fails to load
+                        e.currentTarget.style.display = 'none';
+                      }}
+                    />
+                  </div>
+                ) : null}
+                
+                {/* Fallback placeholder or loading */}
+                <div 
+                  className={`w-7 h-7 lg:w-8 lg:h-8 bg-gray-200 rounded-lg flex items-center justify-center ${profile?.profilePhotoUrl ? 'hidden' : ''}`}
+                >
+                  {profileLoading ? (
+                    <Loader2 size={12} className="animate-spin text-gray-400" />
+                  ) : (
+                    <span className="text-gray-500 text-xs font-medium">
+                      {profile?.firstName ? profile.firstName.charAt(0).toUpperCase() : user?.firstName ? user.firstName.charAt(0).toUpperCase() : 'C'}
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
           </div>
