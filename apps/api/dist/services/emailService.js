@@ -36,12 +36,12 @@ const emailConfig = {
     // Email settings
     from: {
         name: process.env.EMAIL_FROM_NAME || 'Nakksha Consulting Platform',
-        email: process.env.EMAIL_FROM_ADDRESS || 'noreply@nakksha.com'
+        email: process.env.EMAIL_FROM_ADDRESS || 'noreply@nakksha.in'
     },
     // Template settings
     templates: {
-        baseUrl: process.env.EMAIL_TEMPLATE_BASE_URL || 'https://app.nakksha.com',
-        assetUrl: process.env.EMAIL_ASSET_URL || 'https://assets.nakksha.com'
+        baseUrl: process.env.EMAIL_TEMPLATE_BASE_URL || 'https://app.nakksha.in',
+        assetUrl: process.env.EMAIL_ASSET_URL || 'https://assets.nakksha.in'
     },
     // Retry settings
     maxRetries: 3,

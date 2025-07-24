@@ -349,7 +349,7 @@ export const approveConsultant = async (req: Request, res: Response): Promise<vo
       await sendConsultantApprovedEmail({
         firstName: consultant.firstName,
         email: consultant.email,
-        adminDashboardUrl: process.env.CONSULTANT_DASHBOARD_URL || 'https://dashboard.nakksha.com'
+        adminDashboardUrl: process.env.CONSULTANT_DASHBOARD_URL || 'https://nakksha.in/dashboard'
       });
     } else {
       // Send rejection email
@@ -357,7 +357,7 @@ export const approveConsultant = async (req: Request, res: Response): Promise<vo
         firstName: consultant.firstName,
         email: consultant.email,
         reason: adminNotes || 'Your application did not meet our current requirements',
-        supportEmail: process.env.SUPPORT_EMAIL || 'support@nakksha.com'
+        supportEmail: process.env.SUPPORT_EMAIL || 'booking@nakksha.in'
       });
     }
 
