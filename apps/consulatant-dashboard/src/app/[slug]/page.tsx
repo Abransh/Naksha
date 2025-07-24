@@ -198,11 +198,11 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                     amount={services.find(s => s.type === 'Webinar')?.price || 0}
                     title="Group Webinar Session"
                   >
-                    <div className="flex items-center gap-1 px-3 py-2 bg-white rounded-full border border-[#141414] cursor-pointer hover:bg-gray-50 transition-colors">
-                      <span className="text-base text-[#141414] font-inter">
+                    <div className="flex items-center gap-1 px-3 py-2 bg-white rounded-full border  cursor-pointer hover:bg-gray-50 transition-colors">
+                      <span className="text-base text-[var(--primary-100)]  font-inter">
                         {formatPrice(services.find(s => s.type === 'Webinar')?.price || 0)}
                       </span>
-                      <ArrowRight size={12} className="text-[#141414]" />
+                      <ArrowRight size={12} className="text-[var(--primary-100)] " />
                     </div>
                   </BookSessionModal>
                 </div>
