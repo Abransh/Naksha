@@ -114,7 +114,8 @@ class App {
         'http://localhost:3001', // Public site dev
         'https://www.nakksha.in', // Production frontend
         'https://nakksha.in',
-        'https://nakksha-guqgp.ondigitalocean.app', // Production API domain (for internal calls)
+        'https://nakksha-guqgp.ondigitalocean.app',
+        'https://naksha-teal.vercel.app', // Production API domain (for internal calls)
         process.env.FRONTEND_URL || '',
         process.env.DASHBOARD_URL || '',
       ],
