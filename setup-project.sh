@@ -142,7 +142,7 @@ const bcrypt = require('bcryptjs');
 async function createAdmin() {
   const prisma = new PrismaClient();
   
-  const adminEmail = process.env.ADMIN_EMAIL || 'admin@nakksha.com';
+  const adminEmail = process.env.ADMIN_EMAIL || 'admin@nakksha.in';
   const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
   
   const hashedPassword = await bcrypt.hash(adminPassword, 12);
