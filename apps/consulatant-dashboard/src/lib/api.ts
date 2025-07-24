@@ -1,12 +1,48 @@
 /**
- * API Client for Nakksha Consulting Platform
- * Handles all API communication with the backend
+ * PERFORMANCE OPTIMIZED API Client for Nakksha Consulting Platform
+ * Handles all API communication with timeout control and error recovery
  */
 
-// API Configuration
+// API Configuration with timeout handling
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const API_VERSION = 'v1';
 const API_URL = `${API_BASE_URL}/api/${API_VERSION}`;
+
+// Timeout configurations for different operations
+const API_TIMEOUTS = {
+  DEFAULT: 30000,       // 30 seconds for normal requests
+  BOOKING: 45000,       // 45 seconds for booking requests (critical)
+  AUTH: 15000,          // 15 seconds for auth requests
+  UPLOAD: 60000,        // 60 seconds for file uploads
+};
+
+/**
+ * Creates a fetch request with timeout and abort controller
+ */
+const fetchWithTimeout = async (
+  url: string, 
+  options: RequestInit & { timeout?: number } = {}
+): Promise<Response> => {
+  const { timeout = API_TIMEOUTS.DEFAULT, ...fetchOptions } = options;
+  
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), timeout);
+  
+  try {
+    const response = await fetch(url, {
+      ...fetchOptions,
+      signal: controller.signal,
+    });
+    clearTimeout(timeoutId);
+    return response;
+  } catch (error: any) {
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new ApiError(408, 'TIMEOUT', `Request timeout after ${timeout}ms`);
+    }
+    throw error;
+  }
+};
 
 // Types for API responses
 export interface ApiResponse<T = unknown> {
@@ -61,7 +97,7 @@ export class ApiError extends Error {
   }
 }
 
-// Generic API request function with automatic token refresh
+// PERFORMANCE OPTIMIZED: API request function with timeout control
 async function apiRequest<T>(
   endpoint: string,
   options: {
@@ -70,6 +106,7 @@ async function apiRequest<T>(
     body?: unknown;
     requireAuth?: boolean;
     isRetry?: boolean;
+    timeout?: number;
   } = {}
 ): Promise<T> {
   const {
@@ -77,7 +114,8 @@ async function apiRequest<T>(
     headers = {},
     body,
     requireAuth = false,
-    isRetry = false
+    isRetry = false,
+    timeout = API_TIMEOUTS.DEFAULT
   } = options;
 
   const url = endpoint.startsWith('http') ? endpoint : `${API_URL}${endpoint}`;
@@ -95,10 +133,11 @@ async function apiRequest<T>(
     }
   }
 
-  const config: RequestInit = {
+  const config: RequestInit & { timeout?: number } = {
     method,
     headers: requestHeaders,
-    credentials: 'include', // Include cookies
+    credentials: 'include',
+    timeout, // Use custom timeout for different operations
   };
 
   if (body) {
@@ -106,20 +145,21 @@ async function apiRequest<T>(
   }
 
   try {
-    const response = await fetch(url, config);
+    const response = await fetchWithTimeout(url, config);
     
     // Handle 401 unauthorized - try to refresh token
     if (response.status === 401 && requireAuth && !isRetry && typeof window !== 'undefined') {
       const refreshToken = localStorage.getItem('refreshToken');
       if (refreshToken) {
         try {
-          const refreshResponse = await fetch(`${API_URL}/auth/refresh`, {
+          const refreshResponse = await fetchWithTimeout(`${API_URL}/auth/refresh`, {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
             },
             body: JSON.stringify({ refreshToken }),
             credentials: 'include',
+            timeout: API_TIMEOUTS.AUTH, // Use auth timeout
           });
 
           if (refreshResponse.ok) {
@@ -829,7 +869,7 @@ export const calculateProfileCompletion = (profile: ConsultantProfile): number =
   return Math.round((completedFields.length / requiredFields.length) * 100);
 };
 
-// Session booking (public endpoint - no auth required)
+// PERFORMANCE OPTIMIZED: Session booking with timeout control
 export const bookSession = async (bookingData: {
   fullName: string;
   email: string;
@@ -842,20 +882,54 @@ export const bookSession = async (bookingData: {
   clientNotes?: string;
   consultantSlug: string;
 }) => {
-  const response = await fetch(`${API_URL}/book`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-    },
-    body: JSON.stringify(bookingData),
+  console.log('🚀 BookSession: Starting optimized booking process...', {
+    consultantSlug: bookingData.consultantSlug,
+    sessionType: bookingData.sessionType,
+    timeout: `${API_TIMEOUTS.BOOKING}ms`
   });
 
-  if (!response.ok) {
-    const error = await response.json();
-    throw new Error(error.message || 'Failed to book session');
-  }
+  try {
+    const response = await fetchWithTimeout(`${API_URL}/book`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(bookingData),
+      timeout: API_TIMEOUTS.BOOKING, // 45-second timeout for booking
+    });
 
-  return response.json();
+    if (!response.ok) {
+      const error = await response.json().catch(() => ({ 
+        message: 'Network error or timeout' 
+      }));
+      
+      if (response.status === 408) {
+        throw new ApiError(408, 'BOOKING_TIMEOUT', 'Booking took too long. Please try again.');
+      }
+      
+      throw new ApiError(
+        response.status, 
+        error.code || 'BOOKING_ERROR', 
+        error.message || 'Failed to book session'
+      );
+    }
+
+    const result = await response.json();
+    console.log('✅ BookSession: Booking completed successfully', {
+      sessionId: result.data?.session?.id,
+      duration: `< ${API_TIMEOUTS.BOOKING}ms`
+    });
+    
+    return result;
+    
+  } catch (error: any) {
+    console.error('❌ BookSession: Booking failed', {
+      error: error.message,
+      code: error.code,
+      consultantSlug: bookingData.consultantSlug
+    });
+    throw error;
+  }
 };
 
 // Client API methods

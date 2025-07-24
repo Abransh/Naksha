@@ -1,4 +1,5 @@
-// apps/consulatant-dashboard/src/hooks/useRazorpayPayment.ts
+// PERFORMANCE OPTIMIZED Razorpay Payment Hook
+// Handles payment processing with timeout control and error recovery
 
 import { useState, useCallback } from 'react';
 import { toast } from 'sonner';
@@ -69,6 +70,14 @@ declare global {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3001';
 
+// Performance Configuration for Payment Processing
+const PAYMENT_TIMEOUTS = {
+  CONFIG_FETCH: 10000,    // 10 seconds to get payment config
+  ORDER_CREATE: 15000,    // 15 seconds to create payment order
+  PAYMENT_VERIFY: 20000,  // 20 seconds to verify payment
+  TOTAL_FLOW: 60000,      // 60 seconds for entire payment flow
+};
+
 export const useRazorpayPayment = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [paymentConfig, setPaymentConfig] = useState<PaymentConfig | null>(null);
@@ -90,40 +99,60 @@ export const useRazorpayPayment = () => {
     });
   }, []);
 
-  // Get payment configuration from backend
+  // OPTIMIZED: Get payment configuration with timeout
   const getPaymentConfig = useCallback(async (): Promise<PaymentConfig | null> => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), PAYMENT_TIMEOUTS.CONFIG_FETCH);
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/payments/config`, {
         method: 'GET',
         headers: {
           'Content-Type': 'application/json',
         },
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         throw new Error('Failed to get payment configuration');
       }
 
       const result = await response.json();
+      console.log('✅ Payment config loaded successfully');
       return result.data;
-    } catch (error) {
-      console.error('Error getting payment config:', error);
-      toast.error('Failed to load payment configuration');
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        console.error('❌ Payment config timeout after', PAYMENT_TIMEOUTS.CONFIG_FETCH, 'ms');
+        toast.error('Payment configuration timeout. Please try again.');
+      } else {
+        console.error('❌ Payment config error:', error);
+        toast.error('Failed to load payment configuration');
+      }
       return null;
     }
   }, []);
 
-  // Create payment order
+  // OPTIMIZED: Create payment order with timeout
   const createPaymentOrder = useCallback(async (orderData: PaymentOrderData) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), PAYMENT_TIMEOUTS.ORDER_CREATE);
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/payments/create-order`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`, // Get JWT token
+          'Authorization': `Bearer ${localStorage.getItem('token')}`,
         },
         body: JSON.stringify(orderData),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const error = await response.json();
@@ -131,15 +160,26 @@ export const useRazorpayPayment = () => {
       }
 
       const result = await response.json();
+      console.log('✅ Payment order created successfully:', result.data.orderId);
       return result.data;
-    } catch (error) {
-      console.error('Error creating payment order:', error);
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        console.error('❌ Payment order timeout after', PAYMENT_TIMEOUTS.ORDER_CREATE, 'ms');
+        toast.error('Payment order creation timeout. Please try again.');
+      } else {
+        console.error('❌ Payment order error:', error);
+      }
       throw error;
     }
   }, []);
 
-  // Verify payment
+  // OPTIMIZED: Verify payment with timeout
   const verifyPayment = useCallback(async (verificationData: RazorpayResponse) => {
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), PAYMENT_TIMEOUTS.PAYMENT_VERIFY);
+
     try {
       const response = await fetch(`${API_BASE_URL}/api/v1/payments/verify`, {
         method: 'POST',
@@ -151,7 +191,10 @@ export const useRazorpayPayment = () => {
           razorpayPaymentId: verificationData.razorpay_payment_id,
           razorpaySignature: verificationData.razorpay_signature,
         }),
+        signal: controller.signal,
       });
+
+      clearTimeout(timeoutId);
 
       if (!response.ok) {
         const error = await response.json();
@@ -159,9 +202,17 @@ export const useRazorpayPayment = () => {
       }
 
       const result = await response.json();
+      console.log('✅ Payment verified successfully:', verificationData.razorpay_payment_id);
       return result.data;
-    } catch (error) {
-      console.error('Error verifying payment:', error);
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      
+      if (error.name === 'AbortError') {
+        console.error('❌ Payment verification timeout after', PAYMENT_TIMEOUTS.PAYMENT_VERIFY, 'ms');
+        toast.error('Payment verification timeout. Please contact support.');
+      } else {
+        console.error('❌ Payment verification error:', error);
+      }
       throw error;
     }
   }, []);
@@ -185,15 +236,28 @@ export const useRazorpayPayment = () => {
     }
   }, []);
 
-  // Main payment processing function
+  // OPTIMIZED: Main payment processing with total timeout control
   const processPayment = useCallback(async (
     orderData: PaymentOrderData,
     onSuccess?: (paymentData: any) => void,
     onFailure?: (error: any) => void
   ) => {
     setIsLoading(true);
+    
+    // Total payment flow timeout
+    const totalTimeout = setTimeout(() => {
+      console.error('❌ Total payment flow timeout after', PAYMENT_TIMEOUTS.TOTAL_FLOW, 'ms');
+      toast.error('Payment process timeout. Please try again.');
+      onFailure?.({ message: 'Payment timeout', code: 'PAYMENT_TIMEOUT' });
+      setIsLoading(false);
+    }, PAYMENT_TIMEOUTS.TOTAL_FLOW);
 
     try {
+      console.log('🚀 Starting optimized payment flow...', {
+        sessionId: orderData.sessionId,
+        amount: orderData.amount,
+        timeout: `${PAYMENT_TIMEOUTS.TOTAL_FLOW}ms`
+      });
       // Load Razorpay script
       const isRazorpayLoaded = await loadRazorpayScript();
       if (!isRazorpayLoaded) {
@@ -244,6 +308,7 @@ export const useRazorpayPayment = () => {
             console.log('✅ Payment verified:', verificationResult);
             toast.success('Payment successful! Session confirmed.');
             
+            clearTimeout(totalTimeout); // Clear timeout on success
             onSuccess?.(verificationResult);
           } catch (error) {
             console.error('❌ Payment verification failed:', error);
@@ -254,6 +319,7 @@ export const useRazorpayPayment = () => {
         modal: {
           ondismiss: async () => {
             console.log('💳 Payment modal dismissed');
+            clearTimeout(totalTimeout); // Clear timeout on cancellation
             await handlePaymentFailure(paymentOrder.orderId, { description: 'Payment cancelled by user' });
             toast.info('Payment cancelled');
             onFailure?.({ message: 'Payment cancelled by user' });
@@ -269,6 +335,7 @@ export const useRazorpayPayment = () => {
       
       razorpayInstance.on('payment.failed', () => {
         console.error('💳 Payment failed');
+        clearTimeout(totalTimeout); // Clear timeout on payment failure
         handlePaymentFailure(paymentOrder.orderId, 'Payment failed').catch(console.error);
         toast.error('Payment failed. Please try again.');
         onFailure?.('Payment failed');
@@ -278,6 +345,7 @@ export const useRazorpayPayment = () => {
 
     } catch (error) {
       console.error('💳 Payment processing error:', error);
+      clearTimeout(totalTimeout); // Clear timeout on error
       const errorMessage = error instanceof Error ? error.message : 'Payment failed';
       toast.error(errorMessage);
       onFailure?.(error);
