@@ -11,7 +11,7 @@ const API_URL = `${API_BASE_URL}/api/${API_VERSION}`;
 // Timeout configurations for different operations
 const API_TIMEOUTS = {
   DEFAULT: 30000,       // 30 seconds for normal requests
-  BOOKING: 45000,       // 45 seconds for booking requests (critical)
+  BOOKING: 20000,       // 20 seconds for booking requests (matching backend)
   AUTH: 15000,          // 15 seconds for auth requests
   UPLOAD: 60000,        // 60 seconds for file uploads
 };

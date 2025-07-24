@@ -17,10 +17,10 @@ import { sendSessionConfirmationEmail } from '../../services/resendEmailService'
 const router = Router();
 
 /**
- * Performance Configuration - Sub-10-second booking guarantee
+ * Performance Configuration - Sub-15-second booking guarantee
  */
 const BOOKING_TIMEOUT = 30000; // 30 seconds max
-const QUICK_BOOKING_TIMEOUT = 8000; // 8 seconds for optimized flow
+const QUICK_BOOKING_TIMEOUT = 15000; // 15 seconds for optimized flow (increased from 8)
 
 /**
  * Timeout middleware for booking endpoints
@@ -89,20 +89,24 @@ router.post('/',
   optionalAuth, // Allow both authenticated and unauthenticated access
   validateRequest(bookSessionSchema),
   async (req: AuthenticatedRequest, res: Response): Promise<void> => {
+    const startTime = Date.now();
     try {
       const bookingData = req.body;
       
-      console.log('📅 Public session booking request:', {
+      console.log('📅 OPTIMIZED booking request started:', {
         consultantSlug: bookingData.consultantSlug,
         sessionType: bookingData.sessionType,
         clientEmail: bookingData.email,
         selectedDate: bookingData.selectedDate,
-        selectedTime: bookingData.selectedTime
+        selectedTime: bookingData.selectedTime,
+        startTime: new Date().toISOString()
       });
 
       const prisma = getPrismaClient();
 
-      // Find consultant by slug
+      // STEP 1: Find consultant by slug (PERFORMANCE TRACKED)
+      console.log('🔍 Step 1: Finding consultant...');
+      const consultantStartTime = Date.now();
       const consultant = await prisma.consultant.findFirst({
         where: {
           slug: bookingData.consultantSlug,
@@ -120,6 +124,7 @@ router.post('/',
           webinarSessionPrice: true
         }
       });
+      console.log(`✅ Step 1 completed: ${Date.now() - consultantStartTime}ms`);
 
       if (!consultant) {
         throw new NotFoundError('Consultant not found or not available for booking');
@@ -161,7 +166,9 @@ router.post('/',
 
       }
 
-      // OPTIMIZED: Fast transaction with minimal database operations
+      // STEP 2: Fast transaction with minimal database operations (PERFORMANCE TRACKED)
+      console.log('🔍 Step 2: Starting database transaction...');
+      const transactionStartTime = Date.now();
       const result = await prisma.$transaction(async (tx) => {
         let availabilitySlot = null;
         
@@ -263,7 +270,10 @@ router.post('/',
         }
 
         return { client, session };
+      }, {
+        timeout: 10000, // 10 second transaction timeout
       });
+      console.log(`✅ Step 2 completed: ${Date.now() - transactionStartTime}ms`);
 
       // PERFORMANCE: Async email processing (non-blocking)
       processEmailAsync({
@@ -304,7 +314,8 @@ router.post('/',
       // Fire and forget - don't block response
       clearCachesAsync().catch(console.error);
 
-      console.log(`✅ Public session booked successfully: ${result.session.id}`);
+      const totalTime = Date.now() - startTime;
+      console.log(`✅ BOOKING COMPLETED: ${result.session.id} in ${totalTime}ms`);
 
       res.status(201).json({
         message: 'Session booked successfully! Confirmation emails have been sent.',
