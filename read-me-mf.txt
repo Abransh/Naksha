@@ -11,3 +11,19 @@ read CLAUDE.md and /docs, you have to ULTRATHINK and be CTO of a startup for whi
 │   commented code with at last updating CLAUDE.md and making a .md file inside /docs     
 
 lmao
+
+
+
+
+home opage what is nakksha 
+favicon, dashboard bold on home page
+
+settings page connection required in single line
+
+widhraw to privacy policy
+
+webinar date to coming soon
+
+
+settings page Your payment withdrawals will be auto-settled within 7 working business days to your registered bank account via secure payment gateways.
+3rd stage 1 on 1 dark text

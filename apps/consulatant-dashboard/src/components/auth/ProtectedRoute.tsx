@@ -105,7 +105,7 @@ export function PendingApprovalPage() {
           <h1 className="text-2xl font-bold text-gray-900 mb-2">Account Pending Approval</h1>
           
           <p className="text-gray-600 mb-6">
-            Welcome {user?.firstName}! Your account has been created successfully, but it requires admin approval before you can access the dashboard.
+            Welcome {user?.firstName}! Your account is currently pending subscription activation. You may log in, but access to the dashboard will remain restricted until a valid subscription is purchased and activated.
           </p>
 
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
