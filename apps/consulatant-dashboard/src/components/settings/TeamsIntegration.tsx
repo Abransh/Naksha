@@ -175,7 +175,7 @@ export const TeamsIntegration: React.FC = () => {
     
     if (needsReconnection) {
       return (
-        <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300">
+        <Badge variant="destructive" className="bg-red-100 text-red-800 border-red-300 flex items-center whitespace-nowrap">
           <XCircle className="w-3 h-3 mr-1" />
           Connection Required
         </Badge>

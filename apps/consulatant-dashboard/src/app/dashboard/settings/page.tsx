@@ -597,7 +597,7 @@ export default function SettingsPage() {
                     variant="outline"
                     className="w-[180px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
                   >
-                    Webinar Date
+                    Webinar(Coming soon)
                   </Button>
 
                   <Button

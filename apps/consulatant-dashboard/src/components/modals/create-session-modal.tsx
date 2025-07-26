@@ -48,7 +48,7 @@ interface SessionFormData {
   scheduledTime: string;
   durationMinutes: number;
   amount: number;
-  platform: 'ZOOM' | 'MEET' | 'TEAMS';
+  platform: 'TEAMS';
   notes: string;
   paymentMethod: 'online' | 'cash' | 'bank_transfer';
 }
@@ -71,7 +71,7 @@ export function CreateSessionModal({
     scheduledTime: '',
     durationMinutes: 60,
     amount: 0,
-    platform: 'ZOOM',
+    platform: 'TEAMS',
     notes: '',
     paymentMethod: 'online',
   });
@@ -99,7 +99,7 @@ export function CreateSessionModal({
       ...prev,
       title: `${sessionTypeLabel} Session`,
       durationMinutes: formData.sessionType === 'PERSONAL' ? 60 : 120,
-      amount: formData.sessionType === 'PERSONAL' ? 1500 : 3000, // Default pricing
+      // Allow manual amount input - don't auto-set amount
     }));
   }, [formData.sessionType]);
 
@@ -271,8 +271,8 @@ export function CreateSessionModal({
       scheduledDate: defaultDate,
       scheduledTime: '10:00',
       durationMinutes: 60,
-      amount: 1500,
-      platform: 'ZOOM',
+      amount: 0,
+      platform: 'TEAMS',
       notes: '',
       paymentMethod: 'online',
     });
@@ -488,14 +488,12 @@ export function CreateSessionModal({
               </label>
               <Select 
                 value={formData.platform} 
-                onValueChange={(value: 'ZOOM' | 'MEET' | 'TEAMS') => handleInputChange('platform', value)}
+                onValueChange={(value: 'TEAMS') => handleInputChange('platform', value)}
               >
                 <SelectTrigger className="h-12 text-black bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4">
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="ZOOM">Zoom</SelectItem>
-                  <SelectItem value="MEET">Google Meet</SelectItem>
                   <SelectItem value="TEAMS">Microsoft Teams</SelectItem>
                 </SelectContent>
               </Select>

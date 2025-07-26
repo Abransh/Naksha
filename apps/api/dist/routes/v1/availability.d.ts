@@ -1,13 +1,14 @@
 /**
  * File Path: apps/api/src/routes/v1/availability.ts
  *
- * Availability Management Routes
+ * ENHANCED Availability Management Routes with COMPREHENSIVE SYNCHRONIZATION
  *
- * Handles all availability-related operations:
- * - Weekly availability pattern management
- * - Availability slot generation
- * - Getting available time slots for booking
- * - Managing consultant schedules
+ * Features:
+ * - Complete frontend-backend synchronization bridge
+ * - Transaction-safe cache management
+ * - Real-time invalidation triggers
+ * - Unified cache key standardization
+ * - Cross-component state consistency
  */
 declare const router: import("express-serve-static-core").Router;
 export default router;

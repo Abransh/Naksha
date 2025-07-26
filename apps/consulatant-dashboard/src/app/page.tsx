@@ -189,7 +189,7 @@ export default function HomePage() {
             {/* Navigation Links */}
             <div className="hidden md:flex space-x-8">
               <Link
-                href="/Home"
+                href="#home"
                 className="text-[#18191F] font-medium text-base hover:text-[#5570F1] transition-colors"
               >
                 Home
@@ -219,7 +219,7 @@ export default function HomePage() {
               <Link href="/dashboard">
                 <Button
                   variant="outline"
-                  className="bg-[#F5F7FA] text-[#5570F1] border-none hover:bg-gray-100"
+                  className="bg-[#F5F7FA] text-[#5570F1] font-bold border-none hover:bg-gray-100"
                 >
                   Dashboard
                 </Button>
@@ -243,7 +243,7 @@ export default function HomePage() {
       </nav>
 
       {/* Hero Section */}
-      <section className="bg-[#F5F7FA] py-24">
+      <section className="bg-[#F5F7FA] py-24" id="home">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex flex-col lg:flex-row items-center gap-16">
             {/* Left Content */}
@@ -360,7 +360,7 @@ export default function HomePage() {
       </section>
 
       {/* India Section */}
-      <section className="py-16 bg-[#F5F7FA]">
+      <section className="py-16 bg-[#F5F7FA]" id="about">
         <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
           <h2 className="text-3xl md:text-4xl font-bold text-[#4D4D4D] mb-4">
             Helping{" "}

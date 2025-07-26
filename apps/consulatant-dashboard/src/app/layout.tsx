@@ -21,7 +21,12 @@ const poppins = Poppins({
 
 export const metadata: Metadata = {
   title: "Dashboard - Nakksha",
-  description: "lmao",
+  description: "Professional consulting platform for experts and clients",
+  icons: {
+    icon: '/assets/nakksha-small.png',
+    shortcut: '/assets/nakksha-small.png',
+    apple: '/assets/nakksha-small.png',
+  },
 };
 
 export default function RootLayout({

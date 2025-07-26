@@ -539,14 +539,14 @@ export function BookSessionModal({
 
               <div className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-[var(--black-60)] mb-2">
+                  <label className="block text-sm font-medium text-black mb-2">
                     What would you like to discuss? (Optional)
                   </label>
                   <Textarea
                     placeholder="Briefly describe your goals for this session..."
                     value={formData.clientNotes}
                     onChange={(e) => handleInputChange("clientNotes", e.target.value)}
-                    className="min-h-[100px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 py-3 text-base placeholder:text-[var(--black-2)]"
+                    className="min-h-[100px] bg-[var(--input-defaultBackground)] border-0 rounded-lg px-4 py-3 text-black placeholder:text-[var(--black-2)]"
                     style={{ fontFamily: "Inter, sans-serif" }}
                   />
                 </div>
