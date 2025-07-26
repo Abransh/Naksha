@@ -587,7 +587,7 @@ export default function SettingsPage() {
                     <Button
                       variant="outline"
                       onClick={() => setIsAvailabilityModalOpen(true)}
-                      className="w-[180px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
+                      className="w-[172px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
                     >
                       1-on-1 Slots
                     </Button>
@@ -595,7 +595,7 @@ export default function SettingsPage() {
 
                   <Button
                     variant="outline"
-                    className="w-[180px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
+                    className="w-[172px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
                   >
                     Webinar(Coming soon)
                   </Button>
@@ -607,8 +607,11 @@ export default function SettingsPage() {
                     Preview Page
                   </Button>
 
-                  <Button className="w-[172px] h-[37px] rounded-xl bg-[var(--primary-100)] text-white text-[15px] font-inter">
-                    Withdraw
+                  <Button 
+                    onClick={() => window.open('https://drive.google.com/file/d/1ZOlQFDsLepqojwRq-hqTEiXADUYlvBCa/view?usp=sharing', '_blank')}
+                    className="w-[172px] h-[37px] rounded-xl bg-[var(--primary-100)] text-white text-[15px] font-inter"
+                  >
+                  Privacy Policy 
                   </Button>
 
                   {/* Teams Integration Section */}

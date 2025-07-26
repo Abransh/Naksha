@@ -89,7 +89,7 @@ const pricingPlans = [
       "Perfect for consultants who need technical support and have their own marketing setup.",
     buttonStyle: "secondary",
     features: [
-      "Access to entire technical dashboard",
+      
       "Personal 1 TB Storage space",
       "Online meetings + Recording setup",
       "Quotation Maker",
@@ -101,6 +101,7 @@ const pricingPlans = [
       "Personal settings page",
       "Revenue Calculator",
       "Personal unique URL",
+      "Personal Marketing Templates"
     ],
   },
   {

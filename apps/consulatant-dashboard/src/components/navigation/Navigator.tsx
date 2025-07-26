@@ -15,6 +15,7 @@ import { useState } from "react";
 import { useRouter, usePathname } from "next/navigation";
 import { Badge } from "@/components/ui/badge";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { useAuth } from "@/app/providers";
 import {
   BarChart3,
@@ -48,6 +49,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
   const pathname = usePathname();
   const { user, logout } = useAuth();
   const [isExpanded, setIsExpanded] = useState(false);
+  const [isContactModalOpen, setIsContactModalOpen] = useState(false);
 
   // Navigation items configuration
   const navigationItems: NavigationItem[] = [
@@ -96,6 +98,10 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
     } catch (error) {
       console.error("Logout error:", error);
     }
+  };
+
+  const handleContactSupport = () => {
+    setIsContactModalOpen(true);
   };
 
   const isRouteActive = (href: string): boolean => {
@@ -199,9 +205,9 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
           {/* Contact Support */}
           <div className="transition-all duration-300">
             {isExpanded ? (
-              <a 
-                href="mailto:booking@nakksha.in" 
-                className="block bg-gray-100 rounded-2xl p-3 cursor-pointer hover:bg-gray-200 transition-colors"
+              <button 
+                onClick={handleContactSupport}
+                className="block bg-gray-100 rounded-2xl p-3 cursor-pointer hover:bg-gray-200 transition-colors w-full text-left"
               >
                 <div className="flex items-center gap-3">
                   <Headphones size={18} className="text-[var(--black-100)]" />
@@ -209,14 +215,14 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
                     Contact Support
                   </span>
                 </div>
-              </a>
+              </button>
             ) : (
-              <a 
-                href="mailto:booking@nakksha.in" 
+              <button 
+                onClick={handleContactSupport}
                 className="flex items-center justify-center w-14 h-12 rounded-2xl bg-[rgba(94,99,102,0.1)] hover:bg-gray-200 cursor-pointer transition-colors"
               >
                 <Headphones size={20} className="text-black" />
-              </a>
+              </button>
             )}
           </div>
 
@@ -325,9 +331,9 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
 
         <div className="space-y-3 mt-6 mb-4">
           {/* Contact Support */}
-          <a 
-            href="mailto:booking@nakksha.in" 
-            className="block bg-gray-100 rounded-2xl p-3 cursor-pointer hover:bg-gray-200 transition-colors"
+          <button 
+            onClick={handleContactSupport}
+            className="block bg-gray-100 rounded-2xl p-3 cursor-pointer hover:bg-gray-200 transition-colors w-full text-left"
           >
             <div className="flex items-center gap-3">
               <Headphones size={18} className="text-[var(--black-100)]" />
@@ -335,7 +341,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
                 Contact Support
               </span>
             </div>
-          </a>
+          </button>
 
           {/* Gift Banner */}
           <div className="bg-[var(--secondary-20)] rounded-2xl p-3 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">
@@ -394,6 +400,28 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
           </SheetContent>
         </Sheet>
       </div>
+
+      {/* Contact Support Modal */}
+      <Dialog open={isContactModalOpen} onOpenChange={setIsContactModalOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Headphones size={20} className="text-[var(--primary-100)]" />
+              Contact Support
+            </DialogTitle>
+            <DialogDescription className="text-left pt-4 leading-relaxed">
+              For any inquiries or booking-related requests, please send an email to{" "}
+              <a 
+                href="mailto:booking@nakksha.in" 
+                className="text-[var(--primary-100)] hover:underline font-medium"
+              >
+                booking@nakksha.in
+              </a>
+              . Our team will respond within 24 business hours.
+            </DialogDescription>
+          </DialogHeader>
+        </DialogContent>
+      </Dialog>
     </>
   );
 };
