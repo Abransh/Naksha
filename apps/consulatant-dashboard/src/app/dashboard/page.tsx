@@ -410,17 +410,18 @@ export default function Dashboard() {
                         <div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center">
                           <ShoppingBag
                             size={20}
-                            className="text-[var(--black-100)]"
+                            className="text-black"
                           />
                         </div>
-                        <div className="flex items-center gap-2">
-                          <span className="text-[var(--black-10)] text-xs">
-                            {"{Timeline}"}
+                        <div className="flex text-black items-center gap-2">
+                          <span className="text-black text-xs">
+                          <Timeline 
+                          value={timeframe || 'month'} 
+                          onChange={setTimeframe || (() => {})} 
+                          variant="default"
+                        />
                           </span>
-                          <ChevronDown
-                            size={12}
-                            className="text-[var(--black-10)]"
-                          />
+                          
                         </div>
                       </div>
                     </CardHeader>
