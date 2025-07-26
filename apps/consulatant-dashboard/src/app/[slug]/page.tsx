@@ -15,6 +15,9 @@ import {
   Loader2,
   AlertCircle,
   User,
+  Linkedin,
+  Instagram,
+  Twitter,
 } from "lucide-react";
 import { useConsultantShowcase, usePriceFormatter } from "@/hooks/usePublicProfile";
 import { BookSessionModal } from "@/components/modals/book-session-modal";
@@ -326,12 +329,12 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                     {testimonials[currentTestimonial]?.text || 'Excellent service and professional guidance.'}
                   </p>
                   <div className="absolute bottom-6">
-                    <span className="text-base font-bold text-black font-inter">
+                    {/* <span className="text-base font-bold text-black font-inter">
                       {testimonials[currentTestimonial]?.author || 'Anonymous'}
                     </span>
                     <span className="text-base text-gray-600 font-inter">
                       , {testimonials[currentTestimonial]?.service || 'consultation'}
-                    </span>
+                    </span> */}
                   </div>
                 </CardContent>
               </Card>
@@ -405,52 +408,13 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                     className="w-20 h-20 rounded-2xl bg-white/95 border border-white shadow-sm flex items-center justify-center hover:bg-white transition-colors"
                   >
                     {link.icon === 'linkedin' && (
-                      <svg
-                        width="36"
-                        height="36"
-                        viewBox="0 0 36 36"
-                        fill="none"
-                        xmlns="http://www.w3.org/2000/svg"
-                      >
-                        <g clipPath="url(#clip0_237_10413)">
-                          <path
-                            d="M34 0H2C0.89543 0 0 0.89543 0 2V34C0 35.1046 0.89543 36 2 36H34C35.1046 36 36 35.1046 36 34V2C36 0.89543 35.1046 0 34 0Z"
-                            fill="#0077B5"
-                          />
-                          <path
-                            fillRule="evenodd"
-                            clipRule="evenodd"
-                            d="M6.57011 13.9226H11.3816V29.4036H6.57011V13.9226ZM8.97661 6.22706C10.5151 6.22706 11.7651 7.47706 11.7651 9.01556C11.7651 10.5556 10.5151 11.8061 8.97661 11.8061C8.60584 11.8131 8.23739 11.7461 7.89281 11.6091C7.54822 11.4721 7.23441 11.2677 6.96972 11.008C6.70504 10.7483 6.49478 10.4384 6.35125 10.0964C6.20772 9.75451 6.13379 9.3874 6.13379 9.01656C6.13379 8.64573 6.20772 8.27862 6.35125 7.93669C6.49478 7.59476 6.70504 7.28487 6.96972 7.02515C7.23441 6.76542 7.54822 6.56107 7.89281 6.42404C8.23739 6.28701 8.60584 6.22004 8.97661 6.22706ZM14.3996 13.9221H19.0146V16.0376H19.0786C19.7211 14.8206 21.2906 13.5376 23.6311 13.5376C28.5031 13.5376 29.4031 16.7441 29.4031 20.9126V29.4036H24.5946V21.8751C24.5946 20.0801 24.5616 17.7706 22.0946 17.7706C19.5911 17.7706 19.2066 19.7261 19.2066 21.7456V29.4036H14.3991V13.9226L14.3996 13.9221Z"
-                            fill="white"
-                          />
-                        </g>
-                        <defs>
-                          <clipPath id="clip0_237_10413">
-                            <rect width="36" height="36" rx="3" fill="white" />
-                          </clipPath>
-                        </defs>
-                      </svg>
+                      <Linkedin size={36} className="text-[#0077B5]" />
                     )}
                     {link.icon === 'instagram' && (
-                      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                        <rect width="36" height="36" rx="8" fill="url(#instagram-gradient)"/>
-                        <path d="M18 8.5C15.3 8.5 14.97 8.51 13.96 8.55C12.96 8.6 12.27 8.77 11.67 9.01C11.05 9.26 10.53 9.59 10.01 10.11C9.49 10.63 9.16 11.15 8.91 11.77C8.67 12.37 8.5 13.06 8.45 14.06C8.41 15.07 8.4 15.4 8.4 18.1C8.4 20.8 8.41 21.13 8.45 22.14C8.5 23.14 8.67 23.83 8.91 24.43C9.16 25.05 9.49 25.57 10.01 26.09C10.53 26.61 11.05 26.94 11.67 27.19C12.27 27.43 12.96 27.6 13.96 27.65C14.97 27.69 15.3 27.7 18 27.7C20.7 27.7 21.03 27.69 22.04 27.65C23.04 27.6 23.73 27.43 24.33 27.19C24.95 26.94 25.47 26.61 25.99 26.09C26.51 25.57 26.84 25.05 27.09 24.43C27.33 23.83 27.5 23.14 27.55 22.14C27.59 21.13 27.6 20.8 27.6 18.1C27.6 15.4 27.59 15.07 27.55 14.06C27.5 13.06 27.33 12.37 27.09 11.77C26.84 11.15 26.51 10.63 25.99 10.11C25.47 9.59 24.95 9.26 24.33 9.01C23.73 8.77 23.04 8.6 22.04 8.55C21.03 8.51 20.7 8.5 18 8.5ZM18 10.7C20.66 10.7 20.97 10.71 21.96 10.75C22.86 10.79 23.35 10.95 23.68 11.08C24.12 11.26 24.43 11.47 24.76 11.8C25.09 12.13 25.3 12.44 25.48 12.88C25.61 13.21 25.77 13.7 25.81 14.6C25.85 15.59 25.86 15.9 25.86 18.56C25.86 21.22 25.85 21.53 25.81 22.52C25.77 23.42 25.61 23.91 25.48 24.24C25.3 24.68 25.09 24.99 24.76 25.32C24.43 25.65 24.12 25.86 23.68 26.04C23.35 26.17 22.86 26.33 21.96 26.37C20.97 26.41 20.66 26.42 18 26.42C15.34 26.42 15.03 26.41 14.04 26.37C13.14 26.33 12.65 26.17 12.32 26.04C11.88 25.86 11.57 25.65 11.24 25.32C10.91 24.99 10.7 24.68 10.52 24.24C10.39 23.91 10.23 23.42 10.19 22.52C10.15 21.53 10.14 21.22 10.14 18.56C10.14 15.9 10.15 15.59 10.19 14.6C10.23 13.7 10.39 13.21 10.52 12.88C10.7 12.44 10.91 12.13 11.24 11.8C11.57 11.47 11.88 11.26 12.32 11.08C12.65 10.95 13.14 10.79 14.04 10.75C15.03 10.71 15.34 10.7 18 10.7Z" fill="white"/>
-                        <path d="M18 12.9C16.23 12.9 14.73 14.4 14.73 16.17C14.73 17.94 16.23 19.44 18 19.44C19.77 19.44 21.27 17.94 21.27 16.17C21.27 14.4 19.77 12.9 18 12.9ZM18 17.6C17.25 17.6 16.64 16.99 16.64 16.24C16.64 15.49 17.25 14.88 18 14.88C18.75 14.88 19.36 15.49 19.36 16.24C19.36 16.99 18.75 17.6 18 17.6Z" fill="white"/>
-                        <circle cx="21.5" cy="12.8" r="1.1" fill="white"/>
-                        <defs>
-                          <linearGradient id="instagram-gradient" x1="0" y1="0" x2="36" y2="36">
-                            <stop stopColor="#F58529"/>
-                            <stop offset="0.5" stopColor="#DD2A7B"/>
-                            <stop offset="1" stopColor="#8134AF"/>
-                          </linearGradient>
-                        </defs>
-                      </svg>
+                      <Instagram size={36} className="text-pink-500" />
                     )}
-                    {link.icon === 'twitter' && (
-                      <svg width="36" height="36" viewBox="0 0 36 36" fill="none">
-                        <rect width="36" height="36" rx="8" fill="black"/>
-                        <path d="M27 12.5C26.3 12.8 25.5 13 24.7 13.1C25.5 12.6 26.1 11.8 26.4 10.8C25.6 11.3 24.7 11.6 23.7 11.8C23 11 22 10.5 20.8 10.5C18.5 10.5 16.7 12.3 16.7 14.6C16.7 14.9 16.7 15.2 16.8 15.5C13.4 15.3 10.4 13.7 8.4 11.2C8.1 11.9 7.9 12.6 7.9 13.4C7.9 14.9 8.7 16.2 9.9 17C9.2 17 8.5 16.8 7.9 16.5V16.5C7.9 18.5 9.3 20.2 11.1 20.6C10.8 20.7 10.5 20.7 10.1 20.7C9.9 20.7 9.6 20.7 9.4 20.6C9.9 22.3 11.4 23.5 13.2 23.5C11.8 24.6 10 25.3 8 25.3C7.7 25.3 7.4 25.3 7.1 25.2C8.9 26.4 11.1 27.1 13.4 27.1C20.8 27.1 24.8 20.8 24.8 15.1V14.6C25.6 14 26.3 13.3 27 12.5Z" fill="white"/>
-                      </svg>
+                    {(link.icon === 'twitter' || link.icon === 'x') && (
+                      <Twitter size={36} className="text-black" />
                     )}
                   </a>
                 ))}</div>
