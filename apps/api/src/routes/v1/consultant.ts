@@ -75,13 +75,13 @@ const updateProfileSchema = z.object({
     z.null()
   ]).optional(), // Max 50 years
   personalSessionPrice: z.union([
-    z.number().positive().max(999999.99),
-    z.string().transform(val => parseFloat(val)).pipe(z.number().positive().max(999999.99)),
+    z.number().gte(0, 'Personal session price cannot be negative').max(999999.99),
+    z.string().transform(val => parseFloat(val)).pipe(z.number().gte(0, 'Personal session price cannot be negative').max(999999.99)),
     z.null()
   ]).optional(),
   webinarSessionPrice: z.union([
-    z.number().positive().max(999999.99),
-    z.string().transform(val => parseFloat(val)).pipe(z.number().positive().max(999999.99)),
+    z.number().gte(0, 'Webinar session price cannot be negative').max(999999.99),
+    z.string().transform(val => parseFloat(val)).pipe(z.number().gte(0, 'Webinar session price cannot be negative').max(999999.99)),
     z.null()
   ]).optional(),
   instagramUrl: optionalUrlField(),

@@ -32,7 +32,7 @@ const router = Router();
 const createOrderSchema = z.object({
   sessionId: z.string().optional(),
   quotationId: z.string().optional(),
-  amount: z.number().positive().min(1).max(500000),
+  amount: z.number().gte(0, 'Amount cannot be negative').max(500000),
   currency: z.string().default('INR'),
   clientEmail: z.string().email(),
   clientName: z.string().min(1),

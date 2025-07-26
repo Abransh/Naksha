@@ -37,8 +37,8 @@ const createAdminSchema = z.object({
 
 const updateConsultantSchema = z.object({
   isActive: z.boolean().optional(),
-  personalSessionPrice: z.number().positive().max(999999.99).optional(),
-  webinarSessionPrice: z.number().positive().max(999999.99).optional(),
+  personalSessionPrice: z.number().gte(0, 'Personal session price cannot be negative').max(999999.99).optional(),
+  webinarSessionPrice: z.number().gte(0, 'Webinar session price cannot be negative').max(999999.99).optional(),
   consultancySector: z.string().max(100).optional(),
   adminNotes: z.string().optional()
 });

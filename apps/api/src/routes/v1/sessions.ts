@@ -34,7 +34,7 @@ const createSessionSchema = z.object({
   scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format (YYYY-MM-DD)'),
   scheduledTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format'),
   durationMinutes: z.number().min(15).max(480).optional().default(60),
-  amount: z.number().positive('Amount must be positive'),
+  amount: z.number().gte(0, 'Amount cannot be negative'),
   platform: z.enum(['TEAMS']),
   notes: z.string().max(1000).optional(),
   paymentMethod: z.enum(['online', 'cash', 'bank_transfer']).optional().default('online')
@@ -45,7 +45,7 @@ const updateSessionSchema = z.object({
   scheduledDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional(),
   scheduledTime: z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/).optional(),
   durationMinutes: z.number().min(15).max(480).optional(),
-  amount: z.number().positive().optional(),
+  amount: z.number().gte(0).optional(),
   platform: z.enum(['TEAMS']).optional(),
   status: z.enum(['PENDING', 'CONFIRMED', 'COMPLETED', 'CANCELLED', 'RETURNED', 'ABANDONED', 'NO_SHOW']).optional(),
   paymentStatus: z.enum(['PENDING', 'PAID', 'REFUNDED', 'FAILED']).optional(),

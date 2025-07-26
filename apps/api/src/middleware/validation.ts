@@ -407,7 +407,7 @@ export const commonSchemas = {
     ),
 
   // Currency amount
-  amount: z.number().positive('Amount must be positive').max(999999.99, 'Amount too large'),
+  amount: z.number().gte(0, 'Amount cannot be negative').max(999999.99, 'Amount too large'),
 
   // Search query
   searchQuery: z.object({
@@ -419,7 +419,7 @@ export const commonSchemas = {
   fileUpload: z.object({
     filename: z.string().min(1, 'Filename is required'),
     mimetype: z.string().min(1, 'File type is required'),
-    size: z.number().positive('File size must be positive')
+    size: z.number().gte(0, 'File size cannot be negative')
   })
 };
 
