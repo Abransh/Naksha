@@ -370,7 +370,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                     
                     {/* Rating stars for reviews */}
                     {allTestimonials[currentTestimonial]?.type === 'review' && allTestimonials[currentTestimonial]?.rating && (
-                      <div className="flex items-center gap-1 mb-4">
+                      <div className="flex items-center gap-1 mb-6">
                         <StarRating rating={allTestimonials[currentTestimonial].rating} size="sm" />
                         {allTestimonials[currentTestimonial]?.isVerified && (
                           <CheckCircle size={16} className="text-green-500 ml-2" />
@@ -378,7 +378,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                       </div>
                     )}
                     
-                    <p className="text-lg font-medium text-black leading-[31.5px] mb-8 font-inter">
+                    <p className="text-lg font-medium text-black leading-[31.5px] mb-12 font-inter">
                       {allTestimonials[currentTestimonial]?.text || 'Excellent service and professional guidance.'}
                     </p>
                     
