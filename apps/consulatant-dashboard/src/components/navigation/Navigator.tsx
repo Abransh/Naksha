@@ -104,6 +104,10 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
     setIsContactModalOpen(true);
   };
 
+  const handleGiftBannerClick = () => {
+    window.open('/#pricing', '_blank');
+  };
+
   const isRouteActive = (href: string): boolean => {
     if (href === "/dashboard") {
       return pathname === "/dashboard";
@@ -211,7 +215,7 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
               >
                 <div className="flex items-center gap-3">
                   <Headphones size={18} className="text-[var(--black-100)]" />
-                  <span className="text-[var(--black-100)] font-inter text-sm">
+                  <span className="text-black font-inter text-sm">
                     Contact Support
                   </span>
                 </div>
@@ -229,7 +233,10 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
           {/* Gift Banner */}
           <div className="transition-all duration-300">
             {isExpanded ? (
-              <div className="bg-[var(--secondary-20)] rounded-2xl p-3 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">
+              <div 
+                onClick={handleGiftBannerClick}
+                className="bg-[var(--secondary-20)] rounded-2xl p-3 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors"
+              >
                 <div className="flex items-start gap-3">
                   <Gift size={18} className="text-[var(--black-100)] mt-1" />
                   <div className="flex-1">
@@ -245,7 +252,10 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
                 </div>
               </div>
             ) : (
-              <div className="flex items-center justify-center w-14 h-12 rounded-2xl bg-[rgba(255,204,145,0.2)] hover:bg-[rgba(255,204,145,0.3)] cursor-pointer transition-colors">
+              <div 
+                onClick={handleGiftBannerClick}
+                className="flex items-center justify-center w-14 h-12 rounded-2xl bg-[rgba(255,204,145,0.2)] hover:bg-[rgba(255,204,145,0.3)] cursor-pointer transition-colors"
+              >
                 <Gift size={20} className="text-black" />
               </div>
             )}
@@ -333,18 +343,21 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
           {/* Contact Support */}
           <button 
             onClick={handleContactSupport}
-            className="block bg-gray-100 rounded-2xl p-3 cursor-pointer hover:bg-gray-200 transition-colors w-full text-left"
+            className="block bg-black rounded-2xl p-3 cursor-pointer hover:bg-gray-200 transition-colors w-full text-left"
           >
             <div className="flex items-center gap-3">
               <Headphones size={18} className="text-[var(--black-100)]" />
-              <span className="text-[var(--black-100)] font-inter text-sm">
+              <span className="text-black font-inter text-sm">
                 Contact Support
               </span>
             </div>
           </button>
 
           {/* Gift Banner */}
-          <div className="bg-[var(--secondary-20)] rounded-2xl p-3 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors">
+          <div 
+            onClick={handleGiftBannerClick}
+            className="bg-[var(--secondary-20)] rounded-2xl p-3 cursor-pointer hover:bg-[var(--secondary-30)] transition-colors"
+          >
             <div className="flex items-start gap-3">
               <Gift size={18} className="text-[var(--black-100)] mt-1" />
               <div className="flex-1">
@@ -403,13 +416,13 @@ const Navigator: React.FC<NavigatorProps> = ({ className = "" }) => {
 
       {/* Contact Support Modal */}
       <Dialog open={isContactModalOpen} onOpenChange={setIsContactModalOpen}>
-        <DialogContent className="sm:max-w-md">
+        <DialogContent className="sm:max-w-md bg-white">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-2">
-              <Headphones size={20} className="text-[var(--primary-100)]" />
+            <DialogTitle className="flex items-center gap-2 text-black">
+              <Headphones size={20} className="text-black" />
               Contact Support
             </DialogTitle>
-            <DialogDescription className="text-left pt-4 leading-relaxed">
+            <DialogDescription className="text-left pt-4 leading-relaxed text-black">
               For any inquiries or booking-related requests, please send an email to{" "}
               <a 
                 href="mailto:booking@nakksha.in" 
