@@ -77,6 +77,9 @@ model Consultant {
   teamsUserEmail               String?   @map("teams_user_email")
   teamsUserId                  String?   @map("teams_user_id")
   
+  // GST Information
+  gstNumber                    String?   @map("gst_number") // Indian GST registration number
+  
   // Metadata
   createdAt             DateTime @default(now()) @map("created_at")
   updatedAt             DateTime @updatedAt @map("updated_at")
@@ -361,10 +364,11 @@ model Quotation {
   quotationName   String          @map("quotation_name") // Alias for title
   description     String
   baseAmount      Decimal         @db.Decimal(10,2) @map("base_amount")
-  discountPercentage Decimal      @default(0) @db.Decimal(5,2) @map("discount_percentage")
-  finalAmount     Decimal         @db.Decimal(10,2) @map("final_amount") // Calculated: baseAmount - (baseAmount * discountPercentage / 100)
+  taxPercentage   Decimal         @default(0) @db.Decimal(5,2) @map("tax_percentage") // GST percentage
+  finalAmount     Decimal         @db.Decimal(10,2) @map("final_amount") // Calculated: baseAmount + (baseAmount * taxPercentage / 100)
   amount          Decimal         @db.Decimal(10,2) // Alias for finalAmount for compatibility
   currency        String          @default("INR")
+  gstNumber       String?         @map("gst_number") // GST number for this quotation
   validUntil      DateTime        @map("valid_until")
   expiresAt       DateTime        @map("expires_at") // Alias for validUntil
   

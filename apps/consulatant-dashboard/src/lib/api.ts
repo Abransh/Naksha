@@ -427,6 +427,7 @@ export interface ConsultantProfile {
   bankName?: string;
   accountNumber?: string;
   ifscCode?: string;
+  gstNumber?: string;
   personalSessionTitle?: string;
   personalSessionDescription?: string;
   webinarSessionTitle?: string;
@@ -497,6 +498,7 @@ export interface UpdateProfileData {
   bankName?: string;
   accountNumber?: string;
   ifscCode?: string;
+  gstNumber?: string;
   personalSessionTitle?: string;
   personalSessionDescription?: string;
   webinarSessionTitle?: string;

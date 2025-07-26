@@ -389,6 +389,25 @@ export default function SettingsPage() {
                         />
                       </div>
                     </div>
+
+                    {/* GST Number */}
+                    <div className="flex flex-col gap-2">
+                      <label className="text-xs text-[var(--black-4)] font-inter px-1">
+                        GST Number (Optional)
+                      </label>
+                      <Input
+                        placeholder="Enter GST Number (15 characters)"
+                        value={formData.gstNumber || ''}
+                        onChange={(e) =>
+                          handleInputChange("gstNumber", e.target.value.toUpperCase())
+                        }
+                        maxLength={15}
+                        className="h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg text-base text-[var(--black-4)] font-inter"
+                      />
+                      <div className="text-xs text-gray-500 px-1">
+                        Format: 22AAAAA0000A1Z5 (15 characters)
+                      </div>
+                    </div>
                   </div>
                 </div>
 

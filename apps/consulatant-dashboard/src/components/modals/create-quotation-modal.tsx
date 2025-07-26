@@ -32,11 +32,12 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
     clientEmail: "",
     category: "",
     baseAmount: "",
-    discountPercentage: 0,
+    gstNumber: "",
+    taxPercentage: 0,
     description: "",
     notes: "",
     expiryDays: 30,
-    addDiscount: false,
+    addGst: false,
     addExpiryDate: false,
   });
 
@@ -78,6 +79,14 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
     if (!formData.baseAmount || parseFloat(formData.baseAmount) <= 0) {
       newErrors.baseAmount = "Please enter a valid amount";
     }
+    
+    // GST number validation (Indian GST format: 15 characters)
+    if (formData.addGst && formData.gstNumber) {
+      const gstRegex = /^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/;
+      if (!gstRegex.test(formData.gstNumber)) {
+        newErrors.gstNumber = "Please enter a valid GST number (15 characters)";
+      }
+    }
 
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -97,7 +106,8 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
         clientEmail: formData.clientEmail,
         description: formData.description,
         baseAmount: parseFloat(formData.baseAmount),
-        discountPercentage: formData.addDiscount ? formData.discountPercentage : 0,
+        taxPercentage: formData.addGst ? formData.taxPercentage : 0,
+        gstNumber: formData.addGst ? formData.gstNumber : null,
         currency: "INR",
         expiryDays: formData.addExpiryDate ? formData.expiryDays : 30,
         notes: formData.notes,
@@ -151,11 +161,12 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
         clientEmail: "",
         category: "",
         baseAmount: "",
-        discountPercentage: 0,
+        gstNumber: "",
+        taxPercentage: 0,
         description: "",
         notes: "",
         expiryDays: 30,
-        addDiscount: false,
+        addGst: false,
         addExpiryDate: false,
       });
       setErrors({});
@@ -326,43 +337,71 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
               )}
             </div>
 
-            {/* Discount Section */}
+            {/* GST Section */}
             <div className="space-y-3">
               <div className="flex items-center justify-between">
                 <label
                   className="text-sm font-medium text-[var(--black-100)]"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
-                  Add Discount
+                  Add GST
                 </label>
                 <Switch
-                  checked={formData.addDiscount}
+                  checked={formData.addGst}
                   onCheckedChange={(checked) =>
-                    handleInputChange("addDiscount", checked)
+                    handleInputChange("addGst", checked)
                   }
                 />
               </div>
               
-              {formData.addDiscount && (
-                <div className="space-y-2">
-                  <label
-                    className="text-sm font-medium text-[var(--black-100)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  >
-                    Discount Percentage
-                  </label>
-                  <Input
-                    type="number"
-                    placeholder="Enter discount percentage"
-                    value={formData.discountPercentage}
-                    onChange={(e) =>
-                      handleInputChange("discountPercentage", parseFloat(e.target.value) || 0)
-                    }
-                    min="0"
-                    max="100"
-                    className="h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)]"
-                    style={{ fontFamily: "Inter, sans-serif" }}
-                  />
+              {formData.addGst && (
+                <div className="space-y-3">
+                  <div className="space-y-2">
+                    <label
+                      className="text-sm font-medium text-[var(--black-100)]"
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    >
+                      GST Number <span className="text-red-500">*</span>
+                    </label>
+                    <Input
+                      type="text"
+                      placeholder="Enter GST number (15 characters)"
+                      value={formData.gstNumber}
+                      onChange={(e) =>
+                        handleInputChange("gstNumber", e.target.value.toUpperCase())
+                      }
+                      maxLength={15}
+                      className={`h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)] ${
+                        errors.gstNumber ? "border-red-500" : ""
+                      }`}
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    />
+                    {errors.gstNumber && (
+                      <p className="text-sm text-red-600">{errors.gstNumber}</p>
+                    )}
+                  </div>
+                  
+                  <div className="space-y-2">
+                    <label
+                      className="text-sm font-medium text-[var(--black-100)]"
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    >
+                      Tax Percentage
+                    </label>
+                    <Input
+                      type="number"
+                      placeholder="Enter tax percentage (e.g., 18)"
+                      value={formData.taxPercentage}
+                      onChange={(e) =>
+                        handleInputChange("taxPercentage", parseFloat(e.target.value) || 0)
+                      }
+                      min="0"
+                      max="50"
+                      step="0.1"
+                      className="h-10 border-[var(--stroke)] text-[var(--black-40)] placeholder:text-[var(--black-20)]"
+                      style={{ fontFamily: "Inter, sans-serif" }}
+                    />
+                  </div>
                 </div>
               )}
             </div>
@@ -456,33 +495,46 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
                   className="text-sm font-medium text-[var(--black-100)]"
                   style={{ fontFamily: "Inter, sans-serif" }}
                 >
-                  Final Amount
+                  Amount Breakdown
                 </label>
-                <div className="p-4 bg-green-50 border border-green-200 rounded-lg">
-                  <div className="text-center">
-                    <div className="text-2xl font-bold text-green-600">
-                      ₹{(
-                        parseFloat(formData.baseAmount || "0") *
-                        (1 - (formData.addDiscount ? formData.discountPercentage : 0) / 100)
-                      ).toLocaleString()}
+                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                  <div className="space-y-2">
+                    <div className="flex justify-between text-sm">
+                      <span>Base Amount:</span>
+                      <span>₹{parseFloat(formData.baseAmount || "0").toLocaleString()}</span>
                     </div>
-                    {formData.addDiscount && formData.discountPercentage > 0 && (
-                      <div className="text-sm text-gray-600 mt-1">
-                        <span className="line-through">₹{parseFloat(formData.baseAmount || "0").toLocaleString()}</span>
-                        <span className="text-green-600 ml-2">
-                          {formData.discountPercentage}% discount applied
-                        </span>
-                      </div>
+                    {formData.addGst && formData.taxPercentage > 0 && (
+                      <>
+                        <div className="flex justify-between text-sm">
+                          <span>Tax ({formData.taxPercentage}%):</span>
+                          <span>₹{(parseFloat(formData.baseAmount || "0") * formData.taxPercentage / 100).toLocaleString()}</span>
+                        </div>
+                        {formData.gstNumber && (
+                          <div className="text-xs text-gray-600">
+                            GST No: {formData.gstNumber}
+                          </div>
+                        )}
+                      </>
                     )}
+                    <hr className="border-gray-300" />
+                    <div className="flex justify-between font-bold text-lg">
+                      <span>Final Amount:</span>
+                      <span className="text-green-600">
+                        ₹{(
+                          parseFloat(formData.baseAmount || "0") *
+                          (1 + (formData.addGst ? formData.taxPercentage : 0) / 100)
+                        ).toLocaleString()}
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             )}
 
             {/* Quotation Summary */}
-            <div className="space-y-2">
+            <div className="space-y-2 text-black">
               <label
-                className="text-sm font-medium text-[var(--black-100)]"
+                className="text-sm font-medium text-black"
                 style={{ fontFamily: "Inter, sans-serif" }}
               >
                 Summary
