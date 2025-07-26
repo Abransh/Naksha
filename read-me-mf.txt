@@ -27,3 +27,4 @@ webinar date to coming soon
 
 settings page Your payment withdrawals will be auto-settled within 7 working business days to your registered bank account via secure payment gateways.
 3rd stage 1 on 1 dark text
+log_level
