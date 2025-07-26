@@ -11,7 +11,20 @@ const router = Router();
 
 // Validation schemas
 const createReviewSchema = z.object({
-  consultantId: z.string().cuid(),
+  consultantId: z.string().refine(
+    (value) => {
+      // Allow either CUID format or slug: prefix
+      if (value.startsWith('slug:')) {
+        const slug = value.replace('slug:', '');
+        return slug.length > 0 && /^[a-zA-Z0-9-_]+$/.test(slug);
+      }
+      // Validate CUID format for direct IDs
+      return /^[a-z0-9]{25}$/.test(value);
+    },
+    {
+      message: 'Invalid consultant ID format. Must be either a valid CUID or slug:consultantSlug format'
+    }
+  ),
   reviewerName: z.string().min(1, 'Name is required').max(100),
   reviewerEmail: z.string().email().optional(),
   rating: z.number().int().min(1).max(5),
