@@ -473,10 +473,7 @@ export default function Dashboard() {
                         <span className="text-[var(--primary-100)] font-inter text-sm">
                           Sessions
                         </span>
-                        <ChevronDown
-                          size={16}
-                          className="text-[var(--primary-100)]"
-                        />
+                        
                       </div>
                     </div>
                     <Timeline 
