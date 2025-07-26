@@ -264,7 +264,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                   >
                     <div className="bg-white rounded-full px-8 py-2 flex items-center gap-2 cursor-pointer hover:bg-gray-50 transition-colors">
                       <span className="text-base font-semibold text-[var(--primary-100)] font-inter">
-                        {formatPrice(services.find(s => s.type === 'Personal Session')?.price || 0)}+
+                        {formatPrice(services.find(s => s.type === 'Personal Session')?.price || 0)}
                       </span>
                       <ArrowRight
                         size={16}
