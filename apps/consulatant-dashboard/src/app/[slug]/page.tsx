@@ -23,6 +23,7 @@ import { useConsultantShowcase, usePriceFormatter } from "@/hooks/usePublicProfi
 import { BookSessionModal } from "@/components/modals/book-session-modal";
 import { useReviews } from "@/hooks/useReviews";
 import { ReviewForm } from "@/components/forms/ReviewForm";
+import { StarRating } from "@/components/ui/star-rating";
 
 interface ConsultantProfileProps {
   params: Promise<{
@@ -59,7 +60,6 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
     reviewSummary,
     isSubmitting: isSubmittingReview,
     submitReview,
-    renderStars,
     formatDate,
     hasReviews,
     totalReviews,
@@ -353,7 +353,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
 
               {/* Review Form */}
               <ReviewForm
-                consultantId={summary?.id || ''}
+                consultantId={consultantSlug || ''}
                 consultantName={`${summary?.name || 'this consultant'}`}
                 onSubmit={handleReviewSubmit}
                 isSubmitting={isSubmittingReview}
@@ -371,7 +371,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                     {/* Rating stars for reviews */}
                     {allTestimonials[currentTestimonial]?.type === 'review' && allTestimonials[currentTestimonial]?.rating && (
                       <div className="flex items-center gap-1 mb-4">
-                        {renderStars(allTestimonials[currentTestimonial].rating, 'sm')}
+                        <StarRating rating={allTestimonials[currentTestimonial].rating} size="sm" />
                         {allTestimonials[currentTestimonial]?.isVerified && (
                           <CheckCircle size={16} className="text-green-500 ml-2" />
                         )}
@@ -414,7 +414,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                           {/* Rating stars for reviews */}
                           {item.type === 'review' && item.rating && (
                             <div className="flex items-center gap-1 mb-3">
-                              {renderStars(item.rating, 'sm')}
+                              <StarRating rating={item.rating} size="sm" />
                               {item.isVerified && (
                                 <CheckCircle size={14} className="text-green-500 ml-1" />
                               )}

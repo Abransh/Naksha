@@ -33,7 +33,7 @@ const getReviewsQuerySchema = z.object({
  */
 router.post('/', validateRequest(createReviewSchema), async (req, res) => {
   try {
-    const { consultantId, reviewerName, reviewerEmail, rating, reviewText, title, sessionId } = req.body;
+    let { consultantId, reviewerName, reviewerEmail, rating, reviewText, title, sessionId } = req.body;
 
     logger.info('📝 Creating new review', {
       consultantId,
@@ -43,17 +43,37 @@ router.post('/', validateRequest(createReviewSchema), async (req, res) => {
       hasSession: !!sessionId
     });
 
-    // Verify consultant exists
-    const consultant = await prisma.consultant.findUnique({
-      where: { id: consultantId },
-      select: { id: true, firstName: true, lastName: true, slug: true }
-    });
-
-    if (!consultant) {
-      return res.status(404).json({
-        message: 'Consultant not found',
-        code: 'CONSULTANT_NOT_FOUND'
+    // Handle slug-based consultant ID resolution
+    let consultant;
+    if (consultantId.startsWith('slug:')) {
+      const slug = consultantId.replace('slug:', '');
+      consultant = await prisma.consultant.findUnique({
+        where: { slug },
+        select: { id: true, firstName: true, lastName: true, slug: true }
       });
+      
+      if (!consultant) {
+        return res.status(404).json({
+          message: 'Consultant not found',
+          code: 'CONSULTANT_NOT_FOUND'
+        });
+      }
+      
+      // Update consultantId to the actual ID
+      consultantId = consultant.id;
+    } else {
+      // Verify consultant exists by ID
+      consultant = await prisma.consultant.findUnique({
+        where: { id: consultantId },
+        select: { id: true, firstName: true, lastName: true, slug: true }
+      });
+
+      if (!consultant) {
+        return res.status(404).json({
+          message: 'Consultant not found',
+          code: 'CONSULTANT_NOT_FOUND'
+        });
+      }
     }
 
     // Verify session exists if provided
@@ -106,7 +126,7 @@ router.post('/', validateRequest(createReviewSchema), async (req, res) => {
       rating: review.rating
     });
 
-    res.status(201).json({
+    return res.status(201).json({
       message: 'Review submitted successfully',
       data: {
         review: {
@@ -133,7 +153,7 @@ router.post('/', validateRequest(createReviewSchema), async (req, res) => {
       });
     }
 
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Failed to submit review',
       code: 'REVIEW_CREATION_ERROR',
       details: error.message
@@ -230,7 +250,7 @@ router.get('/consultant/:slug', validateRequest(getReviewsQuerySchema, 'query'),
       averageRating: reviewStats._avg.rating
     });
 
-    res.json({
+    return res.json({
       message: 'Reviews retrieved successfully',
       data: {
         reviews,
@@ -257,7 +277,7 @@ router.get('/consultant/:slug', validateRequest(getReviewsQuerySchema, 'query'),
 
   } catch (error: any) {
     logger.error('❌ Error fetching reviews:', error);
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Failed to fetch reviews',
       code: 'REVIEW_FETCH_ERROR',
       details: error.message
@@ -352,14 +372,14 @@ router.get('/consultant/:slug/summary', async (req, res) => {
       averageRating: summary.averageRating
     });
 
-    res.json({
+    return res.json({
       message: 'Review summary retrieved successfully',
       data: summary
     });
 
   } catch (error: any) {
     logger.error('❌ Error fetching review summary:', error);
-    res.status(500).json({
+    return res.status(500).json({
       message: 'Failed to fetch review summary',
       code: 'REVIEW_SUMMARY_ERROR',
       details: error.message

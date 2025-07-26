@@ -34,8 +34,8 @@ const createAdminSchema = zod_1.z.object({
 });
 const updateConsultantSchema = zod_1.z.object({
     isActive: zod_1.z.boolean().optional(),
-    personalSessionPrice: zod_1.z.number().positive().max(999999.99).optional(),
-    webinarSessionPrice: zod_1.z.number().positive().max(999999.99).optional(),
+    personalSessionPrice: zod_1.z.number().gte(0, 'Personal session price cannot be negative').max(999999.99).optional(),
+    webinarSessionPrice: zod_1.z.number().gte(0, 'Webinar session price cannot be negative').max(999999.99).optional(),
     consultancySector: zod_1.z.string().max(100).optional(),
     adminNotes: zod_1.z.string().optional()
 });

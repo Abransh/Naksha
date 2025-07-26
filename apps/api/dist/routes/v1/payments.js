@@ -25,7 +25,7 @@ const router = (0, express_1.Router)();
 const createOrderSchema = zod_1.z.object({
     sessionId: zod_1.z.string().optional(),
     quotationId: zod_1.z.string().optional(),
-    amount: zod_1.z.number().positive().min(1).max(500000),
+    amount: zod_1.z.number().gte(0, 'Amount cannot be negative').max(500000),
     currency: zod_1.z.string().default('INR'),
     clientEmail: zod_1.z.string().email(),
     clientName: zod_1.z.string().min(1),

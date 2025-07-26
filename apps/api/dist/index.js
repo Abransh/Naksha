@@ -43,6 +43,7 @@ const teams_1 = __importDefault(require("./routes/v1/teams"));
 const availability_1 = __importDefault(require("./routes/v1/availability"));
 const payments_1 = __importDefault(require("./routes/v1/payments"));
 const booking_1 = __importDefault(require("./routes/v1/booking"));
+const reviews_1 = __importDefault(require("./routes/v1/reviews"));
 // Controller imports for direct routing
 const auth_controller_1 = require("./controllers/auth.controller");
 const auth_2 = require("./middleware/auth");
@@ -197,6 +198,8 @@ class App {
         this.app.post('/api/v1/auth/logout', auth_1.authenticate, auth_2.logout);
         // Public booking routes (no authentication required) - v1 API
         this.app.use('/api/v1/book', booking_1.default);
+        // Public review routes (no authentication required) - v1 API
+        this.app.use('/api/v1/reviews', reviews_1.default);
         // Protected routes (authentication required)
         this.app.use('/api/v1/consultant', consultant_1.default);
         this.app.use('/api/v1/dashboard', auth_1.authenticateConsultant, dashboard_1.default);

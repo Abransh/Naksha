@@ -66,11 +66,10 @@ export const useReviews = ({ consultantSlug, autoFetch = true }: UseReviewsOptio
 
       console.log('📝 Submitting review for consultant:', consultantSlug);
 
+      // Use a special marker to indicate slug-based submission
       const newReview = await reviewApi.createReview({
         ...reviewData,
-        consultantId: reviewSummary?.consultant?.slug === consultantSlug 
-          ? 'temp-id' // This will be resolved by slug on backend
-          : reviewData.consultantId || 'temp-id'
+        consultantId: `slug:${consultantSlug}` // Backend will resolve this slug to actual ID
       });
 
       // Add the new review to the local state
@@ -145,25 +144,22 @@ export const useReviews = ({ consultantSlug, autoFetch = true }: UseReviewsOptio
     });
   }, []);
 
-  const renderStars = useCallback((rating: number, size: 'sm' | 'md' | 'lg' = 'md') => {
+  const getStarData = useCallback((rating: number, size: 'sm' | 'md' | 'lg' = 'md') => {
     const sizeClasses = {
       sm: 'w-3 h-3',
       md: 'w-4 h-4',
       lg: 'w-5 h-5'
     };
 
-    return Array.from({ length: 5 }, (_, index) => (
-      <svg
-        key={index}
-        className={`${sizeClasses[size]} ${
-          index < rating ? 'text-yellow-400 fill-current' : 'text-gray-300'
-        }`}
-        viewBox="0 0 20 20"
-        fill="currentColor"
-      >
-        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-      </svg>
-    ));
+    return {
+      stars: Array.from({ length: 5 }, (_, index) => ({
+        index,
+        isFilled: index < rating,
+        sizeClass: sizeClasses[size]
+      })),
+      rating,
+      size
+    };
   }, []);
 
   return {
@@ -187,7 +183,7 @@ export const useReviews = ({ consultantSlug, autoFetch = true }: UseReviewsOptio
     getTotalReviews,
     getRatingDistribution,
     formatDate,
-    renderStars,
+    getStarData,
     
     // Computed values
     hasReviews: reviews.length > 0,

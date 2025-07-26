@@ -66,7 +66,7 @@ const bookSessionSchema = zod_1.z.object({
     selectedDate: zod_1.z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid date format').optional(),
     selectedTime: zod_1.z.string().regex(/^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/, 'Invalid time format').optional(),
     duration: zod_1.z.number().min(30).max(480).default(60), // 30 minutes to 8 hours
-    amount: zod_1.z.number().positive('Amount must be positive'),
+    amount: zod_1.z.number().gte(0, 'Amount cannot be negative'),
     // Additional Information
     clientNotes: zod_1.z.string().max(1000).optional(),
     // Consultant Information

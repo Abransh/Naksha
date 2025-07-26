@@ -323,7 +323,7 @@ exports.commonSchemas = {
         .max(128, 'Password must not exceed 128 characters')
         .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 'Password must contain at least one uppercase letter, one lowercase letter, one number, and one special character'),
     // Currency amount
-    amount: zod_1.z.number().positive('Amount must be positive').max(999999.99, 'Amount too large'),
+    amount: zod_1.z.number().gte(0, 'Amount cannot be negative').max(999999.99, 'Amount too large'),
     // Search query
     searchQuery: zod_1.z.object({
         q: zod_1.z.string().min(1).max(100).optional(),
@@ -333,7 +333,7 @@ exports.commonSchemas = {
     fileUpload: zod_1.z.object({
         filename: zod_1.z.string().min(1, 'Filename is required'),
         mimetype: zod_1.z.string().min(1, 'File type is required'),
-        size: zod_1.z.number().positive('File size must be positive')
+        size: zod_1.z.number().gte(0, 'File size cannot be negative')
     })
 };
 /**

@@ -29,7 +29,7 @@ const createQuotationSchema = zod_1.z.object({
     clientName: zod_1.z.string().min(1, 'Client name is required').max(200),
     quotationName: zod_1.z.string().min(1, 'Quotation name is required').max(300),
     description: zod_1.z.string().max(2000, 'Description too long').optional(),
-    baseAmount: zod_1.z.number().positive('Base amount must be positive'),
+    baseAmount: zod_1.z.number().gte(0, 'Base amount cannot be negative'),
     discountPercentage: zod_1.z.number().min(0).max(100, 'Discount cannot exceed 100%').optional().default(0),
     currency: zod_1.z.string().length(3, 'Currency must be 3 characters').optional().default('INR'),
     durationText: zod_1.z.string().max(100, 'Duration text too long').optional(),
@@ -40,7 +40,7 @@ const createQuotationSchema = zod_1.z.object({
 const updateQuotationSchema = zod_1.z.object({
     quotationName: zod_1.z.string().min(1).max(300).optional(),
     description: zod_1.z.string().max(2000).optional(),
-    baseAmount: zod_1.z.number().positive().optional(),
+    baseAmount: zod_1.z.number().gte(0).optional(),
     discountPercentage: zod_1.z.number().min(0).max(100).optional(),
     durationText: zod_1.z.string().max(100).optional(),
     expiresAt: zod_1.z.string().datetime().optional(),
