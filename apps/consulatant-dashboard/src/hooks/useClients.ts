@@ -58,6 +58,7 @@ export interface ClientFilters {
   sortOrder?: 'asc' | 'desc';
   search?: string;
   isActive?: boolean;
+  timeframe?: 'today' | 'week' | 'month' | 'year';
 }
 
 export function useClients(filters: ClientFilters = {}) {
@@ -197,7 +198,8 @@ export function useClients(filters: ClientFilters = {}) {
     filters.sortBy,
     filters.sortOrder,
     filters.search,
-    filters.isActive
+    filters.isActive,
+    filters.timeframe
   ]);
 
 

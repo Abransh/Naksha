@@ -7,6 +7,7 @@ import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
+import { Timeline } from "@/components/ui/timeline";
 import { AddClientModal } from "@/components/modals/add-client-modal";
 import { useClients } from "@/hooks/useClients";
 import { useAuth } from "@/app/providers";
@@ -27,6 +28,7 @@ export default function ClientsPage() {
   const { profile, isLoading: profileLoading } = useConsultantProfile({ enabled: true });
   const [currentPage, setCurrentPage] = useState(1);
   const [selectedClients, setSelectedClients] = useState<string[]>([]);
+  const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'year'>('month');
   const itemsPerPage = 10;
 
   // Use debounced search to prevent API calls on every keystroke
@@ -46,7 +48,8 @@ export default function ClientsPage() {
     limit: itemsPerPage,
     search: debouncedSearchTerm || undefined,
     sortBy: 'createdAt',
-    sortOrder: 'desc'
+    sortOrder: 'desc',
+    timeframe: timeframe
   });
 
   const handleSelectAll = () => {
@@ -256,23 +259,10 @@ export default function ClientsPage() {
                       />
                     </svg>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-xs text-[var(--black-10)]"
-                      style={{ fontFamily: "Inter, sans-serif" }}
-                    >
-                      {"{Timeline}"}
-                    </span>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path
-                        d="M4 6L8 10L12 6"
-                        stroke="#BEC0CA"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
+                  <Timeline 
+                    value={timeframe} 
+                    onChange={(value) => setTimeframe(value as 'today' | 'week' | 'month' | 'year')} 
+                  />
                 </div>
                 <div className="grid grid-cols-3 gap-8">
                   <div>
@@ -357,23 +347,10 @@ export default function ClientsPage() {
                       />
                     </svg>
                   </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className="text-xs text-[var(--black-10)]"
-                      style={{ fontFamily: "Inter, sans-serif" }}
-                    >
-                      {"{Timeline}"}
-                    </span>
-                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                      <path
-                        d="M4 6L8 10L12 6"
-                        stroke="#BEC0CA"
-                        strokeWidth="2"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
-                  </div>
+                  <Timeline 
+                    value={timeframe} 
+                    onChange={(value) => setTimeframe(value as 'today' | 'week' | 'month' | 'year')} 
+                  />
                 </div>
                 <div className="grid grid-cols-3 gap-8">
                   <div>

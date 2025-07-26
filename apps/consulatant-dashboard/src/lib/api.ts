@@ -944,6 +944,7 @@ export const clientApi = {
     sortOrder?: 'asc' | 'desc';
     search?: string;
     isActive?: boolean;
+    timeframe?: 'today' | 'week' | 'month' | 'year';
   } = {}): Promise<{
     clients: any[];
     pagination: any;
@@ -1046,6 +1047,7 @@ export const sessionApi = {
     startDate?: string;
     endDate?: string;
     search?: string;
+    timeframe?: 'today' | 'week' | 'month' | 'year';
   } = {}): Promise<any> {
     const params = new URLSearchParams();
     Object.entries(filters).forEach(([key, value]) => {

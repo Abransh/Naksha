@@ -58,6 +58,7 @@ export interface SessionFilters {
   startDate?: string;
   endDate?: string;
   search?: string;
+  timeframe?: 'today' | 'week' | 'month' | 'year';
 }
 
 export interface CreateSessionData {

@@ -2,12 +2,13 @@
 
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useState, useCallback } from "react";
 import Image from "next/image";
 import { Card, CardContent, CardHeader } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Timeline } from "@/components/ui/timeline";
 import { CreateSessionModal } from "@/components/modals/create-session-modal";
 import { ProtectedRoute } from "@/components/auth/ProtectedRoute";
 import Navigator from "@/components/navigation/Navigator";
@@ -21,7 +22,6 @@ import {
   BarChart3,
   ShoppingBag,
   Users,
-  ChevronDown,
   Home,
 
   Plus,
@@ -227,7 +227,7 @@ const ActionButton = ({
   onUpdate 
 }: { 
   session: Session; 
-  onUpdate: (sessionId: string, updates: any) => Promise<void>;
+  onUpdate: (sessionId: string, updates: Partial<Session>) => Promise<void>;
 }) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -282,9 +282,10 @@ export default function SessionsPage() {
   const { profile, isLoading: profileLoading } = useConsultantProfile({ enabled: true });
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [selectedSessions, setSelectedSessions] = useState<string[]>([]);
+  const [timeframe, setTimeframe] = useState<'today' | 'week' | 'month' | 'year'>('month');
 
   // Use debounced search to prevent API calls on every keystroke
-  const { searchTerm, debouncedSearchTerm, isSearching, setSearchTerm } = useDebouncedSearch();
+  const { searchTerm, setSearchTerm } = useDebouncedSearch();
 
   // Use the sessions hook with auto-refresh
   const {
@@ -304,7 +305,7 @@ export default function SessionsPage() {
     refresh,
     formatCurrency,
     formatDate,
-  } = useSessions();
+  } = useSessions({ timeframe });
 
   // Handle session status updates
   const handleStatusUpdate = useCallback(async (sessionId: string, newStatus: Session['status']) => {
@@ -325,7 +326,7 @@ export default function SessionsPage() {
   }, [updateSession]);
 
   // Handle session updates
-  const handleSessionUpdate = useCallback(async (sessionId: string, updates: any) => {
+  const handleSessionUpdate = useCallback(async (sessionId: string, updates: Partial<Session>) => {
     try {
       await updateSession(sessionId, updates);
       toast.success('Session updated successfully');
@@ -339,13 +340,23 @@ export default function SessionsPage() {
   const handleSearch = useCallback((term: string) => {
     setSearchTerm(term);
     updateFilters({ ...filters, search: term || undefined });
-  }, [filters, updateFilters]);
+  }, [filters, updateFilters, setSearchTerm]);
 
   // Handle filter changes
   const handleFilterChange = useCallback((key: string, value: string) => {
     updateFilters({ 
       ...filters, 
       [key]: value === 'all' ? undefined : value 
+    });
+  }, [filters, updateFilters]);
+
+  // Handle timeframe changes
+  const handleTimeframeChange = useCallback((newTimeframe: string) => {
+    const timeframeValue = newTimeframe as 'today' | 'week' | 'month' | 'year';
+    setTimeframe(timeframeValue);
+    updateFilters({ 
+      ...filters, 
+      timeframe: timeframeValue 
     });
   }, [filters, updateFilters]);
 
@@ -529,10 +540,10 @@ export default function SessionsPage() {
                     <div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center">
                       <ShoppingBag size={20} className="text-[var(--black-100)]" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[var(--black-10)] text-xs">All Time</span>
-                      <ChevronDown size={12} className="text-[var(--black-10)]" />
-                    </div>
+                    <Timeline 
+                      value={timeframe} 
+                      onChange={handleTimeframeChange} 
+                    />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -572,10 +583,10 @@ export default function SessionsPage() {
                     <div className="w-9 h-9 bg-orange-50 rounded-lg flex items-center justify-center">
                       <Users size={20} className="text-[var(--black-100)]" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[var(--black-10)] text-xs">All Time</span>
-                      <ChevronDown size={12} className="text-[var(--black-10)]" />
-                    </div>
+                    <Timeline 
+                      value={timeframe} 
+                      onChange={handleTimeframeChange} 
+                    />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">
@@ -615,10 +626,10 @@ export default function SessionsPage() {
                     <div className="w-9 h-9 bg-blue-50 rounded-lg flex items-center justify-center">
                       <BarChart3 size={20} className="text-[var(--primary-100)]" />
                     </div>
-                    <div className="flex items-center gap-2">
-                      <span className="text-[var(--black-10)] text-xs">All Time</span>
-                      <ChevronDown size={12} className="text-[var(--black-10)]" />
-                    </div>
+                    <Timeline 
+                      value={timeframe} 
+                      onChange={handleTimeframeChange} 
+                    />
                   </div>
                 </CardHeader>
                 <CardContent className="space-y-4">

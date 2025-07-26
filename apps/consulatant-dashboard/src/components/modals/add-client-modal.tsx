@@ -176,7 +176,8 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
             >
               Add a New Client
             </h2>
-            <DialogClose asChild>
+        
+              <div>
               <button className="w-8 h-8 flex items-center justify-center rounded-lg bg-[var(--secondary-30)] hover:bg-[var(--secondary-30)]/80 transition-colors">
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
                   <path
@@ -195,7 +196,8 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                   />
                 </svg>
               </button>
-            </DialogClose>
+              </div>
+            
           </div>
 
           {/* Client Information Section */}
@@ -263,15 +265,7 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                         +91
                       </span>
                     </div>
-                    <svg width="16" height="16" viewBox="0 0 17 16" fill="none">
-                      <path
-                        d="M13.1668 5.6665L8.50016 10.3332L3.8335 5.6665"
-                        stroke="#130F26"
-                        strokeWidth="1.5"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      />
-                    </svg>
+                   
                   </div>
 
                   {/* Phone Input */}
@@ -367,20 +361,7 @@ export function AddClientModal({ children, onClientAdded }: AddClientModalProps)
                       >
                         India
                       </span>
-                      <svg
-                        width="24"
-                        height="24"
-                        viewBox="0 0 24 24"
-                        fill="none"
-                      >
-                        <path
-                          d="M6 9L12 15L18 9"
-                          stroke="#5E6366"
-                          strokeWidth="2"
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </svg>
+                      
                     </div>
 
                     {/* State */}
