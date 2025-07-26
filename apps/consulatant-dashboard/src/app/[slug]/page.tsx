@@ -21,6 +21,8 @@ import {
 } from "lucide-react";
 import { useConsultantShowcase, usePriceFormatter } from "@/hooks/usePublicProfile";
 import { BookSessionModal } from "@/components/modals/book-session-modal";
+import { useReviews } from "@/hooks/useReviews";
+import { ReviewForm } from "@/components/forms/ReviewForm";
 
 interface ConsultantProfileProps {
   params: Promise<{
@@ -50,6 +52,22 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
     error,
     refetch,
   } = useConsultantShowcase(consultantSlug || '');
+
+  // Review system integration
+  const {
+    reviews,
+    reviewSummary,
+    isSubmitting: isSubmittingReview,
+    submitReview,
+    renderStars,
+    formatDate,
+    hasReviews,
+    totalReviews,
+    averageRating
+  } = useReviews({
+    consultantSlug: consultantSlug || '',
+    autoFetch: !!consultantSlug
+  });
 
   // Debug logging
   console.log('🔍 Page Component - Summary:', summary);
@@ -90,16 +108,38 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
     );
   }
 
+  // Combine reviews and testimonials for navigation
+  const allTestimonials = [
+    ...reviews.map(review => ({
+      text: review.reviewText,
+      author: review.reviewerName,
+      service: review.title || 'consultation',
+      rating: review.rating,
+      isVerified: review.isVerified,
+      createdAt: review.createdAt,
+      type: 'review' as const
+    })),
+    ...testimonials.map(testimonial => ({
+      ...testimonial,
+      type: 'testimonial' as const
+    }))
+  ];
+
   const nextTestimonial = () => {
     setCurrentTestimonial((prev) =>
-      prev === testimonials.length - 1 ? 0 : prev + 1,
+      prev === allTestimonials.length - 1 ? 0 : prev + 1,
     );
   };
 
   const prevTestimonial = () => {
     setCurrentTestimonial((prev) =>
-      prev === 0 ? testimonials.length - 1 : prev - 1,
+      prev === 0 ? allTestimonials.length - 1 : prev - 1,
     );
+  };
+
+  // Handle review submission
+  const handleReviewSubmit = async (reviewData: any) => {
+    await submitReview(reviewData);
   };
 
   return (
@@ -291,91 +331,130 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
               <Card className="w-[176px] h-[175px] rounded-[32px] bg-white/95 border border-white shadow-sm">
                 <CardContent className="flex flex-col items-center justify-center h-full">
                   <div className="text-[32px] font-bold text-black leading-8 mb-3 font-inter">
-                    {ratings.average}/5
+                    {averageRating > 0 ? `${averageRating}/5` : `${ratings.average}/5`}
                   </div>
                   <div className="text-base font-medium text-[var(--primary-100)] uppercase tracking-[0.15px] font-inter">
-                    {ratings.total} ratings
+                    {totalReviews > 0 ? `${totalReviews} reviews` : `${ratings.total} ratings`}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Testimonials Count */}
+              {/* Total Reviews */}
               <Card className="w-[176px] h-[175px] rounded-[32px] bg-white/95 border border-white shadow-sm">
                 <CardContent className="flex flex-col items-center justify-center h-full">
                   <div className="text-[32px] font-bold text-black leading-8 mb-3 font-inter">
-                    {testimonials.length}
+                    {allTestimonials.length}
                   </div>
                   <div className="text-base font-medium text-[var(--primary-100)] uppercase tracking-[0.15px] font-inter">
-                    testimonials
+                    {allTestimonials.length === 1 ? 'review' : 'reviews'}
                   </div>
                 </CardContent>
               </Card>
 
-              {/* Write Review */}
-              <div className="flex items-center">
-                <span className="text-xl text-black font-inter">
-                  Write a review...
-                </span>
-              </div>
+              {/* Review Form */}
+              <ReviewForm
+                consultantId={summary?.id || ''}
+                consultantName={`${summary?.name || 'this consultant'}`}
+                onSubmit={handleReviewSubmit}
+                isSubmitting={isSubmittingReview}
+              />
             </div>
 
-            {/* Testimonials */}
-            <div className="grid grid-cols-2 gap-10 mb-16">
-              {/* Large Testimonial */}
-              <Card className="w-[390px] h-[520px] rounded-[32px] bg-white border border-white shadow-sm">
-                <CardContent className="p-6">
-                  <Quote size={44} className="text-gray-400 mb-4" />
-                  <p className="text-lg font-medium text-black leading-[31.5px] mb-8 font-inter">
-                    {testimonials[currentTestimonial]?.text || 'Excellent service and professional guidance.'}
-                  </p>
-                  <div className="absolute bottom-6">
-                    {/* <span className="text-base font-bold text-black font-inter">
-                      {testimonials[currentTestimonial]?.author || 'Anonymous'}
-                    </span>
-                    <span className="text-base text-gray-600 font-inter">
-                      , {testimonials[currentTestimonial]?.service || 'consultation'}
-                    </span> */}
-                  </div>
-                </CardContent>
-              </Card>
-
-              {/* Smaller Testimonials */}
-              <div className="space-y-6">
-                <Card className="w-[390px] h-[240px] rounded-[32px] bg-white border border-white shadow-sm">
-                  <CardContent className="p-6">
+            {/* Reviews and Testimonials */}
+            {allTestimonials.length > 0 ? (
+              <div className="grid grid-cols-2 gap-10 mb-16">
+                {/* Large Review/Testimonial */}
+                <Card className="w-[390px] h-[520px] rounded-[32px] bg-white border border-white shadow-sm">
+                  <CardContent className="p-6 relative">
                     <Quote size={44} className="text-gray-400 mb-4" />
-                    <p className="text-lg font-medium text-black leading-[31.5px] mb-4 font-inter">
-                      {testimonials[1]?.text || 'Great experience with valuable insights.'}
+                    
+                    {/* Rating stars for reviews */}
+                    {allTestimonials[currentTestimonial]?.type === 'review' && allTestimonials[currentTestimonial]?.rating && (
+                      <div className="flex items-center gap-1 mb-4">
+                        {renderStars(allTestimonials[currentTestimonial].rating, 'sm')}
+                        {allTestimonials[currentTestimonial]?.isVerified && (
+                          <CheckCircle size={16} className="text-green-500 ml-2" />
+                        )}
+                      </div>
+                    )}
+                    
+                    <p className="text-lg font-medium text-black leading-[31.5px] mb-8 font-inter">
+                      {allTestimonials[currentTestimonial]?.text || 'Excellent service and professional guidance.'}
                     </p>
-                    <div>
+                    
+                    <div className="absolute bottom-6 left-6 right-6">
                       <span className="text-base font-bold text-black font-inter">
-                        {testimonials[1]?.author || 'Anonymous'}
+                        {allTestimonials[currentTestimonial]?.author || 'Anonymous'}
                       </span>
                       <span className="text-base text-gray-600 font-inter">
-                        , {testimonials[1]?.service || 'consultation'}
+                        , {allTestimonials[currentTestimonial]?.service || 'consultation'}
                       </span>
+                      {allTestimonials[currentTestimonial]?.type === 'review' && allTestimonials[currentTestimonial]?.createdAt && (
+                        <div className="text-sm text-gray-500 mt-1">
+                          {formatDate(allTestimonials[currentTestimonial].createdAt)}
+                        </div>
+                      )}
                     </div>
                   </CardContent>
                 </Card>
 
-                <Card className="w-[390px] h-[240px] rounded-[32px] bg-white border border-white shadow-sm">
-                  <CardContent className="p-6">
-                    <Quote size={44} className="text-gray-400 mb-4" />
-                    <p className="text-lg font-medium text-black leading-[31.5px] mb-4 font-inter">
-                      {testimonials[2]?.text || 'Professional service with actionable advice.'}
-                    </p>
-                    <div>
-                      <span className="text-base font-bold text-black font-inter">
-                        {testimonials[2]?.author || 'Anonymous'}
-                      </span>
-                      <span className="text-base text-gray-600 font-inter">
-                        , {testimonials[2]?.service || 'consultation'}
-                      </span>
-                    </div>
-                  </CardContent>
-                </Card>
+                {/* Smaller Reviews/Testimonials */}
+                <div className="space-y-6">
+                  {[1, 2].map((offset) => {
+                    const index = (currentTestimonial + offset) % allTestimonials.length;
+                    const item = allTestimonials[index];
+                    
+                    if (!item) return null;
+                    
+                    return (
+                      <Card key={`testimonial-${index}`} className="w-[390px] h-[240px] rounded-[32px] bg-white border border-white shadow-sm">
+                        <CardContent className="p-6 relative">
+                          <Quote size={44} className="text-gray-400 mb-4" />
+                          
+                          {/* Rating stars for reviews */}
+                          {item.type === 'review' && item.rating && (
+                            <div className="flex items-center gap-1 mb-3">
+                              {renderStars(item.rating, 'sm')}
+                              {item.isVerified && (
+                                <CheckCircle size={14} className="text-green-500 ml-1" />
+                              )}
+                            </div>
+                          )}
+                          
+                          <p className="text-lg font-medium text-black leading-[31.5px] mb-4 font-inter line-clamp-3">
+                            {item.text}
+                          </p>
+                          
+                          <div className="absolute bottom-6 left-6 right-6">
+                            <span className="text-base font-bold text-black font-inter">
+                              {item.author}
+                            </span>
+                            <span className="text-base text-gray-600 font-inter">
+                              , {item.service}
+                            </span>
+                            {item.type === 'review' && item.createdAt && (
+                              <div className="text-xs text-gray-500 mt-1">
+                                {formatDate(item.createdAt)}
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </Card>
+                    );
+                  })}
+                </div>
               </div>
-            </div>
+            ) : (
+              <div className="text-center py-16">
+                <Quote size={64} className="text-gray-300 mx-auto mb-4" />
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  No reviews yet
+                </h3>
+                <p className="text-gray-500">
+                  Be the first to share your experience with {summary?.name}
+                </p>
+              </div>
+            )}
 
             {/* Navigation Arrows */}
             <div className="flex gap-4 justify-center mb-16">

@@ -42,6 +42,7 @@ import teamsRoutes from './routes/v1/teams';
 import availabilityRoutes from './routes/v1/availability';
 import paymentRoutes from './routes/v1/payments';
 import bookingRoutes from './routes/v1/booking';
+import reviewRoutes from './routes/v1/reviews';
 
 // Controller imports for direct routing
 import { 
@@ -228,6 +229,9 @@ class App {
     
     // Public booking routes (no authentication required) - v1 API
     this.app.use('/api/v1/book', bookingRoutes);
+    
+    // Public review routes (no authentication required) - v1 API
+    this.app.use('/api/v1/reviews', reviewRoutes);
     
     // Protected routes (authentication required)
     this.app.use('/api/v1/consultant', consultantRoutes);

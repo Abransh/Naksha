@@ -90,6 +90,7 @@ model Consultant {
   weeklyAvailabilityPatterns WeeklyAvailabilityPattern[]
   refreshTokens         RefreshToken[]
   paymentTransactions   PaymentTransaction[]
+  reviews               Review[]
   
   @@map("consultants")
   @@index([email])
@@ -581,4 +582,53 @@ enum EmailStatus {
   SENT          // Email sent successfully
   FAILED        // Email failed to send
   QUEUED        // Email queued for retry
+}
+
+// ============================================================================
+// REVIEW & TESTIMONIAL MANAGEMENT
+// ============================================================================
+
+// Reviews - Client reviews for consultants
+model Review {
+  id              String      @id @default(cuid())
+  
+  // Consultant relationship
+  consultantId    String      @map("consultant_id")
+  consultant      Consultant  @relation(fields: [consultantId], references: [id], onDelete: Cascade)
+  
+  // Reviewer Information
+  reviewerName    String      @map("reviewer_name")
+  reviewerEmail   String?     @map("reviewer_email")
+  
+  // Review Content
+  rating          Int         // 1-5 star rating
+  reviewText      String      @map("review_text")
+  title           String?     // Optional review title
+  
+  // Review Status & Moderation
+  status          ReviewStatus @default(PENDING)
+  isVerified      Boolean     @default(false) @map("is_verified") // Verified purchase/session
+  isPublic        Boolean     @default(true) @map("is_public")
+  
+  // Session Reference (if review is for a specific session)
+  sessionId       String?     @map("session_id")
+  
+  // Metadata
+  createdAt       DateTime    @default(now()) @map("created_at")
+  updatedAt       DateTime    @updatedAt @map("updated_at")
+  approvedAt      DateTime?   @map("approved_at")
+  
+  @@map("reviews")
+  @@index([consultantId])
+  @@index([status])
+  @@index([rating])
+  @@index([createdAt])
+  @@index([isPublic])
+}
+
+enum ReviewStatus {
+  PENDING       // Awaiting moderation
+  APPROVED      // Approved and visible
+  REJECTED      // Rejected by moderator
+  SPAM          // Marked as spam
 }

@@ -1160,4 +1160,104 @@ export const sessionApi = {
 };
 
 
+// Review API methods
+export interface Review {
+  id: string;
+  reviewerName: string;
+  reviewerEmail?: string;
+  rating: number;
+  reviewText: string;
+  title?: string;
+  isVerified: boolean;
+  createdAt: string;
+  sessionId?: string;
+}
+
+export interface ReviewSummary {
+  totalReviews: number;
+  averageRating: number;
+  ratingDistribution: Record<number, number>;
+  recentReviews: Review[];
+  consultant: {
+    name: string;
+    slug: string;
+  };
+}
+
+export interface CreateReviewData {
+  consultantId: string;
+  reviewerName: string;
+  reviewerEmail?: string;
+  rating: number;
+  reviewText: string;
+  title?: string;
+  sessionId?: string;
+}
+
+export const reviewApi = {
+  /**
+   * Submit a new review for a consultant
+   */
+  async createReview(reviewData: CreateReviewData): Promise<Review> {
+    const response = await apiRequest<ApiResponse<{ review: Review }>>('/reviews', {
+      method: 'POST',
+      body: reviewData,
+    });
+    return response.data!.review;
+  },
+
+  /**
+   * Get all reviews for a consultant by slug (public endpoint)
+   */
+  async getReviews(consultantSlug: string, filters: {
+    status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SPAM';
+    rating?: number;
+    limit?: number;
+    offset?: number;
+  } = {}): Promise<{
+    reviews: Review[];
+    pagination: {
+      totalCount: number;
+      limit: number;
+      offset: number;
+      hasMore: boolean;
+    };
+    statistics: {
+      totalReviews: number;
+      averageRating: number;
+      ratingDistribution: Record<number, number>;
+    };
+    consultant: {
+      name: string;
+      slug: string;
+    };
+  }> {
+    const params = new URLSearchParams();
+    
+    const defaultFilters = {
+      status: 'APPROVED' as const,
+      limit: 50,
+      offset: 0,
+      ...filters
+    };
+    
+    Object.entries(defaultFilters).forEach(([key, value]) => {
+      if (value !== undefined) {
+        params.append(key, String(value));
+      }
+    });
+
+    const response = await apiRequest<ApiResponse<any>>(`/reviews/consultant/${consultantSlug}?${params}`);
+    return response.data!;
+  },
+
+  /**
+   * Get review summary for a consultant by slug (public endpoint)
+   */
+  async getReviewSummary(consultantSlug: string): Promise<ReviewSummary> {
+    const response = await apiRequest<ApiResponse<ReviewSummary>>(`/reviews/consultant/${consultantSlug}/summary`);
+    return response.data!;
+  },
+};
+
 export default api;
