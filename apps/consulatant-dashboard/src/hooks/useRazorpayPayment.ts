@@ -70,12 +70,12 @@ declare global {
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 
-// Performance Configuration for Payment Processing
+// Performance Configuration for Payment Processing - OPTIMIZED TIMEOUTS
 const PAYMENT_TIMEOUTS = {
-  CONFIG_FETCH: 10000,    // 10 seconds to get payment config
-  ORDER_CREATE: 15000,    // 15 seconds to create payment order
-  PAYMENT_VERIFY: 20000,  // 20 seconds to verify payment
-  TOTAL_FLOW: 60000,      // 60 seconds for entire payment flow
+  CONFIG_FETCH: 15000,    // 15 seconds to get payment config (increased from 10s)
+  ORDER_CREATE: 30000,    // 30 seconds to create payment order (increased from 15s) 
+  PAYMENT_VERIFY: 45000,  // 45 seconds to verify payment (increased from 20s)
+  TOTAL_FLOW: 120000,     // 120 seconds (2 minutes) for entire payment flow (increased from 60s)
 };
 
 export const useRazorpayPayment = () => {
@@ -343,12 +343,51 @@ export const useRazorpayPayment = () => {
 
       razorpayInstance.open();
 
-    } catch (error) {
-      console.error('💳 Payment processing error:', error);
+    } catch (error: any) {
+      console.error('💳 Payment processing error:', {
+        error: error.message,
+        code: error.code,
+        name: error.name,
+        sessionId: orderData.sessionId,
+        amount: orderData.amount,
+        timestamp: new Date().toISOString()
+      });
+      
       clearTimeout(totalTimeout); // Clear timeout on error
-      const errorMessage = error instanceof Error ? error.message : 'Payment failed';
-      toast.error(errorMessage);
-      onFailure?.(error);
+      
+      // Enhanced error handling with specific messages
+      let userMessage = 'Payment failed';
+      let errorCode = 'PAYMENT_ERROR';
+
+      if (error.name === 'AbortError' || error.code === 'PAYMENT_TIMEOUT') {
+        userMessage = 'Payment process timed out. Please try again.';
+        errorCode = 'PAYMENT_TIMEOUT';
+      } else if (error.message?.includes('SDK')) {
+        userMessage = 'Payment service is temporarily unavailable. Please try again.';
+        errorCode = 'PAYMENT_SDK_ERROR';
+      } else if (error.message?.includes('configuration')) {
+        userMessage = 'Payment system configuration error. Please contact support.';
+        errorCode = 'PAYMENT_CONFIG_ERROR';
+      } else if (error.message?.includes('network') || error.message?.includes('connection')) {
+        userMessage = 'Network error. Please check your connection and try again.';
+        errorCode = 'NETWORK_ERROR';
+      } else if (error.message?.includes('order')) {
+        userMessage = 'Failed to create payment order. Please try again.';
+        errorCode = 'ORDER_CREATION_ERROR';
+      } else if (error.code === 'BOOKING_TIMEOUT') {
+        userMessage = 'Session booking timed out. Please try again.';
+        errorCode = 'BOOKING_TIMEOUT';
+      } else if (error.message) {
+        userMessage = error.message;
+        errorCode = error.code || 'PAYMENT_ERROR';
+      }
+
+      toast.error(userMessage);
+      onFailure?.({
+        message: userMessage,
+        code: errorCode,
+        originalError: error
+      });
     } finally {
       setIsLoading(false);
     }

@@ -68,6 +68,20 @@ const bulkUpdateSchema = zod_1.z.object({
         message: 'At least one field must be provided for update'
     })
 });
+const bookSessionSchema = zod_1.z.object({
+    // Client information (auto-create if not exists)
+    fullName: zod_1.z.string().min(1, 'Full name is required').max(200, 'Name too long'),
+    email: zod_1.z.string().email('Invalid email address'),
+    phone: zod_1.z.string().min(1, 'Phone number is required').max(20, 'Phone number too long'),
+    // Session information
+    sessionType: zod_1.z.enum(['PERSONAL', 'WEBINAR']),
+    selectedDate: zod_1.z.string().optional(), // Optional for manual scheduling
+    selectedTime: zod_1.z.string().optional(), // Optional for manual scheduling  
+    duration: zod_1.z.number().min(15).max(480).default(60),
+    amount: zod_1.z.number().gte(0, 'Amount cannot be negative'),
+    clientNotes: zod_1.z.string().max(1000).optional(),
+    consultantSlug: zod_1.z.string().min(1, 'Consultant slug is required')
+});
 /**
  * GET /api/sessions
  * Get sessions with filtering, sorting, and pagination
@@ -513,6 +527,317 @@ router.post('/', (0, validation_1.validateRequest)(createSessionSchema), async (
         }
         console.error('❌ Create session error:', error);
         throw new errorHandler_1.AppError('Failed to create session', 500, 'SESSION_CREATE_ERROR');
+    }
+});
+/**
+ * POST /api/book
+ * Book a session with automatic client creation
+ * This endpoint is used by the public booking system (no authentication required)
+ */
+router.post('/book', (0, validation_1.validateRequest)(bookSessionSchema), async (req, res) => {
+    try {
+        const { fullName, email, phone, sessionType, selectedDate, selectedTime, duration, amount, clientNotes, consultantSlug } = req.body;
+        console.log('🚀 Session booking request received:', {
+            consultantSlug,
+            sessionType,
+            email,
+            hasSchedule: !!(selectedDate && selectedTime),
+            timestamp: new Date().toISOString()
+        });
+        const prisma = (0, database_1.getPrismaClient)();
+        // Find consultant by slug
+        const consultant = await prisma.consultant.findUnique({
+            where: { slug: consultantSlug },
+            select: {
+                id: true,
+                email: true,
+                firstName: true,
+                lastName: true,
+                teamsAccessToken: true,
+                teamsTokenExpiresAt: true,
+                personalSessionPrice: true,
+                webinarSessionPrice: true,
+                isApprovedByAdmin: true,
+                isActive: true
+            }
+        });
+        if (!consultant) {
+            throw new errorHandler_1.NotFoundError('Consultant');
+        }
+        if (!consultant.isApprovedByAdmin || !consultant.isActive) {
+            throw new errorHandler_1.ValidationError('Consultant is not available for bookings');
+        }
+        // Find or create client
+        let client = await prisma.client.findFirst({
+            where: {
+                email: email.toLowerCase(),
+                consultantId: consultant.id
+            }
+        });
+        if (!client) {
+            console.log('📋 Creating new client:', { email, consultantId: consultant.id });
+            // Split fullName into firstName and lastName
+            const nameParts = fullName.trim().split(' ');
+            const firstName = nameParts[0] || fullName;
+            const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+            client = await prisma.client.create({
+                data: {
+                    consultantId: consultant.id,
+                    firstName: firstName,
+                    lastName: lastName,
+                    name: fullName,
+                    email: email.toLowerCase(),
+                    phoneNumber: phone,
+                    isActive: true,
+                    totalSessions: 0,
+                    totalAmountPaid: 0
+                }
+            });
+            console.log('✅ Client created:', { clientId: client.id, email: client.email });
+        }
+        else {
+            console.log('📋 Using existing client:', { clientId: client.id, email: client.email });
+        }
+        // Validate session pricing
+        const expectedPrice = sessionType === 'PERSONAL'
+            ? consultant.personalSessionPrice
+            : consultant.webinarSessionPrice;
+        if (expectedPrice && Math.abs(Number(expectedPrice) - amount) > 0.01) {
+            console.warn('⚠️ Price mismatch:', {
+                expected: expectedPrice,
+                received: amount,
+                sessionType
+            });
+        }
+        // Generate session title
+        const sessionTitle = sessionType === 'PERSONAL'
+            ? `Personal Consultation with ${consultant.firstName} ${consultant.lastName}`
+            : `Webinar Session with ${consultant.firstName} ${consultant.lastName}`;
+        // Create session data
+        const sessionData = {
+            consultantId: consultant.id,
+            clientId: client.id,
+            title: sessionTitle,
+            sessionType,
+            durationMinutes: duration,
+            amount,
+            notes: clientNotes || '',
+            status: 'PENDING',
+            paymentStatus: 'PENDING',
+            paymentMethod: 'online',
+            bookingSource: 'public_booking', // Mark as public booking
+            currency: 'INR',
+            platform: 'TEAMS' // Default to Teams
+        };
+        // Handle scheduled vs manual booking
+        if (selectedDate && selectedTime) {
+            console.log('📅 Scheduled booking:', { selectedDate, selectedTime });
+            // Validate scheduling data
+            const scheduledDateTime = new Date(`${selectedDate}T${selectedTime}`);
+            if (scheduledDateTime <= new Date()) {
+                throw new errorHandler_1.ValidationError('Selected time must be in the future');
+            }
+            // Check for scheduling conflicts
+            const conflictingSession = await prisma.session.findFirst({
+                where: {
+                    consultantId: consultant.id,
+                    scheduledDate: new Date(selectedDate),
+                    scheduledTime: selectedTime,
+                    status: {
+                        not: 'CANCELLED'
+                    }
+                }
+            });
+            if (conflictingSession) {
+                throw new errorHandler_1.ValidationError('This time slot is already booked');
+            }
+            sessionData.scheduledDate = new Date(selectedDate);
+            sessionData.scheduledTime = selectedTime;
+            // Try to generate meeting link for scheduled sessions
+            if (consultant.teamsAccessToken && consultant.teamsTokenExpiresAt) {
+                if (consultant.teamsTokenExpiresAt > new Date()) {
+                    try {
+                        console.log('🔗 Generating Teams meeting for scheduled session...');
+                        const meetingDetails = await (0, meetingService_1.generateMeetingLink)('TEAMS', {
+                            title: sessionTitle,
+                            startTime: scheduledDateTime,
+                            duration: duration,
+                            consultantEmail: consultant.email,
+                            clientEmail: client.email
+                        }, consultant.teamsAccessToken);
+                        sessionData.meetingLink = meetingDetails.meetingLink;
+                        sessionData.meetingId = meetingDetails.meetingId;
+                        sessionData.meetingPassword = meetingDetails.password;
+                        console.log('✅ Teams meeting created:', { meetingId: meetingDetails.meetingId });
+                    }
+                    catch (meetingError) {
+                        console.warn('⚠️ Teams meeting creation failed (will retry after payment):', meetingError);
+                        // Don't fail the booking, meeting can be created after payment
+                    }
+                }
+                else {
+                    console.warn('⚠️ Teams token expired, meeting will be created after payment');
+                }
+            }
+            else {
+                console.warn('⚠️ Teams not connected, meeting will be created after payment');
+            }
+        }
+        else {
+            console.log('📝 Manual booking (no specific schedule)');
+            // For manual bookings, consultant will contact client directly
+        }
+        // Create the session
+        const session = await prisma.session.create({
+            data: sessionData,
+            include: {
+                client: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                        phoneNumber: true
+                    }
+                }
+            }
+        });
+        // Mark availability slot as booked if applicable
+        if (selectedDate && selectedTime) {
+            await prisma.availabilitySlot.updateMany({
+                where: {
+                    consultantId: consultant.id,
+                    sessionType,
+                    date: new Date(selectedDate),
+                    startTime: selectedTime,
+                    isBooked: false
+                },
+                data: {
+                    isBooked: true,
+                    sessionId: session.id
+                }
+            });
+        }
+        // Clear related caches
+        await redis_1.cacheUtils.clearPattern(`sessions:${consultant.id}:*`);
+        await redis_1.cacheUtils.clearPattern(`dashboard_*:${consultant.id}:*`);
+        await redis_1.cacheUtils.clearPattern(`availability:*:${consultantSlug}:*`);
+        console.log('✅ Session booking created:', {
+            sessionId: session.id,
+            clientId: client.id,
+            consultantId: consultant.id,
+            hasSchedule: !!(selectedDate && selectedTime),
+            hasMeeting: !!session.meetingLink
+        });
+        res.status(201).json({
+            success: true,
+            message: selectedDate && selectedTime
+                ? 'Session booked successfully'
+                : 'Booking request submitted successfully',
+            data: {
+                session: {
+                    ...session,
+                    amount: Number(session.amount)
+                },
+                client: session.client,
+                consultant: {
+                    id: consultant.id,
+                    name: `${consultant.firstName} ${consultant.lastName}`,
+                    email: consultant.email
+                },
+                bookingType: selectedDate && selectedTime ? 'scheduled' : 'manual'
+            }
+        });
+    }
+    catch (error) {
+        // Extract request data for logging
+        const requestData = req.body;
+        const { consultantSlug, sessionType, email, fullName, phone, selectedDate, selectedTime, duration, amount } = requestData;
+        // Comprehensive error logging
+        console.error('❌ Session booking error:', {
+            consultantSlug: consultantSlug,
+            sessionType: sessionType,
+            email: email,
+            errorType: error.constructor.name,
+            errorMessage: error.message,
+            errorStack: error.stack,
+            timestamp: new Date().toISOString(),
+            requestData: {
+                fullName: fullName,
+                email: email,
+                phone: phone,
+                sessionType: sessionType,
+                selectedDate: selectedDate,
+                selectedTime: selectedTime,
+                duration: duration,
+                amount: amount
+            }
+        });
+        // Handle specific error types
+        if (error instanceof errorHandler_1.NotFoundError) {
+            console.error('🔍 Consultant not found:', { consultantSlug: consultantSlug });
+            throw new errorHandler_1.NotFoundError('Consultant not found or not available for bookings');
+        }
+        if (error instanceof errorHandler_1.ValidationError) {
+            console.error('⚠️ Validation error in booking:', {
+                consultantSlug: consultantSlug,
+                validationError: error.message
+            });
+            throw error;
+        }
+        // Handle Prisma database errors
+        if (error.code) {
+            switch (error.code) {
+                case 'P2002':
+                    console.error('🔒 Database constraint violation:', {
+                        consultantSlug: consultantSlug,
+                        constraint: error.meta?.target
+                    });
+                    throw new errorHandler_1.ValidationError('A session already exists for this time slot');
+                case 'P2025':
+                    console.error('🔍 Database record not found:', {
+                        consultantSlug: consultantSlug,
+                        recordType: error.meta?.cause
+                    });
+                    throw new errorHandler_1.NotFoundError('Required data not found');
+                case 'P2003':
+                    console.error('🔗 Database foreign key constraint failed:', {
+                        consultantSlug: consultantSlug,
+                        field: error.meta?.field_name
+                    });
+                    throw new errorHandler_1.ValidationError('Invalid consultant or client data');
+                default:
+                    console.error('💾 Database error:', {
+                        consultantSlug: consultantSlug,
+                        code: error.code,
+                        message: error.message
+                    });
+                    throw new errorHandler_1.AppError('Database error during booking', 500, 'DATABASE_ERROR');
+            }
+        }
+        // Handle meeting service errors
+        if (error.message?.includes('Teams') || error.message?.includes('meeting')) {
+            console.error('🔗 Meeting creation error (non-blocking):', {
+                consultantSlug: consultantSlug,
+                meetingError: error.message
+            });
+            // Continue with booking even if meeting creation fails
+        }
+        // Handle network/timeout errors
+        if (error.name === 'TimeoutError' || error.code === 'ETIMEDOUT') {
+            console.error('⏰ Booking timeout error:', {
+                consultantSlug: consultantSlug,
+                timeout: true
+            });
+            throw new errorHandler_1.AppError('Booking request timed out. Please try again.', 408, 'BOOKING_TIMEOUT');
+        }
+        // Generic error fallback
+        console.error('🚨 Unexpected booking error:', {
+            consultantSlug: consultantSlug,
+            errorName: error.name,
+            errorMessage: error.message,
+            errorCode: error.code
+        });
+        throw new errorHandler_1.AppError('Failed to book session. Please try again or contact support.', 500, 'SESSION_BOOKING_ERROR');
     }
 });
 /**
