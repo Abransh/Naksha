@@ -8,10 +8,10 @@ const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000';
 const API_VERSION = 'v1';
 const API_URL = `${API_BASE_URL}/api/${API_VERSION}`;
 
-// Timeout configurations for different operations
+// Timeout configurations for different operations - OPTIMIZED FOR PAYMENT FLOW
 const API_TIMEOUTS = {
   DEFAULT: 30000,       // 30 seconds for normal requests
-  BOOKING: 20000,       // 20 seconds for booking requests (matching backend)
+  BOOKING: 45000,       // 45 seconds for booking requests (increased for complex workflow)
   AUTH: 15000,          // 15 seconds for auth requests
   UPLOAD: 60000,        // 60 seconds for file uploads
 };
@@ -891,7 +891,7 @@ export const bookSession = async (bookingData: {
   });
 
   try {
-    const response = await fetchWithTimeout(`${API_URL}/book`, {
+    const response = await fetchWithTimeout(`${API_URL}/sessions/book`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',

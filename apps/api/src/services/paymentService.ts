@@ -290,15 +290,100 @@ export const processSuccessfulPayment = async (
 
     // Update related entities
     if (paymentTransaction.sessionId) {
-      // Update session payment status
+      // Get session details for Teams meeting creation
+      const session = await prisma.session.findUnique({
+        where: { id: paymentTransaction.sessionId },
+        include: {
+          client: true,
+          consultant: {
+            select: {
+              id: true,
+              email: true,
+              firstName: true,
+              lastName: true,
+              teamsAccessToken: true,
+              teamsTokenExpiresAt: true
+            }
+          }
+        }
+      });
+
+      let sessionUpdateData: any = {
+        paymentStatus: 'PAID',
+        paymentId: razorpayPaymentId,
+        paymentMethod: razorpayPayment.method,
+        status: 'CONFIRMED', // Update status to CONFIRMED after successful payment
+        updatedAt: new Date()
+      };
+
+      // Create Teams meeting if session is scheduled and doesn't have meeting link
+      if (session && session.scheduledDate && session.scheduledTime && !session.meetingLink) {
+        console.log('🔗 Creating Teams meeting for confirmed session:', {
+          sessionId: session.id,
+          scheduledDate: session.scheduledDate,
+          scheduledTime: session.scheduledTime,
+          hasTeamsToken: !!session.consultant.teamsAccessToken
+        });
+
+        try {
+          // Check if consultant has valid Teams token
+          if (session.consultant.teamsAccessToken && session.consultant.teamsTokenExpiresAt) {
+            const tokenIsValid = session.consultant.teamsTokenExpiresAt > new Date();
+            
+            if (tokenIsValid) {
+              // Import Teams meeting service
+              const { generateMeetingLink } = await import('./meetingService');
+              
+              // Create meeting link
+              const scheduledDateTime = new Date(`${session.scheduledDate.toISOString().split('T')[0]}T${session.scheduledTime}`);
+              
+              const meetingDetails = await generateMeetingLink(
+                'TEAMS',
+                {
+                  title: session.title,
+                  startTime: scheduledDateTime,
+                  duration: session.durationMinutes,
+                  consultantEmail: session.consultant.email,
+                  clientEmail: session.client.email,
+                  description: `Consultation session - Payment confirmed`
+                },
+                session.consultant.teamsAccessToken
+              );
+
+              // Add meeting details to session update
+              sessionUpdateData.meetingLink = meetingDetails.meetingLink;
+              sessionUpdateData.meetingId = meetingDetails.meetingId;
+              sessionUpdateData.meetingPassword = meetingDetails.password;
+
+              console.log('✅ Teams meeting created after payment:', {
+                sessionId: session.id,
+                meetingId: meetingDetails.meetingId
+              });
+            } else {
+              console.warn('⚠️ Teams token expired, cannot create meeting:', {
+                sessionId: session.id,
+                tokenExpired: session.consultant.teamsTokenExpiresAt?.toISOString()
+              });
+            }
+          } else {
+            console.warn('⚠️ Teams not configured for consultant:', {
+              sessionId: session.id,
+              consultantId: session.consultant.id
+            });
+          }
+        } catch (meetingError) {
+          console.error('❌ Teams meeting creation failed after payment:', {
+            sessionId: session.id,
+            error: meetingError.message
+          });
+          // Don't fail the payment processing if meeting creation fails
+        }
+      }
+
+      // Update session with payment and meeting details
       await prisma.session.update({
         where: { id: paymentTransaction.sessionId },
-        data: {
-          paymentStatus: 'PAID',
-          paymentId: razorpayPaymentId,
-          paymentMethod: razorpayPayment.method,
-          updatedAt: new Date()
-        }
+        data: sessionUpdateData
       });
 
       // Update client's total amount paid
@@ -313,9 +398,20 @@ export const processSuccessfulPayment = async (
         });
       }
 
-      // Send confirmation emails
-      if (paymentTransaction.session) {
-        await sendPaymentConfirmationEmails(paymentTransaction.session, updatedTransaction);
+      // Send confirmation emails with updated session data (including meeting links)
+      if (session) {
+        // Refresh session data to include meeting links
+        const updatedSession = await prisma.session.findUnique({
+          where: { id: session.id },
+          include: {
+            client: true,
+            consultant: true
+          }
+        });
+
+        if (updatedSession) {
+          await sendPaymentConfirmationEmails(updatedSession, updatedTransaction);
+        }
       }
     }
 
@@ -594,22 +690,16 @@ const sendPaymentConfirmationEmails = async (
   transaction: any
 ): Promise<void> => {
   try {
-    // Email to client via Resend
-    await sendPaymentConfirmationViaResend({
-      clientName: session.client.name,
+    console.log('📧 Sending payment confirmation emails with meeting details:', {
+      sessionId: session.id,
+      hasSchedule: !!(session.scheduledDate && session.scheduledTime),
+      hasMeetingLink: !!session.meetingLink,
       clientEmail: session.client.email,
-      consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
-      consultantEmail: session.consultant.email,
-      amount: Number(transaction.amount),
-      currency: transaction.currency,
-      transactionId: transaction.gatewayPaymentId,
-      paymentMethod: transaction.paymentMethod || 'Online',
-      sessionTitle: session.title,
-      sessionDate: session.scheduledDate.toLocaleDateString()
+      consultantEmail: session.consultant.email
     });
 
-    // Email to consultant (payment received notification) via Resend
-    await sendPaymentConfirmationViaResend({
+    // Prepare session details for email
+    const emailData = {
       clientName: session.client.name,
       clientEmail: session.client.email,
       consultantName: `${session.consultant.firstName} ${session.consultant.lastName}`,
@@ -619,11 +709,43 @@ const sendPaymentConfirmationEmails = async (
       transactionId: transaction.gatewayPaymentId,
       paymentMethod: transaction.paymentMethod || 'Online',
       sessionTitle: session.title,
-      sessionDate: session.scheduledDate.toLocaleDateString()
+      sessionDate: session.scheduledDate ? session.scheduledDate.toLocaleDateString() : 'To be scheduled',
+      sessionTime: session.scheduledTime ? session.scheduledTime : 'To be confirmed',
+      sessionDuration: session.durationMinutes || 60,
+      meetingLink: session.meetingLink || null,
+      meetingPlatform: session.platform || 'TEAMS',
+      sessionType: session.sessionType,
+      sessionNotes: session.notes || '',
+      bookingType: session.scheduledDate && session.scheduledTime ? 'scheduled' : 'manual'
+    };
+
+    // Email to client (with meeting link if available)
+    await sendPaymentConfirmationViaResend({
+      ...emailData,
+      recipientType: 'client',
+      emailType: 'session_confirmed_with_payment'
+    });
+
+    // Email to consultant (payment received notification)  
+    await sendPaymentConfirmationViaResend({
+      ...emailData,
+      recipientType: 'consultant',
+      emailType: 'payment_received_confirmation'
+    });
+
+    console.log('✅ Payment confirmation emails sent successfully:', {
+      sessionId: session.id,
+      clientNotified: true,
+      consultantNotified: true,
+      meetingIncluded: !!session.meetingLink
     });
 
   } catch (error) {
-    console.error('❌ Send payment confirmation emails error:', error);
+    console.error('❌ Send payment confirmation emails error:', {
+      sessionId: session?.id,
+      error: error.message,
+      stack: error.stack
+    });
   }
 };
 

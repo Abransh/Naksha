@@ -93,25 +93,13 @@ export const useConsultantShowcase = (slug: string) => {
   // Mock testimonials data (since it's not in the backend yet)
   const testimonials = [
     {
-      id: 1,
-      text: "Excellent guidance and deep expertise. The session was incredibly valuable and provided clear direction for my career growth.",
-      author: profile?.consultant?.firstName || "Anonymous",
-      service: "portfolio review",
-      rating: 5,
+     
     },
     {
-      id: 2,
-      text: "Highly recommend for anyone looking to advance their career. Professional, insightful, and practical advice.",
-      author: profile?.consultant?.firstName || "Anonymous", 
-      service: "career consultation",
-      rating: 5,
+     
     },
     {
-      id: 3,
-      text: "Great experience! Clear communication and actionable insights that I could implement immediately.",
-      author: profile?.consultant?.firstName || "Anonymous",
-      service: "strategy session",
-      rating: 4,
+     
     },
   ];
 
