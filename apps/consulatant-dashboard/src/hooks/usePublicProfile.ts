@@ -90,27 +90,17 @@ export const usePublicProfile = (
 export const useConsultantShowcase = (slug: string) => {
   const { profile, isLoading, error, refetch } = usePublicProfile(slug);
 
-  // Mock testimonials data (since it's not in the backend yet)
-  const testimonials = [
-    {
-     
-    },
-    {
-     
-    },
-    {
-     
-    },
-  ];
+  // Empty testimonials array - reviews now come from database via useReviews hook
+  const testimonials: any[] = [];
 
-  // Calculate ratings (mock data)
+  // Ratings will be provided by useReviews hook in the component
   const ratings = {
-    average: 4.7,
-    total: 24,
+    average: 0,
+    total: 0,
     distribution: {
-      5: 18,
-      4: 4,
-      3: 2,
+      5: 0,
+      4: 0,
+      3: 0,
       2: 0,
       1: 0,
     }
@@ -126,8 +116,8 @@ export const useConsultantShowcase = (slug: string) => {
       price: profile.consultant.personalSessionPrice || 200,
       currency: 'INR',
       available: true,
-      rating: ratings.average,
-      totalRatings: ratings.total,
+      rating: 0, // Will be set by parent component using useReviews data
+      totalRatings: 0, // Will be set by parent component using useReviews data
     },
     {
       id: 'webinar',
