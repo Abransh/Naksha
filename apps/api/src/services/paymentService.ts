@@ -371,10 +371,10 @@ export const processSuccessfulPayment = async (
               consultantId: session.consultant.id
             });
           }
-        } catch (meetingError) {
+        } catch (meetingError: any) {
           console.error('❌ Teams meeting creation failed after payment:', {
             sessionId: session.id,
-            error: meetingError.message
+            error: meetingError?.message || 'Unknown meeting error'
           });
           // Don't fail the payment processing if meeting creation fails
         }
@@ -721,16 +721,30 @@ const sendPaymentConfirmationEmails = async (
 
     // Email to client (with meeting link if available)
     await sendPaymentConfirmationViaResend({
-      ...emailData,
-      recipientType: 'client',
-      emailType: 'session_confirmed_with_payment'
+      clientName: emailData.clientName,
+      consultantName: emailData.consultantName,
+      clientEmail: emailData.clientEmail,
+      consultantEmail: emailData.consultantEmail,
+      amount: emailData.amount,
+      currency: emailData.currency,
+      transactionId: emailData.transactionId,
+      paymentMethod: emailData.paymentMethod,
+      sessionTitle: emailData.sessionTitle,
+      sessionDate: emailData.sessionDate
     });
 
     // Email to consultant (payment received notification)  
     await sendPaymentConfirmationViaResend({
-      ...emailData,
-      recipientType: 'consultant',
-      emailType: 'payment_received_confirmation'
+      clientName: emailData.clientName,
+      consultantName: emailData.consultantName,
+      clientEmail: emailData.clientEmail,
+      consultantEmail: emailData.consultantEmail,
+      amount: emailData.amount,
+      currency: emailData.currency,
+      transactionId: emailData.transactionId,
+      paymentMethod: emailData.paymentMethod,
+      sessionTitle: emailData.sessionTitle,
+      sessionDate: emailData.sessionDate
     });
 
     console.log('✅ Payment confirmation emails sent successfully:', {
@@ -740,11 +754,11 @@ const sendPaymentConfirmationEmails = async (
       meetingIncluded: !!session.meetingLink
     });
 
-  } catch (error) {
+  } catch (error: any) {
     console.error('❌ Send payment confirmation emails error:', {
       sessionId: session?.id,
-      error: error.message,
-      stack: error.stack
+      error: error?.message || 'Unknown error',
+      stack: error?.stack
     });
   }
 };

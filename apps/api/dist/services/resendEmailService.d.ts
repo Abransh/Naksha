@@ -26,9 +26,10 @@ interface QuotationEmailData {
     quotationName: string;
     description?: string;
     baseAmount: number;
-    discountPercentage: number;
+    taxPercentage: number;
     finalAmount: number;
     currency: string;
+    gstNumber?: string;
     validUntil?: string;
     notes?: string;
     clientName: string;

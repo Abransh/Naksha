@@ -662,9 +662,16 @@ router.post('/book',
       if (!client) {
         console.log('📋 Creating new client:', { email, consultantId: consultant.id });
         
+        // Split fullName into firstName and lastName
+        const nameParts = fullName.trim().split(' ');
+        const firstName = nameParts[0] || fullName;
+        const lastName = nameParts.length > 1 ? nameParts.slice(1).join(' ') : '';
+
         client = await prisma.client.create({
           data: {
             consultantId: consultant.id,
+            firstName: firstName,
+            lastName: lastName,
             name: fullName,
             email: email.toLowerCase(),
             phoneNumber: phone,
@@ -847,36 +854,40 @@ router.post('/book',
       });
 
     } catch (error: any) {
+      // Extract request data for logging
+      const requestData = req.body;
+      const { consultantSlug, sessionType, email, fullName, phone, selectedDate, selectedTime, duration, amount } = requestData;
+
       // Comprehensive error logging
       console.error('❌ Session booking error:', {
-        consultantSlug,
-        sessionType,
-        email,
+        consultantSlug: consultantSlug,
+        sessionType: sessionType,
+        email: email,
         errorType: error.constructor.name,
         errorMessage: error.message,
         errorStack: error.stack,
         timestamp: new Date().toISOString(),
         requestData: {
-          fullName,
-          email,
-          phone,
-          sessionType,
-          selectedDate,
-          selectedTime,
-          duration,
-          amount
+          fullName: fullName,
+          email: email,
+          phone: phone,
+          sessionType: sessionType,
+          selectedDate: selectedDate,
+          selectedTime: selectedTime,
+          duration: duration,
+          amount: amount
         }
       });
 
       // Handle specific error types
       if (error instanceof NotFoundError) {
-        console.error('🔍 Consultant not found:', { consultantSlug });
+        console.error('🔍 Consultant not found:', { consultantSlug: consultantSlug });
         throw new NotFoundError('Consultant not found or not available for bookings');
       }
       
       if (error instanceof ValidationError) {
         console.error('⚠️ Validation error in booking:', {
-          consultantSlug,
+          consultantSlug: consultantSlug,
           validationError: error.message
         });
         throw error;
@@ -887,28 +898,28 @@ router.post('/book',
         switch (error.code) {
           case 'P2002':
             console.error('🔒 Database constraint violation:', {
-              consultantSlug,
+              consultantSlug: consultantSlug,
               constraint: error.meta?.target
             });
             throw new ValidationError('A session already exists for this time slot');
           
           case 'P2025':
             console.error('🔍 Database record not found:', {
-              consultantSlug,
+              consultantSlug: consultantSlug,
               recordType: error.meta?.cause
             });
             throw new NotFoundError('Required data not found');
           
           case 'P2003':
             console.error('🔗 Database foreign key constraint failed:', {
-              consultantSlug,
+              consultantSlug: consultantSlug,
               field: error.meta?.field_name
             });
             throw new ValidationError('Invalid consultant or client data');
           
           default:
             console.error('💾 Database error:', {
-              consultantSlug,
+              consultantSlug: consultantSlug,
               code: error.code,
               message: error.message
             });
@@ -919,7 +930,7 @@ router.post('/book',
       // Handle meeting service errors
       if (error.message?.includes('Teams') || error.message?.includes('meeting')) {
         console.error('🔗 Meeting creation error (non-blocking):', {
-          consultantSlug,
+          consultantSlug: consultantSlug,
           meetingError: error.message
         });
         // Continue with booking even if meeting creation fails
@@ -928,7 +939,7 @@ router.post('/book',
       // Handle network/timeout errors
       if (error.name === 'TimeoutError' || error.code === 'ETIMEDOUT') {
         console.error('⏰ Booking timeout error:', {
-          consultantSlug,
+          consultantSlug: consultantSlug,
           timeout: true
         });
         throw new AppError('Booking request timed out. Please try again.', 408, 'BOOKING_TIMEOUT');
@@ -936,7 +947,7 @@ router.post('/book',
 
       // Generic error fallback
       console.error('🚨 Unexpected booking error:', {
-        consultantSlug,
+        consultantSlug: consultantSlug,
         errorName: error.name,
         errorMessage: error.message,
         errorCode: error.code

@@ -19,7 +19,7 @@ import { AuthenticatedRequest } from '../../middleware/auth';
 import { validateRequest, commonSchemas } from '../../middleware/validation';
 import { AppError, NotFoundError, ValidationError } from '../../middleware/errorHandler';
 import { sendQuotationEmails } from '../../services/resendEmailService';
-// import { generateQuotationPDF } from '../../services/pdfService'; // TODO: Create PDF service
+
 import { uploadToCloudinary } from '../../services/uploadService';
 
 const router = Router();

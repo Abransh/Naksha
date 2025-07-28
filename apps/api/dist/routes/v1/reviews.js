@@ -10,7 +10,17 @@ const logger_1 = require("../../utils/logger");
 const router = (0, express_1.Router)();
 // Validation schemas
 const createReviewSchema = zod_1.z.object({
-    consultantId: zod_1.z.string().cuid(),
+    consultantId: zod_1.z.string().refine((value) => {
+        // Allow either CUID format or slug: prefix
+        if (value.startsWith('slug:')) {
+            const slug = value.replace('slug:', '');
+            return slug.length > 0 && /^[a-zA-Z0-9-_]+$/.test(slug);
+        }
+        // Validate CUID format for direct IDs
+        return /^[a-z0-9]{25}$/.test(value);
+    }, {
+        message: 'Invalid consultant ID format. Must be either a valid CUID or slug:consultantSlug format'
+    }),
     reviewerName: zod_1.z.string().min(1, 'Name is required').max(100),
     reviewerEmail: zod_1.z.string().email().optional(),
     rating: zod_1.z.number().int().min(1).max(5),
