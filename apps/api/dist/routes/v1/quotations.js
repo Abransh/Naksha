@@ -19,6 +19,7 @@ const redis_1 = require("../../config/redis");
 const validation_1 = require("../../middleware/validation");
 const errorHandler_1 = require("../../middleware/errorHandler");
 const resendEmailService_1 = require("../../services/resendEmailService");
+// PDF generation and upload services removed as requested
 const router = (0, express_1.Router)();
 /**
  * Validation schemas
@@ -30,19 +31,18 @@ const createQuotationSchema = zod_1.z.object({
     quotationName: zod_1.z.string().min(1, 'Quotation name is required').max(300),
     description: zod_1.z.string().max(2000, 'Description too long').optional(),
     baseAmount: zod_1.z.number().gte(0, 'Base amount cannot be negative'),
-    discountPercentage: zod_1.z.number().min(0).max(100, 'Discount cannot exceed 100%').optional().default(0),
+    // discountPercentage removed - not implemented in database
     currency: zod_1.z.string().length(3, 'Currency must be 3 characters').optional().default('INR'),
-    durationText: zod_1.z.string().max(100, 'Duration text too long').optional(),
+    // durationText removed - not in database
     expiryDays: zod_1.z.number().min(1).max(365, 'Expiry must be between 1-365 days').optional().default(30),
     notes: zod_1.z.string().max(1000, 'Notes too long').optional(),
-    includeImage: zod_1.z.boolean().optional().default(false)
+    // includeImage removed - PDF functionality removed
 });
 const updateQuotationSchema = zod_1.z.object({
     quotationName: zod_1.z.string().min(1).max(300).optional(),
     description: zod_1.z.string().max(2000).optional(),
     baseAmount: zod_1.z.number().gte(0).optional(),
-    discountPercentage: zod_1.z.number().min(0).max(100).optional(),
-    durationText: zod_1.z.string().max(100).optional(),
+    // discountPercentage and durationText removed - not in database
     expiresAt: zod_1.z.string().datetime().optional(),
     status: zod_1.z.enum(['DRAFT', 'SENT', 'VIEWED', 'ACCEPTED', 'REJECTED', 'EXPIRED']).optional(),
     notes: zod_1.z.string().max(1000).optional()
@@ -118,23 +118,19 @@ router.get('/', (0, validation_1.validateRequest)(quotationFiltersSchema, 'query
         });
         // Format response data
         const formattedQuotations = quotations.map((quotation) => {
-            const finalAmount = Number(quotation.amount) * (1 - Number(0) / 100);
             return {
                 id: quotation.id,
                 quotationName: quotation.quotationName,
                 clientName: quotation.clientName,
                 clientEmail: quotation.clientEmail,
-                // client info available through clientName and clientEmail
                 description: quotation.description,
-                baseAmount: Number(quotation.amount),
-                discountPercentage: 0, // Not implemented yet
-                finalAmount: Number(quotation.amount),
+                baseAmount: Number(quotation.baseAmount),
+                finalAmount: Number(quotation.finalAmount),
                 currency: quotation.currency,
                 validUntil: quotation.validUntil,
                 status: quotation.status,
                 quotationNumber: quotation.quotationNumber,
-                // viewCount not implemented yet
-                lastViewedAt: quotation.lastViewedAt,
+                viewCount: quotation.viewCount || 0,
                 sentAt: quotation.sentAt,
                 acceptedAt: quotation.acceptedAt,
                 notes: quotation.notes,
@@ -207,16 +203,15 @@ router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: valida
         const formattedQuotation = {
             ...quotation,
             baseAmount: Number(quotation.baseAmount),
-            discountPercentage: Number(quotation.discountPercentage),
             finalAmount: Number(quotation.finalAmount),
             client: {
                 name: quotation.clientName,
                 email: quotation.clientEmail,
                 company: quotation.clientCompany
             },
-            isExpired: quotation.expiresAt ? new Date() > quotation.expiresAt : false,
-            daysUntilExpiry: quotation.expiresAt
-                ? Math.ceil((quotation.expiresAt.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+            isExpired: quotation.validUntil ? new Date() > quotation.validUntil : false,
+            daysUntilExpiry: quotation.validUntil
+                ? Math.ceil((quotation.validUntil.getTime() - Date.now()) / (1000 * 60 * 60 * 24))
                 : null
         };
         res.json({
@@ -240,8 +235,8 @@ router.post('/', (0, validation_1.validateRequest)(createQuotationSchema), async
         const consultantId = req.user.id;
         const quotationData = req.body;
         const prisma = (0, database_1.getPrismaClient)();
-        // Calculate final amount
-        const finalAmount = quotationData.baseAmount * (1 - quotationData.discountPercentage / 100);
+        // Calculate final amount (no discount calculation needed)
+        const finalAmount = quotationData.baseAmount;
         // Calculate expiry date
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + quotationData.expiryDays);
@@ -274,51 +269,17 @@ router.post('/', (0, validation_1.validateRequest)(createQuotationSchema), async
                 title: quotationData.quotationName, // Required field
                 description: quotationData.description || '',
                 baseAmount: quotationData.baseAmount,
-                discountPercentage: quotationData.discountPercentage,
                 finalAmount,
                 amount: finalAmount, // Alias for finalAmount
                 currency: quotationData.currency,
                 validUntil: expiresAt, // Required field
-                expiresAt,
+                // expiresAt field removed - using validUntil
                 notes: quotationData.notes,
                 status: 'DRAFT',
                 quotationNumber: `QT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}` // Generate unique quotation number
             }
         });
-        // Generate quotation image/PDF if requested
-        if (quotationData.includeImage) {
-            try {
-                // TODO: Implement PDF generation service
-                const quotationPDF = { secure_url: null }; // Placeholder
-                /*
-                const quotationPDF = await generateQuotationPDF({
-                  quotation: {
-                    ...quotation,
-                    finalAmount: Number(finalAmount),
-                    baseAmount: Number(quotation.amount),
-                    discountPercentage: Number(0)
-                  },
-                  consultant: {
-                    name: `${req.user!.firstName} ${req.user!.lastName}`,
-                    email: req.user!.email
-                  }
-                });
-                */
-                // Upload PDF to Cloudinary
-                // TODO: Upload generated PDF to cloud storage
-                const uploadResult = { secure_url: null }; // Placeholder
-                // Update quotation with image URL
-                await prisma.quotation.update({
-                    where: { id: quotation.id },
-                    data: { // quotationImageUrl: uploadResult.secure_url // TODO: Remove when PDF service is implemented
-                    }
-                });
-            }
-            catch (imageError) {
-                console.error('❌ Quotation image generation failed:', imageError);
-                // Don't fail quotation creation if image generation fails
-            }
-        }
+        // PDF generation removed as requested
         // Clear related caches
         await redis_1.cacheUtils.clearPattern(`quotations:${consultantId}:*`);
         await redis_1.cacheUtils.clearPattern(`dashboard_*:${consultantId}:*`);
@@ -328,8 +289,7 @@ router.post('/', (0, validation_1.validateRequest)(createQuotationSchema), async
             data: {
                 quotation: {
                     ...quotation,
-                    baseAmount: Number(quotation.amount),
-                    discountPercentage: 0, // Not implemented yet
+                    baseAmount: Number(quotation.baseAmount),
                     finalAmount: Number(quotation.finalAmount)
                 }
             }
@@ -367,12 +327,10 @@ router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: valida
         if (existingQuotation.status === 'ACCEPTED' || existingQuotation.status === 'REJECTED') {
             throw new errorHandler_1.ValidationError('Cannot update quotation that has been accepted or rejected');
         }
-        // Recalculate final amount if base amount or discount changed
+        // Recalculate final amount if base amount changed
         let finalAmount = Number(existingQuotation.finalAmount);
-        if (updates.baseAmount !== undefined || updates.discountPercentage !== undefined) {
-            const baseAmount = updates.baseAmount || Number(existingQuotation.baseAmount);
-            const discountPercentage = updates.discountPercentage || Number(existingQuotation.discountPercentage);
-            finalAmount = baseAmount * (1 - discountPercentage / 100);
+        if (updates.baseAmount !== undefined) {
+            finalAmount = updates.baseAmount;
         }
         // Update quotation
         const updatedQuotation = await prisma.quotation.update({
@@ -393,7 +351,6 @@ router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: valida
                 quotation: {
                     ...updatedQuotation,
                     baseAmount: Number(updatedQuotation.baseAmount),
-                    discountPercentage: Number(updatedQuotation.discountPercentage),
                     finalAmount: Number(updatedQuotation.finalAmount)
                 }
             }
@@ -443,7 +400,7 @@ router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: 
             throw new errorHandler_1.ValidationError('Cannot send quotation that has been accepted or rejected');
         }
         // Check if quotation is expired
-        if (quotation.expiresAt && new Date() > quotation.expiresAt) {
+        if (quotation.validUntil && new Date() > quotation.validUntil) {
             throw new errorHandler_1.ValidationError('Cannot send expired quotation');
         }
         // Prepare email data for Resend service
@@ -453,10 +410,10 @@ router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: 
             quotationName: quotation.quotationName,
             description: quotation.description,
             baseAmount: Number(quotation.baseAmount),
-            discountPercentage: Number(quotation.discountPercentage),
+            taxPercentage: Number(quotation.taxPercentage || 0),
             finalAmount: Number(quotation.finalAmount),
             currency: quotation.currency,
-            validUntil: quotation.expiresAt?.toISOString(),
+            validUntil: quotation.validUntil?.toISOString(),
             notes: quotation.notes || undefined,
             clientName: quotation.clientName,
             clientEmail: quotation.clientEmail,
@@ -503,7 +460,6 @@ router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: 
                 quotation: {
                     ...updatedQuotation,
                     baseAmount: Number(updatedQuotation.baseAmount),
-                    discountPercentage: Number(updatedQuotation.discountPercentage),
                     finalAmount: Number(updatedQuotation.finalAmount)
                 },
                 emailStatus: {

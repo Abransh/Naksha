@@ -56,7 +56,7 @@ interface QuotationEmailData {
   quotationName: string;
   description?: string;
   baseAmount: number;
-  taxPercentage: number;
+  taxPercentage?: number; // Optional since not all quotations have tax
   finalAmount: number;
   currency: string;
   gstNumber?: string;
