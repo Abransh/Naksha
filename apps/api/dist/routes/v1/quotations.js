@@ -412,7 +412,7 @@ router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: 
             baseAmount: Number(quotation.baseAmount),
             taxPercentage: Number(quotation.taxPercentage || 0),
             finalAmount: Number(quotation.finalAmount),
-            gstNumber: quotation.gstNumber,
+            gstNumber: quotation.gstNumber || undefined,
             currency: quotation.currency,
             validUntil: quotation.validUntil?.toISOString(),
             notes: quotation.notes || undefined,

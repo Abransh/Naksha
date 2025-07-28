@@ -108,22 +108,16 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
     );
   }
 
-  // Combine reviews and testimonials for navigation
-  const allTestimonials = [
-    ...reviews.map(review => ({
-      text: review.reviewText,
-      author: review.reviewerName,
-      service: review.title || 'consultation',
-      rating: review.rating,
-      isVerified: review.isVerified,
-      createdAt: review.createdAt,
-      type: 'review' as const
-    })),
-    ...testimonials.map(testimonial => ({
-      ...testimonial,
-      type: 'testimonial' as const
-    }))
-  ];
+  // Use only database reviews (testimonials are now empty)
+  const allTestimonials = reviews.map(review => ({
+    text: review.reviewText,
+    author: review.reviewerName,
+    service: review.title || 'consultation',
+    rating: review.rating,
+    isVerified: review.isVerified,
+    createdAt: review.createdAt,
+    type: 'review' as const
+  }));
 
   const nextTestimonial = () => {
     setCurrentTestimonial((prev) =>
