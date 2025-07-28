@@ -58,7 +58,7 @@ const sanitizeEmailForTag = (email) => {
  * Professional quotation email template for clients
  */
 const getClientQuotationEmailHtml = (data) => {
-    const { quotationName, clientName, consultantName, consultantCompany, description, baseAmount, discountPercentage, finalAmount, currency, validUntil, quotationNumber, viewQuotationUrl, emailMessage } = data;
+    const { quotationName, clientName, consultantName, consultantCompany, description, baseAmount, taxPercentage, gstNumber, finalAmount, currency, validUntil, quotationNumber, viewQuotationUrl, emailMessage } = data;
     return `
 <!DOCTYPE html>
 <html lang="en">
@@ -116,7 +116,7 @@ const getClientQuotationEmailHtml = (data) => {
                     <div class="detail-label">Base Amount</div>
                     <div class="detail-value">${currency} ${baseAmount.toLocaleString()}</div>
                 </div>
-                ${taxPercentage > 0 ? `
+                ${taxPercentage && taxPercentage > 0 ? `
                 <div class="detail-item">
                     <div class="detail-label">Tax (GST)</div>
                     <div class="detail-value">${taxPercentage}% - ${currency} ${(baseAmount * taxPercentage / 100).toLocaleString()}</div>
@@ -139,7 +139,7 @@ const getClientQuotationEmailHtml = (data) => {
             <div class="amount-section">
                 <div style="font-size: 18px; opacity: 0.9;">Total Amount (Including Tax)</div>
                 <div class="final-amount">${currency} ${finalAmount.toLocaleString()}</div>
-                ${taxPercentage > 0 ? `<div style="opacity: 0.8;">Includes ${currency} ${(finalAmount - baseAmount).toLocaleString()} tax</div>` : ''}
+                ${taxPercentage && taxPercentage > 0 ? `<div style="opacity: 0.8;">Includes ${currency} ${(finalAmount - baseAmount).toLocaleString()} tax</div>` : ''}
             </div>
             
             ${viewQuotationUrl ? `

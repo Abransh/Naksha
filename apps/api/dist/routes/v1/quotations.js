@@ -272,8 +272,8 @@ router.post('/', (0, validation_1.validateRequest)(createQuotationSchema), async
                 finalAmount,
                 amount: finalAmount, // Alias for finalAmount
                 currency: quotationData.currency,
-                validUntil: expiresAt, // Required field
-                // expiresAt field removed - using validUntil
+                validUntil: expiresAt,
+                expiresAt: expiresAt, // Both fields are required in schema
                 notes: quotationData.notes,
                 status: 'DRAFT',
                 quotationNumber: `QT-${Date.now()}-${Math.random().toString(36).substr(2, 9).toUpperCase()}` // Generate unique quotation number
@@ -412,6 +412,7 @@ router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: 
             baseAmount: Number(quotation.baseAmount),
             taxPercentage: Number(quotation.taxPercentage || 0),
             finalAmount: Number(quotation.finalAmount),
+            gstNumber: quotation.gstNumber,
             currency: quotation.currency,
             validUntil: quotation.validUntil?.toISOString(),
             notes: quotation.notes || undefined,
