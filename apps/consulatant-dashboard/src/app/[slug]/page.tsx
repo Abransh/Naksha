@@ -133,7 +133,14 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
 
   // Handle review submission
   const handleReviewSubmit = async (reviewData: any) => {
-    await submitReview(reviewData);
+    try {
+      await submitReview(reviewData);
+      // Refresh the consultant profile to update any dynamic content
+      refetch();
+    } catch (error) {
+      console.error('Error submitting review:', error);
+      // Error handling is already done in the useReviews hook and ReviewForm component
+    }
   };
 
   return (
@@ -355,7 +362,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
             </div>
 
             {/* Reviews and Testimonials */}
-            {allTestimonials.length > 0 ? (
+            {reviews.length > 0 && !isLoading ? (
               <div className="grid grid-cols-2 gap-10 mb-16">
                 {/* Large Review/Testimonial */}
                 <Card className="w-[390px] h-[520px] rounded-[32px] bg-white border border-white shadow-sm">
@@ -363,7 +370,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                     <Quote size={44} className="text-gray-400 mb-4" />
                     
                     {/* Rating stars for reviews */}
-                    {allTestimonials[currentTestimonial]?.type === 'review' && allTestimonials[currentTestimonial]?.rating && (
+                    {allTestimonials[currentTestimonial]?.rating && (
                       <div className="flex items-center gap-1 mb-6">
                         <StarRating rating={allTestimonials[currentTestimonial].rating} size="sm" />
                         {allTestimonials[currentTestimonial]?.isVerified && (
@@ -373,7 +380,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                     )}
                     
                     <p className="text-lg font-medium text-black leading-[31.5px] mb-12 font-inter">
-                      {allTestimonials[currentTestimonial]?.text || 'Excellent service and professional guidance.'}
+                      {allTestimonials[currentTestimonial]?.text || 'Loading...'}
                     </p>
                     
                     <div className="absolute bottom-6 left-6 right-6">
@@ -383,7 +390,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                       <span className="text-base text-gray-600 font-inter">
                         , {allTestimonials[currentTestimonial]?.service || 'consultation'}
                       </span>
-                      {allTestimonials[currentTestimonial]?.type === 'review' && allTestimonials[currentTestimonial]?.createdAt && (
+                      {allTestimonials[currentTestimonial]?.createdAt && (
                         <div className="text-sm text-gray-500 mt-1">
                           {formatDate(allTestimonials[currentTestimonial].createdAt)}
                         </div>
@@ -406,7 +413,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                           <Quote size={44} className="text-gray-400 mb-4" />
                           
                           {/* Rating stars for reviews */}
-                          {item.type === 'review' && item.rating && (
+                          {item.rating && (
                             <div className="flex items-center gap-1 mb-3">
                               <StarRating rating={item.rating} size="sm" />
                               {item.isVerified && (
@@ -426,7 +433,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                             <span className="text-base text-gray-600 font-inter">
                               , {item.service}
                             </span>
-                            {item.type === 'review' && item.createdAt && (
+                            {item.createdAt && (
                               <div className="text-xs text-gray-500 mt-1">
                                 {formatDate(item.createdAt)}
                               </div>
@@ -438,33 +445,50 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                   })}
                 </div>
               </div>
+            ) : isLoading ? (
+              <div className="text-center py-16">
+                <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4 text-gray-400" />
+                <h3 className="text-xl font-semibold text-gray-600 mb-2">
+                  Loading reviews...
+                </h3>
+                <p className="text-gray-500">
+                  Please wait while we fetch reviews for {summary?.name}
+                </p>
+              </div>
             ) : (
               <div className="text-center py-16">
                 <Quote size={64} className="text-gray-300 mx-auto mb-4" />
                 <h3 className="text-xl font-semibold text-gray-600 mb-2">
                   No reviews yet
                 </h3>
-                <p className="text-gray-500">
+                <p className="text-gray-500 mb-4">
                   Be the first to share your experience with {summary?.name}
+                </p>
+                <p className="text-sm text-gray-400">
+                  Reviews help other users make informed decisions about consulting services
                 </p>
               </div>
             )}
 
-            {/* Navigation Arrows */}
-            <div className="flex gap-4 justify-center mb-16">
-              <button
-                onClick={prevTestimonial}
-                className="w-10 h-10 rounded-full border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors"
-              >
-                <ArrowLeft size={20} />
-              </button>
-              <button
-                onClick={nextTestimonial}
-                className="w-10 h-10 rounded-full border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors"
-              >
-                <ArrowRight size={20} />
-              </button>
-            </div>
+            {/* Navigation Arrows - Only show when there are multiple reviews */}
+            {reviews.length > 1 && !isLoading && (
+              <div className="flex gap-4 justify-center mb-16">
+                <button
+                  onClick={prevTestimonial}
+                  className="w-10 h-10 rounded-full border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors"
+                  disabled={reviews.length <= 1}
+                >
+                  <ArrowLeft size={20} />
+                </button>
+                <button
+                  onClick={nextTestimonial}
+                  className="w-10 h-10 rounded-full border-2 border-black flex items-center justify-center hover:bg-black hover:text-white transition-colors"
+                  disabled={reviews.length <= 1}
+                >
+                  <ArrowRight size={20} />
+                </button>
+              </div>
+            )}
 
             {/* Social Links */}
             <div className="mb-16">
