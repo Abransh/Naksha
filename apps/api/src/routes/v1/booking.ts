@@ -174,12 +174,15 @@ router.post('/',
         
         // SIMPLIFIED: Fast availability check (only if specific time selected)
         if (scheduledDateTime && bookingData.selectedTime) {
+          // Extract just the date part for comparison (slots store date only, not datetime)
+          const scheduledDate = new Date(bookingData.selectedDate + 'T00:00:00.000Z');
+          
           // Single optimized query - no debug queries to reduce timeout risk
           availabilitySlot = await tx.availabilitySlot.findFirst({
             where: {
               consultantId: consultant.id,
               sessionType: bookingData.sessionType,
-              date: scheduledDateTime,
+              date: scheduledDate,
               startTime: bookingData.selectedTime,
               isBooked: false,
               isBlocked: false
