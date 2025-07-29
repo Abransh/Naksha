@@ -215,7 +215,7 @@ export const authenticate = async (req: Request, res: Response, next: NextFuncti
     }
 
     // 2. Cookie (for web clients)
-    if (!token && req.cookies.accessToken) {
+    if (!token && req.cookies?.accessToken) {
       token = req.cookies.accessToken;
     }
 
@@ -447,7 +447,7 @@ export const authenticateSuperAdmin = async (req: Request, res: Response, next: 
  */
 export const optionalAuth = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
   const authHeader = req.headers.authorization;
-  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : req.cookies.accessToken;
+  const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : req.cookies?.accessToken;
 
   if (!token) {
     next();
