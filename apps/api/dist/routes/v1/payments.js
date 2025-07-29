@@ -51,6 +51,16 @@ router.post('/public/create-order', (0, validation_1.validateRequest)(createOrde
         if (!sessionId) {
             throw new errorHandler_1.ValidationError('sessionId is required for public payments');
         }
+        // Validate sessionId format
+        if (typeof sessionId !== 'string' || sessionId.trim() === '' || sessionId === 'undefined') {
+            throw new errorHandler_1.ValidationError('Invalid sessionId provided');
+        }
+        console.log('💳 Creating public payment order:', {
+            sessionId,
+            amount,
+            clientEmail,
+            clientName
+        });
         const prisma = (0, database_1.getPrismaClient)();
         // Verify session exists and is pending payment
         const session = await prisma.session.findFirst({
@@ -69,8 +79,21 @@ router.post('/public/create-order', (0, validation_1.validateRequest)(createOrde
             }
         });
         if (!session) {
+            console.error('❌ Session not found for payment:', {
+                sessionId,
+                searchCriteria: {
+                    id: sessionId,
+                    paymentStatus: 'PENDING'
+                }
+            });
             throw new errorHandler_1.ValidationError('Session not found or payment already processed');
         }
+        console.log('✅ Session found for payment:', {
+            sessionId: session.id,
+            consultantId: session.consultantId,
+            sessionAmount: session.amount,
+            requestedAmount: amount
+        });
         // Verify amount matches session amount
         if (Math.abs(Number(session.amount) - amount) > 0.01) {
             throw new errorHandler_1.ValidationError('Amount mismatch with session');

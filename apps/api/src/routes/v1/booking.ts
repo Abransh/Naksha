@@ -281,22 +281,30 @@ router.post('/',
       });
       console.log(`✅ Step 2 completed: ${Date.now() - transactionStartTime}ms`);
 
-      // PERFORMANCE: Async email processing (non-blocking)
-      processEmailAsync({
-        sessionId: result.session.id,
-        sessionTitle: `${bookingData.sessionType} Session`,
-        sessionType: bookingData.sessionType,
-        clientName: result.client.name,
-        clientEmail: result.client.email,
-        consultantName: `${consultant.firstName} ${consultant.lastName}`,
-        consultantEmail: consultant.email,
-        sessionDate: bookingData.selectedDate || 'To be scheduled',
-        sessionTime: bookingData.selectedTime || 'To be scheduled',
-        amount: bookingData.amount,
-        currency: 'INR',
-        meetingLink: '', // Will be generated after payment
-        meetingPlatform: 'TEAMS'
-      }).catch(console.error); // Fire and forget - don't block response
+      // Send confirmation emails only for manual scheduling (no payment required)
+      // For scheduled sessions, emails will be sent after payment confirmation
+      const isManualScheduling = !scheduledDateTime || !bookingData.selectedTime;
+      
+      if (isManualScheduling) {
+        console.log('📧 Sending confirmation email for manual scheduling session');
+        processEmailAsync({
+          sessionId: result.session.id,
+          sessionTitle: `${bookingData.sessionType} Session`,
+          sessionType: bookingData.sessionType,
+          clientName: result.client.name,
+          clientEmail: result.client.email,
+          consultantName: `${consultant.firstName} ${consultant.lastName}`,
+          consultantEmail: consultant.email,
+          sessionDate: bookingData.selectedDate || 'To be scheduled',
+          sessionTime: bookingData.selectedTime || 'To be scheduled',
+          amount: bookingData.amount,
+          currency: 'INR',
+          meetingLink: '', // Will be generated after payment
+          meetingPlatform: 'TEAMS'
+        }).catch(console.error); // Fire and forget - don't block response
+      } else {
+        console.log('📧 Skipping booking confirmation email - will be sent after payment confirmation');
+      }
 
       // PERFORMANCE: Async cache clearing (non-blocking)
       const clearCachesAsync = async () => {
@@ -324,8 +332,12 @@ router.post('/',
       const totalTime = Date.now() - startTime;
       console.log(`✅ BOOKING COMPLETED: ${result.session.id} in ${totalTime}ms`);
 
+      const responseMessage = isManualScheduling 
+        ? 'Session booking request submitted! The consultant will contact you to schedule and arrange payment.'
+        : 'Session booked successfully! Please complete payment to confirm your session.';
+
       res.status(201).json({
-        message: 'Session booked successfully! Confirmation emails have been sent.',
+        message: responseMessage,
         data: {
           session: {
             id: result.session.id,
@@ -349,11 +361,17 @@ router.post('/',
             name: `${consultant.firstName} ${consultant.lastName}`,
             slug: consultant.slug
           },
-          nextSteps: [
-            'You will receive payment instructions via email',
-            'Complete payment to confirm your session',
-            'Meeting details will be shared after payment confirmation'
-          ]
+          nextSteps: isManualScheduling 
+            ? [
+                'The consultant will contact you directly to schedule your session',
+                'Payment arrangements will be discussed during scheduling',
+                'You will receive session details and meeting links after confirmation'
+              ]
+            : [
+                'Complete payment via the payment gateway to confirm your session',
+                'You will receive session confirmation and meeting details after successful payment',
+                'Meeting links will be provided in your confirmation email'
+              ]
         }
       });
 
