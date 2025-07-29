@@ -52,6 +52,7 @@ import {
   verifyEmail,
   forgotPassword,
   resetPassword,
+  validateResetToken,
   getCurrentUser
 } from './controllers/auth.controller';
 
@@ -220,6 +221,7 @@ class App {
     this.app.post('/api/v1/auth/admin/login', adminLogin);
     this.app.get('/api/v1/auth/verify-email/:token', verifyEmail);
     this.app.post('/api/v1/auth/forgot-password', forgotPassword);
+    this.app.post('/api/v1/auth/validate-reset-token', validateResetToken);
     this.app.post('/api/v1/auth/reset-password', resetPassword);
     
     // Protected auth routes (authentication required) - v1 API

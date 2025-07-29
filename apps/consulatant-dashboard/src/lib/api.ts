@@ -305,6 +305,17 @@ export const authApi = {
   },
 
   /**
+   * Validate password reset token
+   */
+  async validateResetToken(token: string): Promise<{ valid: boolean; data?: { email: string; firstName: string } }> {
+    const response = await apiRequest<ApiResponse<{ email: string; firstName: string }>>('/auth/validate-reset-token', {
+      method: 'POST',
+      body: { token },
+    });
+    return { valid: true, data: response.data };
+  },
+
+  /**
    * Verify email with token
    */
   async verifyEmail(token: string): Promise<void> {

@@ -20,27 +20,94 @@ export default function ResetPasswordPage() {
   const [success, setSuccess] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [token, setToken] = useState<string | null>(null);
+  const [tokenValidating, setTokenValidating] = useState(true);
+  const [tokenValid, setTokenValid] = useState(false);
+  const [userInfo, setUserInfo] = useState<{ email: string; firstName: string } | null>(null);
   
   const router = useRouter();
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    // Get token from URL query parameters
-    const tokenParam = searchParams.get('token');
-    if (!tokenParam) {
-      setError('Invalid or missing reset token. Please request a new password reset link.');
-    } else {
+    const validateToken = async () => {
+      const tokenParam = searchParams.get('token');
+      if (!tokenParam) {
+        setError('Invalid or missing reset token. Please request a new password reset link.');
+        setTokenValidating(false);
+        return;
+      }
+
       setToken(tokenParam);
-    }
+      
+      try {
+        console.log('🔍 Validating reset token...');
+        const validation = await authService.validateResetToken(tokenParam);
+        
+        if (validation.valid) {
+          setTokenValid(true);
+          setUserInfo(validation.data || null);
+          console.log('✅ Token is valid:', validation.data);
+        } else {
+          setError('Invalid or expired reset token. Please request a new password reset link.');
+        }
+      } catch (err) {
+        console.error('❌ Token validation failed:', err);
+        if (err instanceof ApiError) {
+          switch (err.code) {
+            case 'INVALID_RESET_TOKEN':
+              setError('Invalid or expired reset token. Please request a new password reset link.');
+              break;
+            case 'ACCOUNT_NOT_FOUND':
+              setError('The associated account no longer exists. Please contact support.');
+              break;
+            default:
+              setError('Failed to validate reset token. Please try again or request a new reset link.');
+          }
+        } else {
+          setError('Failed to validate reset token. Please try again or request a new reset link.');
+        }
+      } finally {
+        setTokenValidating(false);
+      }
+    };
+
+    validateToken();
   }, [searchParams]);
 
   const validatePasswords = () => {
-    if (formData.password.length < 8) {
+    const password = formData.password;
+    
+    // Check minimum length
+    if (password.length < 8) {
       setError('Password must be at least 8 characters long.');
       return false;
     }
     
-    if (formData.password !== formData.confirmPassword) {
+    // Check for uppercase letter
+    if (!/[A-Z]/.test(password)) {
+      setError('Password must contain at least one uppercase letter.');
+      return false;
+    }
+    
+    // Check for lowercase letter
+    if (!/[a-z]/.test(password)) {
+      setError('Password must contain at least one lowercase letter.');
+      return false;
+    }
+    
+    // Check for number
+    if (!/\d/.test(password)) {
+      setError('Password must contain at least one number.');
+      return false;
+    }
+    
+    // Check for special character
+    if (!/[@$!%*?&]/.test(password)) {
+      setError('Password must contain at least one special character (@$!%*?&).');
+      return false;
+    }
+    
+    // Check if passwords match
+    if (password !== formData.confirmPassword) {
       setError('Passwords do not match.');
       return false;
     }
@@ -168,6 +235,132 @@ export default function ResetPasswordPage() {
     );
   }
 
+  // Show loading state while validating token
+  if (tokenValidating) {
+    return (
+      <>
+        {/* Top Logo */}
+        <div className="fixed top-0 left-0 w-full h-[76px] bg-white flex items-center px-[42px]">
+          <div className="p-8">
+            <img
+              src="/assets/NakkshaBigLogo.svg"
+              alt="Logo"
+              className="w-[179px] h-[74px] rounded-lg"
+            />
+          </div>
+        </div>
+
+        {/* Main Container - Loading State */}
+        <div className="w-[443px] bg-white rounded-xl shadow-lg p-[44px_34px] mt-[76px]">
+          <div className="flex flex-col items-center gap-[60px]">
+            {/* Header Section */}
+            <div className="flex flex-col items-center gap-[30px]">
+              <div className="p-8">
+                <img
+                  src="/assets/NakkshaBigLogo.svg"
+                  alt="Logo"
+                  className="w-[179px] h-[74px] rounded-lg"
+                />
+              </div>
+
+              <div className="flex flex-col items-center gap-2">
+                <h1 className="text-xl font-medium text-black font-poppins">
+                  Validating reset link
+                </h1>
+                <p className="text-sm text-[var(--black-30)] font-inter text-center">
+                  Please wait while we verify your password reset token...
+                </p>
+              </div>
+            </div>
+
+            {/* Loading Content */}
+            <div className="flex flex-col items-center gap-12 w-full">
+              <div className="w-full p-4 bg-blue-50 border border-blue-200 rounded-lg flex items-center justify-center gap-3">
+                <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-600"></div>
+                <p className="text-blue-800">Validating your reset link...</p>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Show error state if token is invalid
+  if (!tokenValid) {
+    return (
+      <>
+        {/* Top Logo */}
+        <div className="fixed top-0 left-0 w-full h-[76px] bg-white flex items-center px-[42px]">
+          <div className="p-8">
+            <img
+              src="/assets/NakkshaBigLogo.svg"
+              alt="Logo"
+              className="w-[179px] h-[74px] rounded-lg"
+            />
+          </div>
+        </div>
+
+        {/* Main Container - Error State */}
+        <div className="w-[443px] bg-white rounded-xl shadow-lg p-[44px_34px] mt-[76px]">
+          <div className="flex flex-col items-center gap-[60px]">
+            {/* Header Section */}
+            <div className="flex flex-col items-center gap-[30px]">
+              <div className="p-8">
+                <img
+                  src="/assets/NakkshaBigLogo.svg"
+                  alt="Logo"
+                  className="w-[179px] h-[74px] rounded-lg"
+                />
+              </div>
+
+              <div className="flex flex-col items-center gap-2">
+                <h1 className="text-xl font-medium text-black font-poppins">
+                  Invalid reset link
+                </h1>
+                <p className="text-sm text-[var(--black-30)] font-inter text-center">
+                  This password reset link is invalid or has expired
+                </p>
+              </div>
+            </div>
+
+            {/* Error Content */}
+            <div className="flex flex-col items-center gap-12 w-full">
+              {/* Error Message */}
+              <div className="w-full p-4 bg-red-50 border border-red-200 rounded-lg flex items-center gap-3">
+                <AlertCircle size={20} className="text-red-600" />
+                <div className="flex-1">
+                  <p className="text-red-800 font-medium">Reset link expired</p>
+                  <p className="text-red-600 text-sm">
+                    {error || 'Please request a new password reset link.'}
+                  </p>
+                </div>
+              </div>
+
+              {/* Action Buttons */}
+              <div className="flex flex-col gap-4 w-full">
+                <Link
+                  href="/forgot-password"
+                  className="w-full h-[54px] bg-[var(--primary-100)] hover:bg-[var(--primary-100)]/90 text-white text-xl font-inter rounded-xl flex items-center justify-center"
+                >
+                  Request New Reset Link
+                </Link>
+                
+                <Link
+                  href="/login"
+                  className="w-full h-[54px] border border-[var(--primary-100)] text-[var(--primary-100)] hover:bg-[var(--primary-100)]/10 text-xl font-inter rounded-xl flex items-center justify-center"
+                >
+                  Back to Login
+                </Link>
+              </div>
+            </div>
+          </div>
+        </div>
+      </>
+    );
+  }
+
+  // Show the password reset form only if token is valid
   return (
     <>
       {/* Top Logo */}
@@ -211,13 +404,26 @@ export default function ResetPasswordPage() {
                 Reset your password
               </h1>
               <p className="text-sm text-[var(--black-30)] font-inter text-center">
-                Enter your new password below
+                {userInfo ? `Hi ${userInfo.firstName}, enter your new password below` : 'Enter your new password below'}
               </p>
             </div>
           </div>
 
           {/* Form Content */}
           <div className="flex flex-col items-center gap-12 w-full">
+            {/* Success Message for Valid Token */}
+            {userInfo && (
+              <div className="w-full p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                <CheckCircle size={20} className="text-green-600" />
+                <div className="flex-1">
+                  <p className="text-green-800 font-medium">Reset link verified</p>
+                  <p className="text-green-600 text-sm">
+                    You can now create a new password for {userInfo.email}
+                  </p>
+                </div>
+              </div>
+            )}
+
             {/* Error Message */}
             {error && (
               <div className="w-full p-4 bg-red-50 border border-red-200 text-black rounded-lg flex items-center gap-3">
@@ -287,8 +493,24 @@ export default function ResetPasswordPage() {
               <div className="w-full bg-gray-50 p-3 rounded-lg">
                 <p className="text-xs text-[var(--black-60)] font-inter mb-2">Password requirements:</p>
                 <ul className="text-xs text-[var(--black-60)] font-inter list-disc list-inside space-y-1">
-                  <li>At least 8 characters long</li>
-                  <li>Both passwords must match</li>
+                  <li className={formData.password.length >= 8 ? 'text-green-600' : ''}>
+                    At least 8 characters long
+                  </li>
+                  <li className={/[A-Z]/.test(formData.password) ? 'text-green-600' : ''}>
+                    At least one uppercase letter (A-Z)
+                  </li>
+                  <li className={/[a-z]/.test(formData.password) ? 'text-green-600' : ''}>
+                    At least one lowercase letter (a-z)
+                  </li>
+                  <li className={/\d/.test(formData.password) ? 'text-green-600' : ''}>
+                    At least one number (0-9)
+                  </li>
+                  <li className={/[@$!%*?&]/.test(formData.password) ? 'text-green-600' : ''}>
+                    At least one special character (@$!%*?&)
+                  </li>
+                  <li className={formData.password && formData.confirmPassword && formData.password === formData.confirmPassword ? 'text-green-600' : ''}>
+                    Both passwords must match
+                  </li>
                 </ul>
               </div>
 

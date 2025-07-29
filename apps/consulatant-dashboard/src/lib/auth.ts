@@ -277,6 +277,18 @@ const tokenManager = {
   },
 
   /**
+   * Validate password reset token
+   */
+  async validateResetToken(token: string): Promise<{ valid: boolean; data?: { email: string; firstName: string } }> {
+    try {
+      return await authApi.validateResetToken(token);
+    } catch (error) {
+      console.error('Token validation failed:', error);
+      return { valid: false };
+    }
+  },
+
+  /**
    * Refresh user data from server
    */
   async refreshUserData(): Promise<Consultant | null> {
