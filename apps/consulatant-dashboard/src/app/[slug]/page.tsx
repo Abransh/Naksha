@@ -383,7 +383,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                       {allTestimonials[currentTestimonial]?.text || 'Loading...'}
                     </p>
                     
-                    <div className="absolute bottom-6 left-6 right-6">
+                    <div className="absolute bottom-6 left-6 right-6 mt-4">
                       <span className="text-base font-bold text-black font-inter">
                         {allTestimonials[currentTestimonial]?.author || 'Anonymous'}
                       </span>
