@@ -379,7 +379,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                       </div>
                     )}
                     
-                    <p className="text-lg font-medium text-black leading-[31.5px] mb-12 font-inter">
+                    <p className="text-lg font-medium text-black leading-[31.5px] mb-6 font-inter">
                       {allTestimonials[currentTestimonial]?.text || 'Loading...'}
                     </p>
                     
