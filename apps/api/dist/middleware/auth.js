@@ -161,7 +161,7 @@ const authenticate = async (req, res, next) => {
             token = authHeader.substring(7);
         }
         // 2. Cookie (for web clients)
-        if (!token && req.cookies.accessToken) {
+        if (!token && req.cookies?.accessToken) {
             token = req.cookies.accessToken;
         }
         // 3. Query parameter (for specific endpoints like file downloads)
@@ -381,7 +381,7 @@ exports.authenticateSuperAdmin = authenticateSuperAdmin;
  */
 const optionalAuth = async (req, res, next) => {
     const authHeader = req.headers.authorization;
-    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : req.cookies.accessToken;
+    const token = authHeader && authHeader.startsWith('Bearer ') ? authHeader.substring(7) : req.cookies?.accessToken;
     if (!token) {
         next();
         return;

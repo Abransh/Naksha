@@ -14,6 +14,7 @@ const auth_1 = require("../../middleware/auth");
 const validation_1 = require("../../middleware/validation");
 const errorHandler_1 = require("../../middleware/errorHandler");
 const resendEmailService_1 = require("../../services/resendEmailService");
+const meetingService_1 = require("../../services/meetingService");
 const router = (0, express_1.Router)();
 /**
  * Performance Configuration - Sub-15-second booking guarantee
@@ -150,12 +151,14 @@ auth_1.optionalAuth, // Allow both authenticated and unauthenticated access
             let availabilitySlot = null;
             // SIMPLIFIED: Fast availability check (only if specific time selected)
             if (scheduledDateTime && bookingData.selectedTime) {
+                // Extract just the date part for comparison (slots store date only, not datetime)
+                const scheduledDate = new Date(bookingData.selectedDate + 'T00:00:00.000Z');
                 // Single optimized query - no debug queries to reduce timeout risk
                 availabilitySlot = await tx.availabilitySlot.findFirst({
                     where: {
                         consultantId: consultant.id,
                         sessionType: bookingData.sessionType,
-                        date: scheduledDateTime,
+                        date: scheduledDate,
                         startTime: bookingData.selectedTime,
                         isBooked: false,
                         isBlocked: false
@@ -212,12 +215,57 @@ auth_1.optionalAuth, // Allow both authenticated and unauthenticated access
                     amount: bookingData.amount,
                     currency: 'INR',
                     paymentStatus: 'PENDING',
-                    platform: 'zoom',
+                    platform: 'TEAMS',
                     clientNotes: bookingData.clientNotes || '',
                     timezone: 'Asia/Kolkata',
                     bookingSource: 'naksha_platform' // Mark as FROM NAKSHA
                 }
             });
+            // Generate Teams meeting link if scheduled session
+            let meetingLink = '';
+            if (scheduledDateTime && bookingData.selectedTime) {
+                try {
+                    console.log('🔗 Generating Teams meeting link...');
+                    // Calculate end time (session duration)
+                    const endDateTime = new Date(scheduledDateTime.getTime() + bookingData.duration * 60 * 1000);
+                    // Get consultant's Teams access token (from database)
+                    const consultantTeamsData = await tx.consultant.findUnique({
+                        where: { id: consultant.id },
+                        select: {
+                            teamsAccessToken: true,
+                            teamsTokenExpiresAt: true
+                        }
+                    });
+                    if (consultantTeamsData?.teamsAccessToken) {
+                        console.log('✅ Consultant has Teams token, generating meeting...');
+                        const meetingResponse = await (0, meetingService_1.generateMeetingLink)('TEAMS', {
+                            title: session.title,
+                            startTime: scheduledDateTime,
+                            endTime: endDateTime,
+                            consultantEmail: consultant.email,
+                            clientEmail: bookingData.email,
+                            description: `${bookingData.sessionType} session with ${consultant.firstName} ${consultant.lastName}`
+                        }, consultantTeamsData.teamsAccessToken);
+                        meetingLink = meetingResponse.meetingLink;
+                        // Update session with meeting link
+                        await tx.session.update({
+                            where: { id: session.id },
+                            data: {
+                                meetingLink,
+                                meetingId: meetingResponse.meetingId
+                            }
+                        });
+                        console.log('✅ Teams meeting link generated:', meetingLink);
+                    }
+                    else {
+                        console.log('⚠️ Consultant has not connected Teams - meeting link will be generated after payment');
+                    }
+                }
+                catch (meetingError) {
+                    console.error('❌ Teams meeting generation failed (non-blocking):', meetingError);
+                    // Don't fail the booking if meeting creation fails
+                }
+            }
             // Update client session count
             await tx.client.update({
                 where: { id: client.id },
@@ -238,7 +286,7 @@ auth_1.optionalAuth, // Allow both authenticated and unauthenticated access
                 });
                 console.log(`✅ Availability slot booked: ${availabilitySlot.id}`);
             }
-            return { client, session };
+            return { client, session, meetingLink };
         }, {
             timeout: 10000, // 10 second transaction timeout
         });
@@ -256,7 +304,8 @@ auth_1.optionalAuth, // Allow both authenticated and unauthenticated access
             sessionTime: bookingData.selectedTime || 'To be scheduled',
             amount: bookingData.amount,
             currency: 'INR',
-            meetingPlatform: 'Zoom'
+            meetingLink: result.meetingLink || '',
+            meetingPlatform: 'TEAMS'
         }).catch(console.error); // Fire and forget - don't block response
         // PERFORMANCE: Async cache clearing (non-blocking)
         const clearCachesAsync = async () => {
@@ -291,7 +340,9 @@ auth_1.optionalAuth, // Allow both authenticated and unauthenticated access
                     duration: result.session.duration,
                     amount: Number(result.session.amount),
                     status: result.session.status,
-                    paymentStatus: result.session.paymentStatus
+                    paymentStatus: result.session.paymentStatus,
+                    meetingLink: result.meetingLink || result.session.meetingLink || '',
+                    platform: result.session.platform
                 },
                 client: {
                     id: result.client.id,

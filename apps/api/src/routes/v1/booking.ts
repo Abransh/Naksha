@@ -257,9 +257,6 @@ router.post('/',
           try {
             console.log('🔗 Generating Teams meeting link...');
             
-            // Calculate end time (session duration)
-            const endDateTime = new Date(scheduledDateTime.getTime() + bookingData.duration * 60 * 1000);
-            
             // Get consultant's Teams access token (from database)
             const consultantTeamsData = await tx.consultant.findUnique({
               where: { id: consultant.id },
@@ -275,10 +272,11 @@ router.post('/',
               const meetingResponse = await generateMeetingLink('TEAMS', {
                 title: session.title,
                 startTime: scheduledDateTime,
-                endTime: endDateTime,
+                duration: bookingData.duration, // duration in minutes
                 consultantEmail: consultant.email,
                 clientEmail: bookingData.email,
-                description: `${bookingData.sessionType} session with ${consultant.firstName} ${consultant.lastName}`
+                description: `${bookingData.sessionType} session with ${consultant.firstName} ${consultant.lastName}`,
+                timezone: 'Asia/Kolkata'
               }, consultantTeamsData.teamsAccessToken);
               
               meetingLink = meetingResponse.meetingLink;
