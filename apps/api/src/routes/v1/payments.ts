@@ -72,6 +72,18 @@ router.post('/public/create-order',
         throw new ValidationError('sessionId is required for public payments');
       }
 
+      // Validate sessionId format
+      if (typeof sessionId !== 'string' || sessionId.trim() === '' || sessionId === 'undefined') {
+        throw new ValidationError('Invalid sessionId provided');
+      }
+
+      console.log('💳 Creating public payment order:', {
+        sessionId,
+        amount,
+        clientEmail,
+        clientName
+      });
+
       const prisma = getPrismaClient();
 
       // Verify session exists and is pending payment
@@ -92,8 +104,22 @@ router.post('/public/create-order',
       });
 
       if (!session) {
+        console.error('❌ Session not found for payment:', {
+          sessionId,
+          searchCriteria: {
+            id: sessionId,
+            paymentStatus: 'PENDING'
+          }
+        });
         throw new ValidationError('Session not found or payment already processed');
       }
+
+      console.log('✅ Session found for payment:', {
+        sessionId: session.id,
+        consultantId: session.consultantId,
+        sessionAmount: session.amount,
+        requestedAmount: amount
+      });
 
       // Verify amount matches session amount
       if (Math.abs(Number(session.amount) - amount) > 0.01) {

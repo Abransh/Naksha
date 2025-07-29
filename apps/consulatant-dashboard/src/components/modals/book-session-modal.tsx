@@ -137,16 +137,28 @@ export function BookSessionModal({
       
       console.log('✅ Session created successfully:', sessionResult);
       
+      // Validate session creation before proceeding
+      const sessionId = sessionResult?.data?.session?.id || sessionResult?.session?.id;
+      if (!sessionId) {
+        console.error('❌ Session creation failed - invalid response structure:', sessionResult);
+        throw new Error('Session creation failed - no session ID received');
+      }
+
       // Check if we have session scheduling or manual booking
       const hasTimeSelection = formData.selectedDate && formData.selectedTime;
       
       if (hasTimeSelection) {
         // Process payment for scheduled sessions
-        console.log('💳 Initiating payment for scheduled session...');
+        console.log('💳 Initiating payment for scheduled session...', {
+          sessionId: sessionId,
+          amount: formData.amount,
+          clientEmail: formData.email,
+          hasValidSessionId: !!sessionId
+        });
         
         await processPayment(
           {
-            sessionId: sessionResult.session?.id,
+            sessionId: sessionId,
             amount: formData.amount,
             clientEmail: formData.email,
             clientName: formData.fullName,

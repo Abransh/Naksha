@@ -166,13 +166,33 @@ export const useRazorpayPayment = () => {
 
       clearTimeout(timeoutId);
 
+      let errorData: any;
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to create payment order');
+        try {
+          errorData = await response.json();
+        } catch (e) {
+          errorData = { message: `HTTP ${response.status}: ${response.statusText}` };
+        }
+        
+        console.error('❌ Payment order creation failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          orderData,
+          endpoint,
+          isPublicBooking
+        });
+        
+        throw new Error(errorData.message || `Failed to create payment order (${response.status})`);
       }
 
       const result = await response.json();
-      console.log('✅ Payment order created successfully:', result.data.orderId);
+      console.log('✅ Payment order created successfully:', {
+        orderId: result.data?.orderId,
+        amount: result.data?.amount,
+        sessionId: orderData.sessionId,
+        endpoint
+      });
       return result.data;
     } catch (error: any) {
       clearTimeout(timeoutId);
@@ -261,6 +281,25 @@ export const useRazorpayPayment = () => {
   ) => {
     setIsLoading(true);
     
+    // Validate order data before processing
+    if (!orderData.sessionId && !orderData.quotationId) {
+      const error = { message: 'Session ID or Quotation ID is required for payment processing', code: 'MISSING_ID' };
+      console.error('❌ Payment validation failed:', error);
+      toast.error(error.message);
+      onFailure?.(error);
+      setIsLoading(false);
+      return;
+    }
+
+    if (orderData.sessionId && (!orderData.sessionId.trim() || orderData.sessionId === 'undefined')) {
+      const error = { message: 'Invalid session ID provided for payment', code: 'INVALID_SESSION_ID' };
+      console.error('❌ Payment validation failed:', error);
+      toast.error(error.message);
+      onFailure?.(error);
+      setIsLoading(false);
+      return;
+    }
+    
     // Total payment flow timeout
     const totalTimeout = setTimeout(() => {
       console.error('❌ Total payment flow timeout after', PAYMENT_TIMEOUTS.TOTAL_FLOW, 'ms');
@@ -272,8 +311,11 @@ export const useRazorpayPayment = () => {
     try {
       console.log('🚀 Starting optimized payment flow...', {
         sessionId: orderData.sessionId,
+        quotationId: orderData.quotationId,
         amount: orderData.amount,
-        timeout: `${PAYMENT_TIMEOUTS.TOTAL_FLOW}ms`
+        clientEmail: orderData.clientEmail,
+        timeout: `${PAYMENT_TIMEOUTS.TOTAL_FLOW}ms`,
+        isValidSessionId: orderData.sessionId ? (orderData.sessionId.trim() !== '' && orderData.sessionId !== 'undefined') : 'N/A'
       });
       // Load Razorpay script
       const isRazorpayLoaded = await loadRazorpayScript();
