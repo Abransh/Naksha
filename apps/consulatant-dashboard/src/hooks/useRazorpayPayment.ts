@@ -143,7 +143,7 @@ export const useRazorpayPayment = () => {
 
     try {
       // Use public endpoint for session bookings, authenticated endpoint for quotations
-      const isPublicBooking = orderData.sessionId && !orderData.quotationId;
+      const isPublicBooking = Boolean(orderData.sessionId && !orderData.quotationId);
       const endpoint = isPublicBooking 
         ? `${API_BASE_URL}/api/v1/payments/public/create-order`
         : `${API_BASE_URL}/api/v1/payments/create-order`;
@@ -293,7 +293,7 @@ export const useRazorpayPayment = () => {
 
       // Create payment order
       const paymentOrder = await createPaymentOrder(orderData);
-      const isPublicBooking = orderData.sessionId && !orderData.quotationId;
+      const isPublicBooking = Boolean(orderData.sessionId && !orderData.quotationId);
 
       console.log('💳 Payment order created:', paymentOrder);
 
