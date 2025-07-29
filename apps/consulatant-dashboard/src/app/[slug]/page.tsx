@@ -379,7 +379,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                       </div>
                     )}
                     
-                    <p className="text-lg font-medium text-black leading-[31.5px] mb-6 font-inter">
+                    <p className="text-lg font-medium text-black leading-[31.5px] mb-12 font-inter">
                       {allTestimonials[currentTestimonial]?.text || 'Loading...'}
                     </p>
                     
@@ -427,14 +427,14 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                           </p>
                           
                           <div className="absolute bottom-6 left-6 right-6">
-                            <span className="text-base font-bold text-black font-inter">
+                            <span className="text-base font-bold text-black font-inter mt-12">
                               {item.author}
                             </span>
-                            <span className="text-base text-gray-600 font-inter">
+                            <span className="text-base text-gray-600 font-inter mt-6">
                               , {item.service}
                             </span>
                             {item.createdAt && (
-                              <div className="text-xs text-gray-500 mt-1">
+                              <div className="text-xs text-gray-500 mt-6">
                                 {formatDate(item.createdAt)}
                               </div>
                             )}
