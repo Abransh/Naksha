@@ -891,7 +891,7 @@ export const bookSession = async (bookingData: {
   });
 
   try {
-    const response = await fetchWithTimeout(`${API_URL}/sessions/book`, {
+    const response = await fetchWithTimeout(`${API_URL}/book`, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
