@@ -13,7 +13,6 @@ import { AuthenticatedRequest, optionalAuth } from '../../middleware/auth';
 import { validateRequest } from '../../middleware/validation';
 import { AppError, NotFoundError, ValidationError } from '../../middleware/errorHandler';
 import { sendSessionConfirmationEmail } from '../../services/resendEmailService';
-import { generateMeetingLink } from '../../services/meetingService';
 
 const router = Router();
 
@@ -251,54 +250,8 @@ router.post('/',
           }
         });
 
-        // Generate Teams meeting link if scheduled session
-        let meetingLink = '';
-        if (scheduledDateTime && bookingData.selectedTime) {
-          try {
-            console.log('🔗 Generating Teams meeting link...');
-            
-            // Get consultant's Teams access token (from database)
-            const consultantTeamsData = await tx.consultant.findUnique({
-              where: { id: consultant.id },
-              select: { 
-                teamsAccessToken: true,
-                teamsTokenExpiresAt: true 
-              }
-            });
-            
-            if (consultantTeamsData?.teamsAccessToken) {
-              console.log('✅ Consultant has Teams token, generating meeting...');
-              
-              const meetingResponse = await generateMeetingLink('TEAMS', {
-                title: session.title,
-                startTime: scheduledDateTime,
-                duration: bookingData.duration, // duration in minutes
-                consultantEmail: consultant.email,
-                clientEmail: bookingData.email,
-                description: `${bookingData.sessionType} session with ${consultant.firstName} ${consultant.lastName}`,
-                timezone: 'Asia/Kolkata'
-              }, consultantTeamsData.teamsAccessToken);
-              
-              meetingLink = meetingResponse.meetingLink;
-              
-              // Update session with meeting link
-              await tx.session.update({
-                where: { id: session.id },
-                data: { 
-                  meetingLink,
-                  meetingId: meetingResponse.meetingId 
-                }
-              });
-              
-              console.log('✅ Teams meeting link generated:', meetingLink);
-            } else {
-              console.log('⚠️ Consultant has not connected Teams - meeting link will be generated after payment');
-            }
-          } catch (meetingError) {
-            console.error('❌ Teams meeting generation failed (non-blocking):', meetingError);
-            // Don't fail the booking if meeting creation fails
-          }
-        }
+        // Teams meeting link will be generated after payment confirmation
+        console.log('📝 Session created - Teams meeting link will be generated after payment');
 
         // Update client session count
         await tx.client.update({
@@ -322,7 +275,7 @@ router.post('/',
           console.log(`✅ Availability slot booked: ${availabilitySlot.id}`);
         }
 
-        return { client, session, meetingLink };
+        return { client, session };
       }, {
         timeout: 10000, // 10 second transaction timeout
       });
@@ -341,7 +294,7 @@ router.post('/',
         sessionTime: bookingData.selectedTime || 'To be scheduled',
         amount: bookingData.amount,
         currency: 'INR',
-        meetingLink: result.meetingLink || '',
+        meetingLink: '', // Will be generated after payment
         meetingPlatform: 'TEAMS'
       }).catch(console.error); // Fire and forget - don't block response
 
@@ -384,7 +337,7 @@ router.post('/',
             amount: Number(result.session.amount),
             status: result.session.status,
             paymentStatus: result.session.paymentStatus,
-            meetingLink: result.meetingLink || result.session.meetingLink || '',
+            meetingLink: '', // Will be generated after payment confirmation
             platform: result.session.platform
           },
           client: {

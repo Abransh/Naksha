@@ -136,18 +136,30 @@ export const useRazorpayPayment = () => {
     }
   }, []);
 
-  // OPTIMIZED: Create payment order with timeout
+  // OPTIMIZED: Create payment order with timeout (public endpoint for session bookings)
   const createPaymentOrder = useCallback(async (orderData: PaymentOrderData) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), PAYMENT_TIMEOUTS.ORDER_CREATE);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/payments/create-order`, {
+      // Use public endpoint for session bookings, authenticated endpoint for quotations
+      const isPublicBooking = orderData.sessionId && !orderData.quotationId;
+      const endpoint = isPublicBooking 
+        ? `${API_BASE_URL}/api/v1/payments/public/create-order`
+        : `${API_BASE_URL}/api/v1/payments/create-order`;
+      
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      
+      // Only add authorization header for authenticated endpoints
+      if (!isPublicBooking) {
+        headers['Authorization'] = `Bearer ${localStorage.getItem('token')}`;
+      }
+
+      const response = await fetch(endpoint, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`,
-        },
+        headers,
         body: JSON.stringify(orderData),
         signal: controller.signal,
       });
@@ -175,13 +187,18 @@ export const useRazorpayPayment = () => {
     }
   }, []);
 
-  // OPTIMIZED: Verify payment with timeout
-  const verifyPayment = useCallback(async (verificationData: RazorpayResponse) => {
+  // OPTIMIZED: Verify payment with timeout (support both public and authenticated endpoints)
+  const verifyPayment = useCallback(async (verificationData: RazorpayResponse, isPublicBooking: boolean = false) => {
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), PAYMENT_TIMEOUTS.PAYMENT_VERIFY);
 
     try {
-      const response = await fetch(`${API_BASE_URL}/api/v1/payments/verify`, {
+      // Use public verification endpoint for session bookings
+      const endpoint = isPublicBooking 
+        ? `${API_BASE_URL}/api/v1/payments/public/verify`
+        : `${API_BASE_URL}/api/v1/payments/verify`;
+
+      const response = await fetch(endpoint, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -276,6 +293,7 @@ export const useRazorpayPayment = () => {
 
       // Create payment order
       const paymentOrder = await createPaymentOrder(orderData);
+      const isPublicBooking = orderData.sessionId && !orderData.quotationId;
 
       console.log('💳 Payment order created:', paymentOrder);
 
@@ -303,7 +321,7 @@ export const useRazorpayPayment = () => {
             console.log('💳 Payment successful, verifying...', response);
             
             // Verify payment with backend
-            const verificationResult = await verifyPayment(response);
+            const verificationResult = await verifyPayment(response, isPublicBooking);
             
             console.log('✅ Payment verified:', verificationResult);
             toast.success('Payment successful! Session confirmed.');

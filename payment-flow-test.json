@@ -1,0 +1,100 @@
+{
+  "bookingFlow": {
+    "step1": {
+      "description": "Create a session booking (public endpoint)",
+      "method": "POST",
+      "url": "http://localhost:8000/api/v1/book",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "fullName": "John Doe",
+        "email": "john.doe@example.com",
+        "phone": "+91-9876543210",
+        "sessionType": "PERSONAL",
+        "selectedDate": "2025-01-15",
+        "selectedTime": "14:00",
+        "duration": 60,
+        "amount": 1500,
+        "clientNotes": "Discussing career transition strategy",
+        "consultantSlug": "john-consultant"
+      },
+      "expectedResponse": {
+        "message": "Session booked successfully! Confirmation emails have been sent.",
+        "data": {
+          "session": {
+            "id": "[SESSION_ID]",
+            "paymentStatus": "PENDING"
+          }
+        }
+      }
+    },
+    "step2": {
+      "description": "Create payment order (public endpoint)",
+      "method": "POST",
+      "url": "http://localhost:8000/api/v1/payments/public/create-order",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "sessionId": "[SESSION_ID_FROM_STEP1]",
+        "amount": 1500,
+        "currency": "INR",
+        "clientEmail": "john.doe@example.com",
+        "clientName": "John Doe",
+        "notes": {
+          "sessionType": "PERSONAL",
+          "phone": "+91-9876543210"
+        }
+      },
+      "expectedResponse": {
+        "success": true,
+        "message": "Payment order created successfully",
+        "data": {
+          "orderId": "[RAZORPAY_ORDER_ID]",
+          "amount": 1500,
+          "currency": "INR"
+        }
+      }
+    },
+    "step3": {
+      "description": "After successful Razorpay payment, verify payment (public endpoint)",
+      "method": "POST",
+      "url": "http://localhost:8000/api/v1/payments/public/verify",
+      "headers": {
+        "Content-Type": "application/json"
+      },
+      "body": {
+        "razorpayOrderId": "[RAZORPAY_ORDER_ID_FROM_STEP2]",
+        "razorpayPaymentId": "[RAZORPAY_PAYMENT_ID]",
+        "razorpaySignature": "[RAZORPAY_SIGNATURE]"
+      },
+      "expectedResponse": {
+        "success": true,
+        "message": "Payment verified and processed successfully",
+        "data": {
+          "transactionId": "[TRANSACTION_ID]",
+          "sessionUpdated": true,
+          "meetingLinkGenerated": true
+        }
+      }
+    }
+  },
+  "implementationNotes": {
+    "architecture": "The payment system now properly separates concerns:",
+    "bookingPhase": "Session creation happens without payment (PENDING status)",
+    "paymentPhase": "Public payment endpoints handle Razorpay integration without auth",
+    "confirmationPhase": "After payment success, Teams meeting links are generated automatically",
+    "securityModel": "Public endpoints only for session bookings, protected endpoints for consultant-initiated payments",
+    "meetingGeneration": "Teams meetings are created after payment confirmation via webhook/verification",
+    "errorHandling": "Comprehensive error handling at each step with proper HTTP status codes"
+  },
+  "keyImprovements": {
+    "removedComplexity": "Teams meeting generation removed from booking endpoint",
+    "separatedConcerns": "Booking → Payment → Meeting generation workflow",
+    "publicEndpoints": "No authentication required for public session bookings",
+    "paymentSecurity": "Razorpay signature verification ensures payment authenticity",
+    "meetingAutomation": "Teams meetings auto-generated after successful payment",
+    "errorRecovery": "Payment failures don't prevent session creation"
+  }
+}

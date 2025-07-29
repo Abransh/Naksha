@@ -52,8 +52,130 @@ const failedPaymentSchema = z.object({
 });
 
 /**
+ * POST /payments/public/create-order
+ * Create payment order for public session booking (no auth required)
+ */
+router.post('/public/create-order',
+  validateRequest(createOrderSchema),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const {
+        sessionId,
+        amount,
+        currency,
+        clientEmail,
+        clientName,
+        notes
+      } = req.body;
+
+      if (!sessionId) {
+        throw new ValidationError('sessionId is required for public payments');
+      }
+
+      const prisma = getPrismaClient();
+
+      // Verify session exists and is pending payment
+      const session = await prisma.session.findFirst({
+        where: {
+          id: sessionId,
+          paymentStatus: 'PENDING'
+        },
+        include: {
+          consultant: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true
+            }
+          }
+        }
+      });
+
+      if (!session) {
+        throw new ValidationError('Session not found or payment already processed');
+      }
+
+      // Verify amount matches session amount
+      if (Math.abs(Number(session.amount) - amount) > 0.01) {
+        throw new ValidationError('Amount mismatch with session');
+      }
+
+      // Create payment order
+      const paymentOrder = await createPaymentOrder({
+        sessionId,
+        consultantId: session.consultantId,
+        amount,
+        currency,
+        clientEmail,
+        clientName,
+        notes
+      });
+
+      console.log('💳 Public payment order created:', {
+        orderId: paymentOrder.orderId,
+        amount,
+        sessionId,
+        consultantId: session.consultantId
+      });
+
+      res.json({
+        success: true,
+        message: 'Payment order created successfully',
+        data: paymentOrder
+      });
+
+    } catch (error) {
+      if (error instanceof ValidationError) throw error;
+      console.error('Error creating public payment order:', error);
+      throw new AppError('Failed to create payment order');
+    }
+  }
+);
+
+/**
+ * POST /payments/public/verify
+ * Verify payment for public session booking (no auth required)
+ */
+router.post('/public/verify',
+  validateRequest(verifyPaymentSchema),
+  async (req: Request, res: Response): Promise<void> => {
+    try {
+      const {
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature
+      } = req.body;
+
+      // Process successful payment
+      const result = await processSuccessfulPayment({
+        razorpayOrderId,
+        razorpayPaymentId,
+        razorpaySignature
+      });
+
+      console.log('✅ Public payment verified and processed:', {
+        paymentId: razorpayPaymentId,
+        transactionId: result.transactionId,
+        amount: result.amount
+      });
+
+      res.json({
+        success: true,
+        message: 'Payment verified and processed successfully',
+        data: result
+      });
+
+    } catch (error) {
+      if (error instanceof ValidationError) throw error;
+      console.error('Error verifying public payment:', error);
+      throw new AppError('Payment verification failed');
+    }
+  }
+);
+
+/**
  * POST /payments/create-order
- * Create payment order for session booking or quotation
+ * Create payment order for session booking or quotation (authenticated)
  */
 router.post('/create-order',
   authenticateConsultant,

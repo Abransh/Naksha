@@ -14,7 +14,6 @@ const auth_1 = require("../../middleware/auth");
 const validation_1 = require("../../middleware/validation");
 const errorHandler_1 = require("../../middleware/errorHandler");
 const resendEmailService_1 = require("../../services/resendEmailService");
-const meetingService_1 = require("../../services/meetingService");
 const router = (0, express_1.Router)();
 /**
  * Performance Configuration - Sub-15-second booking guarantee
@@ -221,51 +220,8 @@ auth_1.optionalAuth, // Allow both authenticated and unauthenticated access
                     bookingSource: 'naksha_platform' // Mark as FROM NAKSHA
                 }
             });
-            // Generate Teams meeting link if scheduled session
-            let meetingLink = '';
-            if (scheduledDateTime && bookingData.selectedTime) {
-                try {
-                    console.log('🔗 Generating Teams meeting link...');
-                    // Calculate end time (session duration)
-                    const endDateTime = new Date(scheduledDateTime.getTime() + bookingData.duration * 60 * 1000);
-                    // Get consultant's Teams access token (from database)
-                    const consultantTeamsData = await tx.consultant.findUnique({
-                        where: { id: consultant.id },
-                        select: {
-                            teamsAccessToken: true,
-                            teamsTokenExpiresAt: true
-                        }
-                    });
-                    if (consultantTeamsData?.teamsAccessToken) {
-                        console.log('✅ Consultant has Teams token, generating meeting...');
-                        const meetingResponse = await (0, meetingService_1.generateMeetingLink)('TEAMS', {
-                            title: session.title,
-                            startTime: scheduledDateTime,
-                            endTime: endDateTime,
-                            consultantEmail: consultant.email,
-                            clientEmail: bookingData.email,
-                            description: `${bookingData.sessionType} session with ${consultant.firstName} ${consultant.lastName}`
-                        }, consultantTeamsData.teamsAccessToken);
-                        meetingLink = meetingResponse.meetingLink;
-                        // Update session with meeting link
-                        await tx.session.update({
-                            where: { id: session.id },
-                            data: {
-                                meetingLink,
-                                meetingId: meetingResponse.meetingId
-                            }
-                        });
-                        console.log('✅ Teams meeting link generated:', meetingLink);
-                    }
-                    else {
-                        console.log('⚠️ Consultant has not connected Teams - meeting link will be generated after payment');
-                    }
-                }
-                catch (meetingError) {
-                    console.error('❌ Teams meeting generation failed (non-blocking):', meetingError);
-                    // Don't fail the booking if meeting creation fails
-                }
-            }
+            // Teams meeting link will be generated after payment confirmation
+            console.log('📝 Session created - Teams meeting link will be generated after payment');
             // Update client session count
             await tx.client.update({
                 where: { id: client.id },
@@ -286,7 +242,7 @@ auth_1.optionalAuth, // Allow both authenticated and unauthenticated access
                 });
                 console.log(`✅ Availability slot booked: ${availabilitySlot.id}`);
             }
-            return { client, session, meetingLink };
+            return { client, session };
         }, {
             timeout: 10000, // 10 second transaction timeout
         });
@@ -304,7 +260,7 @@ auth_1.optionalAuth, // Allow both authenticated and unauthenticated access
             sessionTime: bookingData.selectedTime || 'To be scheduled',
             amount: bookingData.amount,
             currency: 'INR',
-            meetingLink: result.meetingLink || '',
+            meetingLink: '', // Will be generated after payment
             meetingPlatform: 'TEAMS'
         }).catch(console.error); // Fire and forget - don't block response
         // PERFORMANCE: Async cache clearing (non-blocking)
@@ -341,7 +297,7 @@ auth_1.optionalAuth, // Allow both authenticated and unauthenticated access
                     amount: Number(result.session.amount),
                     status: result.session.status,
                     paymentStatus: result.session.paymentStatus,
-                    meetingLink: result.meetingLink || result.session.meetingLink || '',
+                    meetingLink: '', // Will be generated after payment confirmation
                     platform: result.session.platform
                 },
                 client: {
