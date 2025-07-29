@@ -13,6 +13,7 @@ import { AuthenticatedRequest, optionalAuth } from '../../middleware/auth';
 import { validateRequest } from '../../middleware/validation';
 import { AppError, NotFoundError, ValidationError } from '../../middleware/errorHandler';
 import { sendSessionConfirmationEmail } from '../../services/resendEmailService';
+import { generateMeetingLink } from '../../services/meetingService';
 
 const router = Router();
 
@@ -243,12 +244,63 @@ router.post('/',
             amount: bookingData.amount,
             currency: 'INR',
             paymentStatus: 'PENDING',
-            platform: 'zoom',
+            platform: 'TEAMS',
             clientNotes: bookingData.clientNotes || '',
             timezone: 'Asia/Kolkata',
             bookingSource: 'naksha_platform' // Mark as FROM NAKSHA
           }
         });
+
+        // Generate Teams meeting link if scheduled session
+        let meetingLink = '';
+        if (scheduledDateTime && bookingData.selectedTime) {
+          try {
+            console.log('🔗 Generating Teams meeting link...');
+            
+            // Calculate end time (session duration)
+            const endDateTime = new Date(scheduledDateTime.getTime() + bookingData.duration * 60 * 1000);
+            
+            // Get consultant's Teams access token (from database)
+            const consultantTeamsData = await tx.consultant.findUnique({
+              where: { id: consultant.id },
+              select: { 
+                teamsAccessToken: true,
+                teamsTokenExpiresAt: true 
+              }
+            });
+            
+            if (consultantTeamsData?.teamsAccessToken) {
+              console.log('✅ Consultant has Teams token, generating meeting...');
+              
+              const meetingResponse = await generateMeetingLink('TEAMS', {
+                title: session.title,
+                startTime: scheduledDateTime,
+                endTime: endDateTime,
+                consultantEmail: consultant.email,
+                clientEmail: bookingData.email,
+                description: `${bookingData.sessionType} session with ${consultant.firstName} ${consultant.lastName}`
+              }, consultantTeamsData.teamsAccessToken);
+              
+              meetingLink = meetingResponse.meetingLink;
+              
+              // Update session with meeting link
+              await tx.session.update({
+                where: { id: session.id },
+                data: { 
+                  meetingLink,
+                  meetingId: meetingResponse.meetingId 
+                }
+              });
+              
+              console.log('✅ Teams meeting link generated:', meetingLink);
+            } else {
+              console.log('⚠️ Consultant has not connected Teams - meeting link will be generated after payment');
+            }
+          } catch (meetingError) {
+            console.error('❌ Teams meeting generation failed (non-blocking):', meetingError);
+            // Don't fail the booking if meeting creation fails
+          }
+        }
 
         // Update client session count
         await tx.client.update({
@@ -272,7 +324,7 @@ router.post('/',
           console.log(`✅ Availability slot booked: ${availabilitySlot.id}`);
         }
 
-        return { client, session };
+        return { client, session, meetingLink };
       }, {
         timeout: 10000, // 10 second transaction timeout
       });
@@ -291,7 +343,8 @@ router.post('/',
         sessionTime: bookingData.selectedTime || 'To be scheduled',
         amount: bookingData.amount,
         currency: 'INR',
-        meetingPlatform: 'Zoom'
+        meetingLink: result.meetingLink || '',
+        meetingPlatform: 'TEAMS'
       }).catch(console.error); // Fire and forget - don't block response
 
       // PERFORMANCE: Async cache clearing (non-blocking)
@@ -332,7 +385,9 @@ router.post('/',
             duration: result.session.duration,
             amount: Number(result.session.amount),
             status: result.session.status,
-            paymentStatus: result.session.paymentStatus
+            paymentStatus: result.session.paymentStatus,
+            meetingLink: result.meetingLink || result.session.meetingLink || '',
+            platform: result.session.platform
           },
           client: {
             id: result.client.id,
