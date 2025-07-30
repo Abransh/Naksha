@@ -23,9 +23,9 @@ export const metadata: Metadata = {
   title: "Dashboard - Nakksha",
   description: "Professional consulting platform for experts and clients",
   icons: {
-    icon: '/assets/nakksha-small.png',
-    shortcut: '/assets/nakksha-small.png',
-    apple: '/assets/nakksha-small.png',
+    icon: '/assets/nakksha-small.ico',
+    shortcut: '/assets/nakksha-small.ico',
+    apple: '/assets/nakksha-small.ico',
   },
 };
 
