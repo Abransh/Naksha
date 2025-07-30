@@ -464,41 +464,77 @@ router.post('/forgot-password',
   async (req: Request, res: Response): Promise<void> => {
     try {
       const { email } = req.body;
+      console.log(`🔐 Processing forgot password request for: ${email}`);
+      
       const prisma = getPrismaClient();
+      console.log('✅ Database connection established');
 
       // Find user (don't reveal if user exists or not)
       const user = await prisma.consultant.findUnique({
         where: { email },
         select: { id: true, email: true, firstName: true }
       });
+      console.log(`👤 User lookup result: ${user ? 'Found' : 'Not found'}`);
 
       if (user) {
+        console.log('📧 User exists, proceeding to send reset email...');
+        
         // Generate password reset token
         const resetToken = uuidv4();
-        await cacheUtils.setWithAutoTTL(
-          `password_reset:${resetToken}`,
-          { userId: user.id, email: user.email },
-          'mediumCache' // 30 minutes
-        );
+        console.log(`🔑 Generated reset token: ${resetToken.substring(0, 8)}...`);
+        
+        try {
+          // Test Redis connection
+          await cacheUtils.setWithAutoTTL(
+            `password_reset:${resetToken}`,
+            { userId: user.id, email: user.email },
+            'mediumCache' // 30 minutes
+          );
+          console.log('✅ Reset token stored in Redis cache');
+        } catch (redisError) {
+          console.error('❌ Redis cache error:', redisError);
+          throw new Error(`Cache storage failed: ${redisError instanceof Error ? redisError.message : 'Unknown Redis error'}`);
+        }
 
-        // Send password reset email via Resend
-        await sendPasswordResetEmail({
-          firstName: user.firstName,
-          email: user.email,
-          resetLink: `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`
-        });
+        // Test frontend URL configuration
+        const resetLink = `${process.env.FRONTEND_URL}/auth/reset-password?token=${resetToken}`;
+        console.log(`🔗 Reset link generated: ${resetLink}`);
+
+        try {
+          // Send password reset email via Resend
+          console.log('📧 Attempting to send password reset email...');
+          const emailResult = await sendPasswordResetEmail({
+            firstName: user.firstName,
+            email: user.email,
+            resetLink: resetLink
+          });
+          console.log('✅ Password reset email sent successfully:', emailResult);
+        } catch (emailError) {
+          console.error('❌ Email sending error:', emailError);
+          throw new Error(`Email sending failed: ${emailError instanceof Error ? emailError.message : 'Unknown email error'}`);
+        }
+      } else {
+        console.log('👤 User not found, but returning success to prevent enumeration');
       }
 
+      console.log('✅ Forgot password request processed successfully');
+      
       // Always return success to prevent email enumeration
       res.json({
         message: 'If an account with that email exists, we have sent password reset instructions'
       });
 
     } catch (error) {
-      console.error('❌ Forgot password error:', error);
+      console.error('❌ Forgot password error details:', {
+        message: error instanceof Error ? error.message : 'Unknown error',
+        stack: error instanceof Error ? error.stack : undefined,
+        timestamp: new Date().toISOString(),
+        requestBody: { email: req.body?.email }
+      });
+      
       res.status(500).json({
         error: 'Request failed',
-        message: 'An error occurred while processing your request',
+        message: 'Could not process password reset request',
         code: 'FORGOT_PASSWORD_ERROR'
       });
     }

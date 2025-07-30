@@ -1205,8 +1205,23 @@ export const sendConsultantWelcomeEmail = async (data: AuthEmailData): Promise<E
 export const sendPasswordResetEmail = async (data: AuthEmailData): Promise<EmailResponse> => {
   try {
     console.log(`📧 Sending password reset email to: ${data.email}`);
+    
+    // Validate configuration before sending
+    const configValidation = validateResendConfig();
+    if (!configValidation.valid) {
+      console.error('❌ Resend configuration validation failed:', configValidation.errors);
+      throw new Error(`Email configuration error: ${configValidation.errors.join(', ')}`);
+    }
+    
+    console.log('✅ Resend configuration validated successfully');
+    console.log('📧 Email configuration:', {
+      from: resendConfig.from,
+      replyTo: resendConfig.replyTo,
+      hasApiKey: !!process.env.RESEND_API_KEY,
+      resetLink: data.resetLink?.substring(0, 50) + '...'
+    });
 
-    const emailResponse = await getResendClient().emails.send({
+    const emailData = {
       from: resendConfig.from,
       to: data.email,
       replyTo: resendConfig.replyTo,
@@ -1216,9 +1231,24 @@ export const sendPasswordResetEmail = async (data: AuthEmailData): Promise<Email
         { name: 'type', value: 'password_reset' },
         { name: 'consultant_email', value: sanitizeEmailForTag(data.email) }
       ]
+    };
+    
+    console.log('📧 Preparing to send email with data:', {
+      from: emailData.from,
+      to: emailData.to,
+      subject: emailData.subject,
+      tagsCount: emailData.tags.length
     });
 
+    const emailResponse = await getResendClient().emails.send(emailData);
+
     console.log(`✅ Password reset email sent successfully. Email ID: ${emailResponse.data?.id}`);
+    console.log('📧 Resend API response:', {
+      id: emailResponse.data?.id,
+      from: emailResponse.data?.from,
+      to: emailResponse.data?.to,
+      created_at: emailResponse.data?.created_at
+    });
 
     // Log to database
     await logEmailToDatabase({
@@ -1235,7 +1265,14 @@ export const sendPasswordResetEmail = async (data: AuthEmailData): Promise<Email
     };
 
   } catch (error) {
-    console.error('❌ Failed to send password reset email:', error);
+    console.error('❌ Failed to send password reset email - detailed error:', {
+      message: error instanceof Error ? error.message : 'Unknown error',
+      stack: error instanceof Error ? error.stack : undefined,
+      errorType: error?.constructor?.name,
+      timestamp: new Date().toISOString(),
+      recipient: data.email,
+      resetLink: data.resetLink ? 'provided' : 'missing'
+    });
 
     // Log failed email to database
     await logEmailToDatabase({
