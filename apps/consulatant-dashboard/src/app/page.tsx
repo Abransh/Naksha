@@ -547,7 +547,7 @@ export default function HomePage() {
             <div className="md:col-span-2">
               <div className="mb-8">
                 <p className="text-[#F5F7FA] text-sm mb-2">
-                  Copyright © 2025 The Naksha Group
+                  Copyright © 2025 The Nakksha Group
                 </p>
                 <p className="text-[#F5F7FA] text-sm">All rights reserved</p>
               </div>
@@ -596,7 +596,7 @@ export default function HomePage() {
                 <p className="text-[#F5F7FA] flex-row text-sm transition-colors">
                 Nakksha <br></br>
 A platform to start and grow online consultancy. We don’t just support, we take charge of your tech, marketing & growth.<br></br>
-The Naksha Group <br></br>
+The Nakksha Group <br></br>
 Nagpur, Maharashtra - 440015 <br></br>
 P: +91-9307973337; E: <a href= "mailto:booking@nakksha.in"> booking@nakksha.in</a> <br></br>
 GST: 27BRKPN2343D1ZW

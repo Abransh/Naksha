@@ -332,7 +332,7 @@ export default function Dashboard() {
                       <div className="flex items-center gap-2">
                         <div className="w-2 h-2 rounded-full bg-[var(--primary-100)]"></div>
                         <span className="text-[var(--black-20)] text-xs">
-                          FROM NAKSHA ({formatCurrency(revenueSplit.fromNaksha)})
+                          FROM NAKkSHA ({formatCurrency(revenueSplit.fromNaksha)})
                         </span>
                       </div>
                       <div className="flex items-center gap-2">
