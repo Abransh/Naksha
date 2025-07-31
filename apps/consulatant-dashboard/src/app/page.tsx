@@ -83,11 +83,13 @@ const consultantTypes = [
 const pricingPlans = [
   {
     name: "Starter",
-    monthlyPrice: 2000,
-    yearlyPrice: 19200, // 20% discount on 12 months (24000 * 0.8)
+    monthlyPrice: 2360,
+    yearlyPrice: 22656, // 20% discount on 12 months (24000 * 0.8)
     description:
       "Perfect for consultants who need technical support and have their own marketing setup.",
     buttonStyle: "secondary",
+    monthlyLink: "https://rzp.io/rzp/tSv8fQBY",
+    yearlyLink: "https://rzp.io/rzp/uoqGhu5",
     features: [
       
       "Personal 1 TB Storage space",
@@ -106,12 +108,14 @@ const pricingPlans = [
   },
   {
     name: "Growth",
-    monthlyPrice: 3000,
-    yearlyPrice: 28800, // 20% discount on 12 months (36000 * 0.8)
+    monthlyPrice: 3540,
+    yearlyPrice: 33984, // 20% discount on 12 months (36000 * 0.8)
     description:
       "Perfect for consultants who need technical support and a personal marketing advisor.",
     buttonStyle: "primary",
     gradient: true,
+    monthlyLink: "https://rzp.io/rzp/LzlqNyNz",
+    yearlyLink: "https://rzp.io/rzp/hX2RVgu9",
     features: [
       "Personal 1 TB Storage space",
       "Online meetings + Recording setup",
@@ -129,11 +133,13 @@ const pricingPlans = [
   },
   {
     name: "Pro",
-    monthlyPrice: 5000,
-    yearlyPrice: 48000, // 20% discount on 12 months (60000 * 0.8)
+    monthlyPrice: 5900,
+    yearlyPrice: 56640, // 20% discount on 12 months (60000 * 0.8)
     description:
       "Perfect for consultants looking for a complete tech and marketing solution. A campaign manager and video editor will be provided.",
     buttonStyle: "secondary",
+    monthlyLink: "https://rzp.io/rzp/fT0aYVe",
+    yearlyLink: "https://rzp.io/rzp/dZaofQyo",
     features: [
       "Personal 1 TB Storage space",
       "Online meetings + Recording setup",
@@ -459,15 +465,21 @@ export default function HomePage() {
                   </p>
 
                   {/* CTA Button */}
-                  <Button
-                    className={`w-full py-4 text-lg font-medium rounded-xl ${
-                      plan.buttonStyle === "primary"
-                        ? "bg-gradient-to-r from-[#8C82FF] to-[#4A3AFF] text-white shadow-lg"
-                        : "bg-white border border-[#D9DBE9] text-[#514F6E] hover:bg-gray-50"
-                    }`}
+                  <Link 
+                    href={isAnnualBilling ? plan.yearlyLink : plan.monthlyLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
-                    Get started
-                  </Button>
+                    <Button
+                      className={`w-full py-4 text-lg font-medium rounded-xl ${
+                        plan.buttonStyle === "primary"
+                          ? "bg-gradient-to-r from-[#8C82FF] to-[#4A3AFF] text-white shadow-lg"
+                          : "bg-white border border-[#D9DBE9] text-[#514F6E] hover:bg-gray-50"
+                      }`}
+                    >
+                      Get started
+                    </Button>
+                  </Link>
                 </div>
 
                 {/* Bottom Card - Features */}
