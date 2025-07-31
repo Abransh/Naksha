@@ -111,13 +111,13 @@ export function PendingApprovalPage() {
           <div className="bg-gray-50 rounded-lg p-4 mb-6">
             <h3 className="font-medium text-gray-900 mb-2">Account Status:</h3>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between">
+              <div className="flex text-black justify-between">
                 <span>Email Verified:</span>
                 <span className={onboardingStatus.needsEmailVerification ? 'text-red-600' : 'text-green-600'}>
                   {onboardingStatus.needsEmailVerification ? 'Pending' : 'Verified'}
                 </span>
               </div>
-              <div className="flex justify-between">
+              <div className="flex text-black justify-between">
                 <span>Admin Approval:</span>
                 <span className={onboardingStatus.needsAdminApproval ? 'text-yellow-600' : 'text-green-600'}>
                   {onboardingStatus.needsAdminApproval ? 'Pending' : 'Approved'}

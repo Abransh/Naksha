@@ -25,6 +25,11 @@ export declare const forgotPassword: (req: Request, res: Response) => Promise<vo
 /**
  * Reset Password
  */
+/**
+ * Validate password reset token
+ * Public endpoint - no authentication required
+ */
+export declare const validateResetToken: (req: Request, res: Response) => Promise<void>;
 export declare const resetPassword: (req: Request, res: Response) => Promise<void>;
 /**
  * Get current user profile

@@ -330,7 +330,7 @@ router.get('/config', (req, res) => {
             keyId: process.env.RAZORPAY_KEY_ID,
             currency: 'INR',
             company: {
-                name: 'Naksha Consulting',
+                name: 'Nakksha Consulting',
                 logo: '/assets/naksha-logo.png',
                 theme: {
                     color: '#3B82F6'

@@ -7,7 +7,7 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
-exports.getCurrentUser = exports.resetPassword = exports.forgotPassword = exports.verifyEmail = exports.adminLogin = exports.consultantLogin = exports.consultantSignup = void 0;
+exports.getCurrentUser = exports.resetPassword = exports.validateResetToken = exports.forgotPassword = exports.verifyEmail = exports.adminLogin = exports.consultantLogin = exports.consultantSignup = void 0;
 const bcryptjs_1 = __importDefault(require("bcryptjs"));
 const crypto_1 = __importDefault(require("crypto"));
 const database_1 = require("@nakksha/database");
@@ -82,6 +82,9 @@ const resetPasswordSchema = zod_1.z.object({
     password: zod_1.z.string()
         .min(8, 'Password must be at least 8 characters')
         .regex(/^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]/, 'Password must contain uppercase, lowercase, number and special character')
+});
+const validateResetTokenSchema = zod_1.z.object({
+    token: zod_1.z.string().min(1, 'Reset token is required')
 });
 // ============================================================================
 // CONSULTANT AUTHENTICATION
@@ -511,13 +514,15 @@ const forgotPassword = async (req, res) => {
         }
         // Generate reset token
         const resetToken = crypto_1.default.randomBytes(32).toString('hex');
-        // Store reset token in Redis (1 hour expiry)
-        await redis_1.CacheManager.set(`password_reset:${resetToken}`, {
+        // Store reset token in Redis (3 hours expiry) - using direct Redis client to avoid cache prefix
+        const redisClient = require('../config/redis').getRedisClient();
+        await redisClient.setEx(`password_reset:${resetToken}`, 60 * 60 * 3, // 3 hours
+        JSON.stringify({
             consultantId: consultant.id,
             email: consultant.email,
-            type: 'password_reset'
-        }, 60 * 60 // 1 hour
-        );
+            type: 'password_reset',
+            createdAt: new Date().toISOString()
+        }));
         // Send password reset email using Resend API
         try {
             const resetLink = `${process.env.FRONTEND_URL || 'https://naksha-teal.vercel.app'}/reset-password?token=${resetToken}`;
@@ -565,19 +570,85 @@ exports.forgotPassword = forgotPassword;
 /**
  * Reset Password
  */
-const resetPassword = async (req, res) => {
+/**
+ * Validate password reset token
+ * Public endpoint - no authentication required
+ */
+const validateResetToken = async (req, res) => {
     try {
-        const { token, password } = resetPasswordSchema.parse(req.body);
-        // Get reset data from Redis
-        const resetData = await redis_1.CacheManager.get(`password_reset:${token}`);
+        const { token } = validateResetTokenSchema.parse(req.body);
+        // Get reset data from Redis using direct key (no cache prefix)
+        const redisClient = require('../config/redis').getRedisClient();
+        const resetData = await redisClient.get(`password_reset:${token}`);
         if (!resetData) {
             res.status(400).json({
                 error: 'Invalid reset token',
                 message: 'The password reset link is invalid or has expired',
+                code: 'INVALID_RESET_TOKEN',
+                valid: false
+            });
+            return;
+        }
+        const parsedData = JSON.parse(resetData);
+        // Check if consultant still exists
+        const consultant = await database_1.prisma.consultant.findUnique({
+            where: { id: parsedData.consultantId },
+            select: { id: true, email: true, firstName: true }
+        });
+        if (!consultant) {
+            res.status(400).json({
+                error: 'Invalid reset token',
+                message: 'The associated account no longer exists',
+                code: 'ACCOUNT_NOT_FOUND',
+                valid: false
+            });
+            return;
+        }
+        logger_1.logger.info(`Valid reset token checked for: ${consultant.email}`);
+        res.json({
+            message: 'Reset token is valid',
+            valid: true,
+            data: {
+                email: consultant.email,
+                firstName: consultant.firstName
+            }
+        });
+    }
+    catch (error) {
+        if (error instanceof zod_1.z.ZodError) {
+            res.status(400).json({
+                error: 'Validation error',
+                message: error.errors[0]?.message || 'Invalid request data',
+                code: 'VALIDATION_ERROR',
+                valid: false
+            });
+            return;
+        }
+        logger_1.logger.error('Validate reset token error:', error);
+        res.status(500).json({
+            error: 'Internal server error',
+            message: 'Failed to validate reset token',
+            code: 'SERVER_ERROR',
+            valid: false
+        });
+    }
+};
+exports.validateResetToken = validateResetToken;
+const resetPassword = async (req, res) => {
+    try {
+        const { token, password } = resetPasswordSchema.parse(req.body);
+        // Get reset data from Redis using direct client to avoid cache prefix issues
+        const redisClient = require('../config/redis').getRedisClient();
+        const resetDataString = await redisClient.get(`password_reset:${token}`);
+        if (!resetDataString) {
+            res.status(400).json({
+                error: 'Invalid reset token',
+                message: 'The password reset link is invalid or has expired. Please request a new password reset.',
                 code: 'INVALID_RESET_TOKEN'
             });
             return;
         }
+        const resetData = JSON.parse(resetDataString);
         // Hash new password
         const saltRounds = 12;
         const passwordHash = await bcryptjs_1.default.hash(password, saltRounds);
@@ -595,10 +666,10 @@ const resetPassword = async (req, res) => {
                 }
             }
         });
-        // Remove reset token from Redis
-        await redis_1.CacheManager.del(`password_reset:${token}`);
-        // Clear user session from Redis
-        await redis_1.CacheManager.del(`user_session:${resetData.consultantId}`);
+        // Remove reset token from Redis using direct client
+        await redisClient.del(`password_reset:${token}`);
+        // Clear user session from Redis using direct client
+        await redisClient.del(`user_session:${resetData.consultantId}`);
         logger_1.logger.info(`Password reset completed for: ${resetData.email}`);
         res.json({
             message: 'Password reset successfully',

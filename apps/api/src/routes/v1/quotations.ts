@@ -34,19 +34,19 @@ const createQuotationSchema = z.object({
   quotationName: z.string().min(1, 'Quotation name is required').max(300),
   description: z.string().max(2000, 'Description too long').optional(),
   baseAmount: z.number().gte(0, 'Base amount cannot be negative'),
-  // discountPercentage removed - not implemented in database
+  taxPercentage: z.number().min(0, 'Tax percentage cannot be negative').max(50, 'Tax percentage cannot exceed 50%').optional().default(0),
+  gstNumber: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/, 'Invalid GST number format (15 characters required)').optional(),
   currency: z.string().length(3, 'Currency must be 3 characters').optional().default('INR'),
-  // durationText removed - not in database
   expiryDays: z.number().min(1).max(365, 'Expiry must be between 1-365 days').optional().default(30),
   notes: z.string().max(1000, 'Notes too long').optional(),
-  // includeImage removed - PDF functionality removed
 });
 
 const updateQuotationSchema = z.object({
   quotationName: z.string().min(1).max(300).optional(),
   description: z.string().max(2000).optional(),
   baseAmount: z.number().gte(0).optional(),
-  // discountPercentage and durationText removed - not in database
+  taxPercentage: z.number().min(0, 'Tax percentage cannot be negative').max(50, 'Tax percentage cannot exceed 50%').optional(),
+  gstNumber: z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/, 'Invalid GST number format (15 characters required)').optional(),
   expiresAt: z.string().datetime().optional(),
   status: z.enum(['DRAFT', 'SENT', 'VIEWED', 'ACCEPTED', 'REJECTED', 'EXPIRED']).optional(),
   notes: z.string().max(1000).optional()
@@ -142,6 +142,8 @@ router.get('/',
           clientEmail: quotation.clientEmail,
           description: quotation.description,
           baseAmount: Number(quotation.baseAmount),
+          taxPercentage: Number(quotation.taxPercentage || 0),
+          gstNumber: quotation.gstNumber,
           finalAmount: Number(quotation.finalAmount),
           currency: quotation.currency,
           validUntil: quotation.validUntil,
@@ -232,6 +234,8 @@ router.get('/:id',
       const formattedQuotation = {
         ...quotation,
         baseAmount: Number(quotation.baseAmount),
+        taxPercentage: Number(quotation.taxPercentage || 0),
+        gstNumber: quotation.gstNumber,
         finalAmount: Number(quotation.finalAmount),
         client: {
           name: quotation.clientName,
@@ -271,8 +275,22 @@ router.post('/',
 
       const prisma = getPrismaClient();
 
-      // Calculate final amount (no discount calculation needed)
-      const finalAmount = quotationData.baseAmount;
+      // Get consultant information (including GST number for default)
+      const consultant = await prisma.consultant.findUnique({
+        where: { id: consultantId },
+        select: { gstNumber: true }
+      });
+
+      if (!consultant) {
+        throw new AppError('Consultant not found', 404, 'CONSULTANT_NOT_FOUND');
+      }
+
+      // Use consultant's GST number as default if not provided
+      const finalGstNumber = quotationData.gstNumber || consultant.gstNumber;
+
+      // Calculate final amount including tax
+      const taxAmount = quotationData.baseAmount * (quotationData.taxPercentage || 0) / 100;
+      const finalAmount = quotationData.baseAmount + taxAmount;
 
       // Calculate expiry date
       const expiresAt = new Date();
@@ -310,6 +328,8 @@ router.post('/',
           title: quotationData.quotationName, // Required field
           description: quotationData.description || '',
           baseAmount: quotationData.baseAmount,
+          taxPercentage: quotationData.taxPercentage || 0,
+          gstNumber: finalGstNumber,
           finalAmount,
           amount: finalAmount, // Alias for finalAmount
           currency: quotationData.currency,
@@ -335,6 +355,8 @@ router.post('/',
           quotation: {
             ...quotation,
             baseAmount: Number(quotation.baseAmount),
+            taxPercentage: Number(quotation.taxPercentage || 0),
+            gstNumber: quotation.gstNumber,
             finalAmount: Number(quotation.finalAmount)
           }
         }
@@ -382,10 +404,14 @@ router.put('/:id',
         throw new ValidationError('Cannot update quotation that has been accepted or rejected');
       }
 
-      // Recalculate final amount if base amount changed
+      // Recalculate final amount if base amount or tax percentage changed
       let finalAmount = Number(existingQuotation.finalAmount);
-      if (updates.baseAmount !== undefined) {
-        finalAmount = updates.baseAmount;
+      const newBaseAmount = updates.baseAmount !== undefined ? updates.baseAmount : Number(existingQuotation.baseAmount);
+      const newTaxPercentage = updates.taxPercentage !== undefined ? updates.taxPercentage : Number(existingQuotation.taxPercentage || 0);
+      
+      if (updates.baseAmount !== undefined || updates.taxPercentage !== undefined) {
+        const taxAmount = newBaseAmount * newTaxPercentage / 100;
+        finalAmount = newBaseAmount + taxAmount;
       }
 
       // Update quotation
@@ -410,6 +436,8 @@ router.put('/:id',
           quotation: {
             ...updatedQuotation,
             baseAmount: Number(updatedQuotation.baseAmount),
+            taxPercentage: Number(updatedQuotation.taxPercentage || 0),
+            gstNumber: updatedQuotation.gstNumber,
             finalAmount: Number(updatedQuotation.finalAmount)
           }
         }
@@ -539,6 +567,8 @@ router.post('/:id/send',
           quotation: {
             ...updatedQuotation,
             baseAmount: Number(updatedQuotation.baseAmount),
+            taxPercentage: Number(updatedQuotation.taxPercentage || 0),
+            gstNumber: updatedQuotation.gstNumber,
             finalAmount: Number(updatedQuotation.finalAmount)
           },
           emailStatus: {

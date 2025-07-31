@@ -191,6 +191,7 @@ class App {
         this.app.post('/api/v1/auth/admin/login', auth_controller_1.adminLogin);
         this.app.get('/api/v1/auth/verify-email/:token', auth_controller_1.verifyEmail);
         this.app.post('/api/v1/auth/forgot-password', auth_controller_1.forgotPassword);
+        this.app.post('/api/v1/auth/validate-reset-token', auth_controller_1.validateResetToken);
         this.app.post('/api/v1/auth/reset-password', auth_controller_1.resetPassword);
         // Protected auth routes (authentication required) - v1 API
         this.app.get('/api/v1/auth/me', auth_1.authenticate, auth_controller_1.getCurrentUser);

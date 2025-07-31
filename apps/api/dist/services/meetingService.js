@@ -417,7 +417,7 @@ const sendMeetingInvitation = async (meetingDetails, meetingLink, accessToken) =
             <p><strong>Join Teams Meeting:</strong> <a href="${meetingLink}">Click here to join</a></p>
             <p><strong>Meeting Link:</strong> ${meetingLink}</p>
             <hr>
-            <p><em>This meeting was created by Naksha Consulting Platform</em></p>
+            <p><em>This meeting was created by Nakksha Consulting Platform</em></p>
           </div>
         `
             },

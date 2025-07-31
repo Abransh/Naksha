@@ -31,18 +31,18 @@ const createQuotationSchema = zod_1.z.object({
     quotationName: zod_1.z.string().min(1, 'Quotation name is required').max(300),
     description: zod_1.z.string().max(2000, 'Description too long').optional(),
     baseAmount: zod_1.z.number().gte(0, 'Base amount cannot be negative'),
-    // discountPercentage removed - not implemented in database
+    taxPercentage: zod_1.z.number().min(0, 'Tax percentage cannot be negative').max(50, 'Tax percentage cannot exceed 50%').optional().default(0),
+    gstNumber: zod_1.z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/, 'Invalid GST number format (15 characters required)').optional(),
     currency: zod_1.z.string().length(3, 'Currency must be 3 characters').optional().default('INR'),
-    // durationText removed - not in database
     expiryDays: zod_1.z.number().min(1).max(365, 'Expiry must be between 1-365 days').optional().default(30),
     notes: zod_1.z.string().max(1000, 'Notes too long').optional(),
-    // includeImage removed - PDF functionality removed
 });
 const updateQuotationSchema = zod_1.z.object({
     quotationName: zod_1.z.string().min(1).max(300).optional(),
     description: zod_1.z.string().max(2000).optional(),
     baseAmount: zod_1.z.number().gte(0).optional(),
-    // discountPercentage and durationText removed - not in database
+    taxPercentage: zod_1.z.number().min(0, 'Tax percentage cannot be negative').max(50, 'Tax percentage cannot exceed 50%').optional(),
+    gstNumber: zod_1.z.string().regex(/^[0-9]{2}[A-Z]{5}[0-9]{4}[A-Z]{1}[1-9A-Z]{1}[Z]{1}[0-9A-Z]{1}$/, 'Invalid GST number format (15 characters required)').optional(),
     expiresAt: zod_1.z.string().datetime().optional(),
     status: zod_1.z.enum(['DRAFT', 'SENT', 'VIEWED', 'ACCEPTED', 'REJECTED', 'EXPIRED']).optional(),
     notes: zod_1.z.string().max(1000).optional()
@@ -125,6 +125,8 @@ router.get('/', (0, validation_1.validateRequest)(quotationFiltersSchema, 'query
                 clientEmail: quotation.clientEmail,
                 description: quotation.description,
                 baseAmount: Number(quotation.baseAmount),
+                taxPercentage: Number(quotation.taxPercentage || 0),
+                gstNumber: quotation.gstNumber,
                 finalAmount: Number(quotation.finalAmount),
                 currency: quotation.currency,
                 validUntil: quotation.validUntil,
@@ -203,6 +205,8 @@ router.get('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: valida
         const formattedQuotation = {
             ...quotation,
             baseAmount: Number(quotation.baseAmount),
+            taxPercentage: Number(quotation.taxPercentage || 0),
+            gstNumber: quotation.gstNumber,
             finalAmount: Number(quotation.finalAmount),
             client: {
                 name: quotation.clientName,
@@ -235,8 +239,19 @@ router.post('/', (0, validation_1.validateRequest)(createQuotationSchema), async
         const consultantId = req.user.id;
         const quotationData = req.body;
         const prisma = (0, database_1.getPrismaClient)();
-        // Calculate final amount (no discount calculation needed)
-        const finalAmount = quotationData.baseAmount;
+        // Get consultant information (including GST number for default)
+        const consultant = await prisma.consultant.findUnique({
+            where: { id: consultantId },
+            select: { gstNumber: true }
+        });
+        if (!consultant) {
+            throw new errorHandler_1.AppError('Consultant not found', 404, 'CONSULTANT_NOT_FOUND');
+        }
+        // Use consultant's GST number as default if not provided
+        const finalGstNumber = quotationData.gstNumber || consultant.gstNumber;
+        // Calculate final amount including tax
+        const taxAmount = quotationData.baseAmount * (quotationData.taxPercentage || 0) / 100;
+        const finalAmount = quotationData.baseAmount + taxAmount;
         // Calculate expiry date
         const expiresAt = new Date();
         expiresAt.setDate(expiresAt.getDate() + quotationData.expiryDays);
@@ -269,6 +284,8 @@ router.post('/', (0, validation_1.validateRequest)(createQuotationSchema), async
                 title: quotationData.quotationName, // Required field
                 description: quotationData.description || '',
                 baseAmount: quotationData.baseAmount,
+                taxPercentage: quotationData.taxPercentage || 0,
+                gstNumber: finalGstNumber,
                 finalAmount,
                 amount: finalAmount, // Alias for finalAmount
                 currency: quotationData.currency,
@@ -290,6 +307,8 @@ router.post('/', (0, validation_1.validateRequest)(createQuotationSchema), async
                 quotation: {
                     ...quotation,
                     baseAmount: Number(quotation.baseAmount),
+                    taxPercentage: Number(quotation.taxPercentage || 0),
+                    gstNumber: quotation.gstNumber,
                     finalAmount: Number(quotation.finalAmount)
                 }
             }
@@ -327,10 +346,13 @@ router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: valida
         if (existingQuotation.status === 'ACCEPTED' || existingQuotation.status === 'REJECTED') {
             throw new errorHandler_1.ValidationError('Cannot update quotation that has been accepted or rejected');
         }
-        // Recalculate final amount if base amount changed
+        // Recalculate final amount if base amount or tax percentage changed
         let finalAmount = Number(existingQuotation.finalAmount);
-        if (updates.baseAmount !== undefined) {
-            finalAmount = updates.baseAmount;
+        const newBaseAmount = updates.baseAmount !== undefined ? updates.baseAmount : Number(existingQuotation.baseAmount);
+        const newTaxPercentage = updates.taxPercentage !== undefined ? updates.taxPercentage : Number(existingQuotation.taxPercentage || 0);
+        if (updates.baseAmount !== undefined || updates.taxPercentage !== undefined) {
+            const taxAmount = newBaseAmount * newTaxPercentage / 100;
+            finalAmount = newBaseAmount + taxAmount;
         }
         // Update quotation
         const updatedQuotation = await prisma.quotation.update({
@@ -351,6 +373,8 @@ router.put('/:id', (0, validation_1.validateRequest)(zod_1.z.object({ id: valida
                 quotation: {
                     ...updatedQuotation,
                     baseAmount: Number(updatedQuotation.baseAmount),
+                    taxPercentage: Number(updatedQuotation.taxPercentage || 0),
+                    gstNumber: updatedQuotation.gstNumber,
                     finalAmount: Number(updatedQuotation.finalAmount)
                 }
             }
@@ -461,6 +485,8 @@ router.post('/:id/send', (0, validation_1.validateRequest)(zod_1.z.object({ id: 
                 quotation: {
                     ...updatedQuotation,
                     baseAmount: Number(updatedQuotation.baseAmount),
+                    taxPercentage: Number(updatedQuotation.taxPercentage || 0),
+                    gstNumber: updatedQuotation.gstNumber,
                     finalAmount: Number(updatedQuotation.finalAmount)
                 },
                 emailStatus: {

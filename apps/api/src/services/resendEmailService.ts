@@ -1240,10 +1240,7 @@ export const sendPasswordResetEmail = async (data: AuthEmailData): Promise<Email
 
     console.log(`✅ Password reset email sent successfully. Email ID: ${emailResponse.data?.id}`);
     console.log('📧 Resend API response:', {
-      id: emailResponse.data?.id,
-      from: emailResponse.data?.from,
-      to: emailResponse.data?.to,
-      created_at: emailResponse.data?.created_at
+      id: emailResponse.data?.id
     });
 
     // Log to database
