@@ -223,7 +223,8 @@ const getClientQuotationEmailHtml = (data: QuotationEmailData): string => {
         <div class="content">
             <p>Dear <strong>${clientName}</strong>,</p>
             
-            <p>I'm pleased to share a professional quotation for your project requirements. Please find the details below:</p>
+            <p>I'm pleased to share the professional quotation for your project requirements. Please find the details below:
+</p>
             
             <div class="quotation-card">
                 <h3 style="margin-top: 0; color: #667eea;">${quotationName}</h3>
@@ -271,9 +272,11 @@ const getClientQuotationEmailHtml = (data: QuotationEmailData): string => {
             
            
        
-            <p>If you have any questions about this quotation or would like to discuss the project further, please don't hesitate to reach out to me.</p>
-            
-            <p>I look forward to working with you!</p>
+            <p>If you have any questions regarding this quotation or would like to discuss any aspect of the project in more detail, please feel free to reach out.
+</p>
+            <p>If you'd like to proceed, you may simply reply to this email or contact me directly.
+</p>
+            <p>Looking forward to the opportunity to collaborate with you.</p>
             
             <p>Best regards,<br>
             <strong>${consultantName}</strong><br>
@@ -645,13 +648,13 @@ const getClientWelcomeEmailHtml = (data: ClientEmailData): string => {
 <body>
     <div class="container">
         <div class="header">
-            <h1>🎉 Welcome to nakksha.in!</h1>
+            <h1>I hope this message finds you well.</h1>
         </div>
         
         <div class="content">
             <p>Hello ${clientName},</p>
             
-            <p>Welcome to nakksha.in! You've been connected with <strong>${consultantName}</strong>, your dedicated consultant.</p>
+            <p>Thank you for placing your trust in me. </p>
             
             <div style="background: #EFF6FF; padding: 20px; border-radius: 8px; margin: 20px 0;">
                 <h3>Your Consultant Details:</h3>
@@ -660,7 +663,9 @@ const getClientWelcomeEmailHtml = (data: ClientEmailData): string => {
                 ${profileUrl ? `<p><strong>Profile:</strong> <a href="${profileUrl}">View Profile</a></p>` : ''}
             </div>
             
-            <p>Your consultant will reach out to you soon to discuss your requirements and schedule sessions.</p>
+            <p>I'm truly grateful for the opportunity to work with you and support your journey ahead.
+I'm here to understand your goals, offer tailored guidance, and help you navigate your next steps with clarity and confidence. We'll work together to find the right solutions.
+</p>
             
             ${profileUrl ? `
             <div style="text-align: center;">
@@ -668,7 +673,7 @@ const getClientWelcomeEmailHtml = (data: ClientEmailData): string => {
             </div>
             ` : ''}
             
-            <p>If you have any questions, feel free to contact your consultant directly or reach out to our support team.</p>
+            <p>Looking forward to our conversation.</p>
         </div>
         
         <div class="footer">

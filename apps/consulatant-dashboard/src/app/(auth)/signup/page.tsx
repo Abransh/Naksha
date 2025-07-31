@@ -19,24 +19,8 @@ export default function SignupPage() {
   const [success, setSuccess] = useState(false);
   const [countdown, setCountdown] = useState(3);
 
-  const { signup, error, clearError, user, isAuthenticated, isLoading: authLoading } = useAuth();
+  const { signup, error, clearError } = useAuth();
   const router = useRouter();
-
-  // Handle redirect for already authenticated users
-  useEffect(() => {
-    if (isAuthenticated && user && !authLoading) {
-      // Determine redirect path based on user status
-      let redirectPath = '/dashboard';
-      
-      if (!user.isApprovedByAdmin) {
-        redirectPath = '/dashboard/pending-approval';
-      } else if (!user.profileCompleted) {
-        redirectPath = '/dashboard/settings';
-      }
-      
-      router.push(redirectPath);
-    }
-  }, [isAuthenticated, user, authLoading, router]);
 
   // Handle redirect after successful signup
   useEffect(() => {
