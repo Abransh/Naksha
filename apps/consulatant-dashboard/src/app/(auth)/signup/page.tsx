@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
@@ -21,24 +21,73 @@ export default function SignupPage() {
 
   const { signup, error, clearError } = useAuth();
   const router = useRouter();
+  const countdownRef = useRef<NodeJS.Timeout | null>(null);
+  const failsafeRef = useRef<NodeJS.Timeout | null>(null);
 
   // Handle redirect after successful signup
   useEffect(() => {
     if (success) {
-      // Start countdown and redirect to login
-      const countdownInterval = setInterval(() => {
-        setCountdown((prev) => {
-          if (prev <= 1) {
-            clearInterval(countdownInterval);
-            router.push('/login');
-            return 0;
-          }
-          return prev - 1;
-        });
-      }, 1000);
+      console.log('🎉 Signup success detected, starting redirect countdown...');
+      let currentCount = 3;
       
-      // Cleanup on unmount
-      return () => clearInterval(countdownInterval);
+      const doRedirect = () => {
+        console.log('🔄 Executing redirect to login page...');
+        try {
+          router.push('/login');
+          console.log('✅ Router.push(/login) called successfully');
+        } catch (err) {
+          console.error('❌ Router.push failed:', err);
+          // Fallback: try window.location as last resort
+          window.location.href = '/login';
+        }
+      };
+      
+      const updateCountdown = () => {
+        console.log(`⏳ Countdown: ${currentCount} seconds remaining`);
+        setCountdown(currentCount);
+        
+        if (currentCount <= 0) {
+          console.log('⏰ Countdown reached zero, redirecting now...');
+          if (countdownRef.current) {
+            clearInterval(countdownRef.current);
+            countdownRef.current = null;
+          }
+          doRedirect();
+          return;
+        }
+        
+        currentCount--;
+      };
+      
+      // Update immediately
+      updateCountdown();
+      
+      // Start countdown interval
+      countdownRef.current = setInterval(updateCountdown, 1000);
+      console.log('🕐 Countdown interval started');
+      
+      // Failsafe: Force redirect after 6 seconds regardless of countdown status
+      failsafeRef.current = setTimeout(() => {
+        console.log('🚨 Failsafe redirect triggered after 6 seconds');
+        if (countdownRef.current) {
+          clearInterval(countdownRef.current);
+          countdownRef.current = null;
+        }
+        doRedirect();
+      }, 6000);
+      
+      // Cleanup function
+      return () => {
+        console.log('🧹 Cleaning up countdown intervals...');
+        if (countdownRef.current) {
+          clearInterval(countdownRef.current);
+          countdownRef.current = null;
+        }
+        if (failsafeRef.current) {
+          clearTimeout(failsafeRef.current);
+          failsafeRef.current = null;
+        }
+      };
     }
   }, [success, router]);
 
@@ -46,22 +95,47 @@ export default function SignupPage() {
     e.preventDefault();
     e.stopPropagation();
     
+    console.log('🚀 Signup form submitted');
+    console.log('📋 Form data:', {
+      fullName: formData.fullName.trim(),
+      email: formData.email.trim(),
+      passwordLength: formData.password.length,
+      hasName: !!formData.fullName.trim(),
+      hasEmail: !!formData.email.trim(),
+      hasPassword: !!formData.password.trim(),
+    });
+    
     clearError();
 
+    // Validation check
     if (!formData.fullName.trim() || !formData.email.trim() || !formData.password.trim()) {
+      console.log('❌ Form validation failed - missing required fields');
       return;
     }
 
+    console.log('✅ Form validation passed, starting signup process...');
     setIsLoading(true);
 
     try {
-      await signup(formData.fullName.trim(), formData.email.trim(), formData.password);
+      console.log('📡 Calling signup API...');
+      const result = await signup(formData.fullName.trim(), formData.email.trim(), formData.password);
+      console.log('✅ Signup API call completed successfully:', result);
+      
+      console.log('🎯 Setting success state to true...');
       setSuccess(true);
       setIsLoading(false);
-      // Success state will trigger redirect countdown
+      console.log('✅ Success state set, loading state cleared');
+      console.log('⏭️ Success useEffect should trigger redirect countdown now...');
     } catch (err) {
+      console.error('❌ Signup failed with error:', err);
+      console.log('📊 Error details:', {
+        message: err instanceof Error ? err.message : 'Unknown error',
+        type: typeof err,
+        stringified: JSON.stringify(err, null, 2)
+      });
       // Error is handled by the auth context
       setIsLoading(false);
+      console.log('💥 Loading state cleared after error');
     }
   };
 
@@ -124,14 +198,37 @@ export default function SignupPage() {
           <div className="flex flex-col items-center gap-12 w-full">
             {/* Success Message */}
             {success && (
-              <div className="w-full p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
-                <CheckCircle size={20} className="text-green-600" />
-                <div className="flex-1">
-                  <p className="text-green-800 font-medium">Account created successfully!</p>
-                  <p className="text-green-600 text-sm">
-                    Please check your email to verify your account. 
-                    Redirecting to login in {countdown} second{countdown !== 1 ? 's' : ''}...
-                  </p>
+              <div className="w-full p-4 bg-green-50 border border-green-200 rounded-lg">
+                <div className="flex items-center gap-3 mb-3">
+                  <CheckCircle size={20} className="text-green-600" />
+                  <div className="flex-1">
+                    <p className="text-green-800 font-medium">Account created successfully!</p>
+                    <p className="text-green-600 text-sm">
+                      Please check your email to verify your account. 
+                      Redirecting to login in {countdown} second{countdown !== 1 ? 's' : ''}...
+                    </p>
+                  </div>
+                </div>
+                <div className="flex justify-end">
+                  <Button
+                    onClick={() => {
+                      console.log('🔘 Skip countdown button clicked');
+                      if (countdownRef.current) {
+                        clearInterval(countdownRef.current);
+                        countdownRef.current = null;
+                      }
+                      if (failsafeRef.current) {
+                        clearTimeout(failsafeRef.current);
+                        failsafeRef.current = null;
+                      }
+                      router.push('/login');
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="text-xs bg-white hover:bg-gray-50 text-green-700 border-green-300"
+                  >
+                    Go to Login Now
+                  </Button>
                 </div>
               </div>
             )}
