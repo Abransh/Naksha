@@ -270,7 +270,7 @@ const getClientQuotationEmailHtml = (data: QuotationEmailData): string => {
             </div>
             
            
-        g
+       
             <p>If you have any questions about this quotation or would like to discuss the project further, please don't hesitate to reach out to me.</p>
             
             <p>I look forward to working with you!</p>
