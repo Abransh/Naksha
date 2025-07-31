@@ -163,7 +163,7 @@ export default function SignupPage() {
                     placeholder="Your Full Name"
                     value={formData.fullName}
                     onChange={handleInputChange}
-                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-4 text-base text-[var(--black-2)] placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
+                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-4 text-base text-black placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
                     required
                   />
                 </div>
@@ -180,7 +180,7 @@ export default function SignupPage() {
                     placeholder="Your Email Address"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] text-black border-0 rounded-lg pl-12 pr-4 text-base text-[var(--black-2)] placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
+                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-4 text-base text-black placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
                     required
                   />
                 </div>
@@ -197,7 +197,7 @@ export default function SignupPage() {
                     placeholder="Create a Strong Password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-12 text-base text-black text-[var(--black-2)] placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
+                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-12 text-base text-black placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
                     required
                   />
                   <button
