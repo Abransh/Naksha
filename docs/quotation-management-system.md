@@ -1037,7 +1037,7 @@ DATABASE_URL="postgresql://username:password@localhost:5432/naksha_db"
 REDIS_URL="redis://localhost:6379"
 RESEND_API_KEY="re_xxxxxxxxxx"
 FRONTEND_URL="https://dashboard.naksha.com"
-EMAIL_FROM="noreply@naksha.com"
+EMAIL_FROM="booking@naksha.com"
 EMAIL_REPLY_TO="support@naksha.com"
 
 # Frontend (.env.local)

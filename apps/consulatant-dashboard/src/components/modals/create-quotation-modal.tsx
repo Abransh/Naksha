@@ -497,7 +497,7 @@ export function CreateQuotationModal({ children }: CreateQuotationModalProps) {
                 >
                   Amount Breakdown
                 </label>
-                <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                <div className="p-4 bg-blue-50 border text-black border-blue-200 rounded-lg">
                   <div className="space-y-2">
                     <div className="flex justify-between text-sm">
                       <span>Base Amount:</span>

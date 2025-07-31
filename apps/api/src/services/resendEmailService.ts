@@ -39,7 +39,7 @@ const getResendClient = (): Resend => {
  * Email configuration for Resend
  */
 const resendConfig = {
-  from: process.env.EMAIL_FROM || 'nakksha Platform <noreply@nakksha.in>',
+  from: process.env.EMAIL_FROM || 'nakksha Platform <booking@nakksha.in>',
   replyTo: process.env.EMAIL_REPLY_TO || 'support@nakksha.in',
   baseUrl: process.env.FRONTEND_URL || 'https://dashboard.nakksha.in'
 };
@@ -269,12 +269,8 @@ const getClientQuotationEmailHtml = (data: QuotationEmailData): string => {
                 ${taxPercentage && taxPercentage > 0 ? `<div style="opacity: 0.8;">Includes ${currency} ${(finalAmount - baseAmount).toLocaleString()} tax</div>` : ''}
             </div>
             
-            ${viewQuotationUrl ? `
-            <div style="text-align: center;">
-                <a href="${viewQuotationUrl}" class="cta-button">View Full Quotation</a>
-            </div>
-            ` : ''}
-            
+           
+        g
             <p>If you have any questions about this quotation or would like to discuss the project further, please don't hesitate to reach out to me.</p>
             
             <p>I look forward to working with you!</p>

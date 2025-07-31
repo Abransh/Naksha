@@ -171,7 +171,7 @@ export default function SignupPage() {
                 <div className="relative w-full">
                   <User
                     size={20}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#6E7079] z-10"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black z-10"
                   />
                   <Input
                     type="text"
@@ -188,7 +188,7 @@ export default function SignupPage() {
                 <div className="relative w-full">
                   <Mail
                     size={20}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#6E7079] z-10"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black z-10"
                   />
                   <Input
                     type="email"
@@ -196,7 +196,7 @@ export default function SignupPage() {
                     placeholder="Your Email Address"
                     value={formData.email}
                     onChange={handleInputChange}
-                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-4 text-base text-[var(--black-2)] placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
+                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] text-black border-0 rounded-lg pl-12 pr-4 text-base text-[var(--black-2)] placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
                     required
                   />
                 </div>
@@ -205,7 +205,7 @@ export default function SignupPage() {
                 <div className="relative w-full">
                   <Lock
                     size={20}
-                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-[#6E7079] z-10"
+                    className="absolute left-4 top-1/2 transform -translate-y-1/2 text-black z-10"
                   />
                   <Input
                     type={showPassword ? "text" : "password"}
@@ -213,13 +213,13 @@ export default function SignupPage() {
                     placeholder="Create a Strong Password"
                     value={formData.password}
                     onChange={handleInputChange}
-                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-12 text-base text-[var(--black-2)] placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
+                    className="w-full h-[52px] bg-[var(--input-defaultBackground)] border-0 rounded-lg pl-12 pr-12 text-base text-black text-[var(--black-2)] placeholder:text-[var(--black-2)] font-inter focus-visible:ring-1 focus-visible:ring-[var(--primary-100)]"
                     required
                   />
                   <button
                     type="button"
                     onClick={() => setShowPassword(!showPassword)}
-                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-black hover:text-gray-600 z-10"
+                    className="absolute right-4 top-1/2 transform -translate-y-1/2 text-black  z-10"
                   >
                     {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
                   </button>
