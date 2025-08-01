@@ -1,12 +1,12 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
-import { useRouter } from "next/navigation";
+import { useState } from "react";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
-import { Mail, Lock, Eye, EyeOff, User, BarChart3, AlertCircle, CheckCircle } from "lucide-react";
+import { Mail, Lock, Eye, EyeOff, User, AlertCircle, CheckCircle } from "lucide-react";
 import { useAuth } from "@/app/providers";
+import { toast } from "@/components/ui/use-toast";
 
 export default function SignupPage() {
   const [showPassword, setShowPassword] = useState(false);
@@ -17,79 +17,9 @@ export default function SignupPage() {
   });
   const [isLoading, setIsLoading] = useState(false);
   const [success, setSuccess] = useState(false);
-  const [countdown, setCountdown] = useState(3);
 
   const { signup, error, clearError } = useAuth();
-  const router = useRouter();
-  const countdownRef = useRef<NodeJS.Timeout | null>(null);
-  const failsafeRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Handle redirect after successful signup
-  useEffect(() => {
-    if (success) {
-      console.log('🎉 Signup success detected, starting redirect countdown...');
-      let currentCount = 3;
-      
-      const doRedirect = () => {
-        console.log('🔄 Executing redirect to login page...');
-        try {
-          router.push('/login');
-          console.log('✅ Router.push(/login) called successfully');
-        } catch (err) {
-          console.error('❌ Router.push failed:', err);
-          // Fallback: try window.location as last resort
-          window.location.href = '/login';
-        }
-      };
-      
-      const updateCountdown = () => {
-        console.log(`⏳ Countdown: ${currentCount} seconds remaining`);
-        setCountdown(currentCount);
-        
-        if (currentCount <= 0) {
-          console.log('⏰ Countdown reached zero, redirecting now...');
-          if (countdownRef.current) {
-            clearInterval(countdownRef.current);
-            countdownRef.current = null;
-          }
-          doRedirect();
-          return;
-        }
-        
-        currentCount--;
-      };
-      
-      // Update immediately
-      updateCountdown();
-      
-      // Start countdown interval
-      countdownRef.current = setInterval(updateCountdown, 1000);
-      console.log('🕐 Countdown interval started');
-      
-      // Failsafe: Force redirect after 6 seconds regardless of countdown status
-      failsafeRef.current = setTimeout(() => {
-        console.log('🚨 Failsafe redirect triggered after 6 seconds');
-        if (countdownRef.current) {
-          clearInterval(countdownRef.current);
-          countdownRef.current = null;
-        }
-        doRedirect();
-      }, 6000);
-      
-      // Cleanup function
-      return () => {
-        console.log('🧹 Cleaning up countdown intervals...');
-        if (countdownRef.current) {
-          clearInterval(countdownRef.current);
-          countdownRef.current = null;
-        }
-        if (failsafeRef.current) {
-          clearTimeout(failsafeRef.current);
-          failsafeRef.current = null;
-        }
-      };
-    }
-  }, [success, router]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -124,8 +54,15 @@ export default function SignupPage() {
       console.log('🎯 Setting success state to true...');
       setSuccess(true);
       setIsLoading(false);
-      console.log('✅ Success state set, loading state cleared');
-      console.log('⏭️ Success useEffect should trigger redirect countdown now...');
+      
+      // Show toast message for user to login
+      toast({
+        title: "Account created successfully!",
+        description: "Please login to access your dashboard.",
+        variant: "default",
+      });
+      
+      console.log('✅ Success state set, loading state cleared, toast shown');
     } catch (err) {
       console.error('❌ Signup failed with error:', err);
       console.log('📊 Error details:', {
@@ -198,37 +135,13 @@ export default function SignupPage() {
           <div className="flex flex-col items-center gap-12 w-full">
             {/* Success Message */}
             {success && (
-              <div className="w-full p-4 bg-green-50 border border-green-200 rounded-lg">
-                <div className="flex items-center gap-3 mb-3">
-                  <CheckCircle size={20} className="text-green-600" />
-                  <div className="flex-1">
-                    <p className="text-green-800 font-medium">Account created successfully!</p>
-                    <p className="text-green-600 text-sm">
-                      Please check your email to verify your account. 
-                      Redirecting to login in {countdown} second{countdown !== 1 ? 's' : ''}...
-                    </p>
-                  </div>
-                </div>
-                <div className="flex justify-end">
-                  <Button
-                    onClick={() => {
-                      console.log('🔘 Skip countdown button clicked');
-                      if (countdownRef.current) {
-                        clearInterval(countdownRef.current);
-                        countdownRef.current = null;
-                      }
-                      if (failsafeRef.current) {
-                        clearTimeout(failsafeRef.current);
-                        failsafeRef.current = null;
-                      }
-                      router.push('/login');
-                    }}
-                    variant="outline"
-                    size="sm"
-                    className="text-xs bg-white hover:bg-gray-50 text-green-700 border-green-300"
-                  >
-                    Go to Login Now
-                  </Button>
+              <div className="w-full p-4 bg-green-50 border border-green-200 rounded-lg flex items-center gap-3">
+                <CheckCircle size={20} className="text-green-600" />
+                <div className="flex-1">
+                  <p className="text-green-800 font-medium">Account created successfully!</p>
+                  <p className="text-green-600 text-sm">
+                    Please check your email to verify your account and then login to access your dashboard.
+                  </p>
                 </div>
               </div>
             )}

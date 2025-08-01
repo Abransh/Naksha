@@ -614,9 +614,10 @@ export default function SettingsPage() {
 
                   <Button
                     variant="outline"
+                    onClick={() => window.open('https://drive.google.com/file/d/1Vo3UOaJ4fv0APBN0yRCG2mtjENpqlv88/view?usp=sharing', '_blank')}
                     className="w-[172px] h-[37px] rounded-xl border border-[var(--primary-100)] text-[var(--primary-100)] text-[15px] font-inter"
                   >
-                    Webinar(Coming soon)
+                    Important Notes
                   </Button>
 
                   <Button
