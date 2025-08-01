@@ -3,8 +3,6 @@
 @tailwind utilities;
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
   --main-background: #f4f5fa;
   --primary-100: #5570f1;
   --white: #fff;
@@ -136,4 +134,48 @@ body {
   background: var(--background);
   color: var(--foreground);
   font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Toast visibility fixes - ensure toasts are always readable */
+[data-sonner-toast] {
+  background: white !important;
+  color: #1f2937 !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
+}
+
+[data-sonner-toast][data-type="success"] {
+  background: #f0fdf4 !important;
+  color: #166534 !important;
+  border-color: #bbf7d0 !important;
+}
+
+[data-sonner-toast][data-type="error"] {
+  background: #fef2f2 !important;
+  color: #dc2626 !important;
+  border-color: #fecaca !important;
+}
+
+[data-sonner-toast][data-type="warning"] {
+  background: #fffbeb !important;
+  color: #d97706 !important;
+  border-color: #fed7aa !important;
+}
+
+[data-sonner-toast][data-type="info"] {
+  background: #eff6ff !important;
+  color: #2563eb !important;
+  border-color: #dbeafe !important;
+}
+
+/* Radix Toast overrides */
+[data-radix-toast-viewport] {
+  z-index: 9999 !important;
+}
+
+.toast {
+  background: white !important;
+  color: #1f2937 !important;
+  border: 1px solid #e5e7eb !important;
+  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05) !important;
 }
