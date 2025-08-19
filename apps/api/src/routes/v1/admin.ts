@@ -11,7 +11,9 @@ import {
   updateConsultant,
   createAdmin,
   getAllAdmins,
-  getAdminDashboard
+  getAdminDashboard,
+  getAllSessions,
+  getSessionDetails
 } from '../../controllers/admin.controller';
 import { authenticateAdmin, authenticateSuperAdmin } from '../../middleware/auth';
 
@@ -46,6 +48,23 @@ router.post('/consultants/approve', authenticateAdmin, approveConsultant);
  * Update consultant information (admin only)
  */
 router.put('/consultants/:consultantId', authenticateAdmin, updateConsultant);
+
+// ============================================================================
+// SESSION MANAGEMENT ROUTES
+// ============================================================================
+
+/**
+ * GET /api/admin/sessions
+ * Get all sessions across all consultants for admin view
+ * Query params: page, limit, status, paymentStatus, consultantId, search, startDate, endDate
+ */
+router.get('/sessions', authenticateAdmin, getAllSessions);
+
+/**
+ * GET /api/admin/sessions/:sessionId
+ * Get detailed information about a specific session
+ */
+router.get('/sessions/:sessionId', authenticateAdmin, getSessionDetails);
 
 // ============================================================================
 // ADMIN MANAGEMENT ROUTES (Super Admin Only)

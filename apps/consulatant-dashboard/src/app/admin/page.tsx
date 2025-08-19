@@ -5,7 +5,6 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
-import { Switch } from "@/components/ui/switch";
 import { 
   Search, 
   Users, 
@@ -13,17 +12,15 @@ import {
   UserX, 
   Download,
   RefreshCw,
-  Mail,
-  Phone,
-  Calendar,
-  Building2,
   Loader2,
   CheckCircle,
-  XCircle,
   AlertCircle
 } from "lucide-react";
 import { useConsultantManagement, useAdminStats } from "@/hooks/useAdminData";
 import { ConsultantData } from "@/lib/adminApi";
+import AdminNavigation from "@/components/navigation/AdminNavigation";
+import EditableConsultantRow from "@/components/admin/EditableConsultantRow";
+import BulkOperations from "@/components/admin/BulkOperations";
 
 // Using types from adminApi
 type Consultant = ConsultantData;
@@ -64,131 +61,6 @@ const StatusToggle = ({
   );
 };
 
-// Consultant Row Component
-const ConsultantRow = ({ 
-  consultant, 
-  onStatusUpdate, 
-  isUpdating 
-}: { 
-  consultant: Consultant; 
-  onStatusUpdate: (id: string, field: 'isEmailVerified' | 'isApprovedByAdmin' | 'isActive', value: boolean) => void;
-  isUpdating: boolean;
-}) => {
-  const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString('en-IN', {
-      day: '2-digit',
-      month: 'short',
-      year: 'numeric'
-    });
-  };
-
-  // Status icon helper removed as it's not being used
-
-  return (
-    <tr className="border-b border-gray-100 hover:bg-gray-50 transition-colors">
-      {/* Basic Info */}
-      <td className="px-4 py-4">
-        <div className="flex items-center space-x-3">
-          {consultant.profilePhotoUrl ? (
-            <img
-              src={consultant.profilePhotoUrl}
-              alt={`${consultant.firstName} ${consultant.lastName}`}
-              className="h-10 w-10 rounded-full object-cover"
-            />
-          ) : (
-            <div className="h-10 w-10 rounded-full bg-gray-200 flex items-center justify-center">
-              <Users className="h-5 w-5 text-gray-500" />
-            </div>
-          )}
-          <div>
-            <div className="font-medium text-gray-900">
-              {consultant.firstName} {consultant.lastName}
-            </div>
-            <div className="text-sm text-gray-500 flex items-center gap-1">
-              <Mail className="h-3 w-3" />
-              {consultant.email}
-            </div>
-          </div>
-        </div>
-      </td>
-
-      {/* Contact & Sector */}
-      <td className="px-4 py-4">
-        <div className="space-y-1">
-          <div className="text-sm flex items-center gap-1">
-            <Phone className="h-3 w-3 text-gray-400" />
-            {consultant.phoneCountryCode} {consultant.phoneNumber}
-          </div>
-          {consultant.consultancySector && (
-            <div className="text-sm flex items-center gap-1">
-              <Building2 className="h-3 w-3 text-gray-400" />
-              {consultant.consultancySector}
-            </div>
-          )}
-        </div>
-      </td>
-
-      {/* Stats */}
-      <td className="px-4 py-4">
-        <div className="space-y-1 text-sm">
-          <div>Sessions: {consultant.stats?.totalSessions || 0}</div>
-          <div>Clients: {consultant.stats?.totalClients || 0}</div>
-          <div>Experience: {Math.floor((consultant.experienceMonths || 0) / 12)}y {(consultant.experienceMonths || 0) % 12}m</div>
-        </div>
-      </td>
-
-      {/* Status Toggles */}
-      <td className="px-4 py-4">
-        <div className="space-y-3">
-          <StatusToggle
-            label="Email Verified"
-            checked={consultant.isEmailVerified}
-            onChange={(value) => onStatusUpdate(consultant.id, "isEmailVerified", value)}
-            disabled={isUpdating}
-            variant="success"
-          />
-          <StatusToggle
-            label="Admin Approved"
-            checked={consultant.isApprovedByAdmin}
-            onChange={(value) => onStatusUpdate(consultant.id, "isApprovedByAdmin", value)}
-            disabled={isUpdating}
-            variant="warning"
-          />
-          <StatusToggle
-            label="Active"
-            checked={consultant.isActive}
-            onChange={(value) => onStatusUpdate(consultant.id, "isActive", value)}
-            disabled={isUpdating}
-            variant="default"
-          />
-        </div>
-      </td>
-
-      {/* Metadata */}
-      <td className="px-4 py-4">
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <Badge variant={consultant.profileCompleted ? "default" : "secondary"}>
-              Profile: {consultant.profileCompleted ? "Complete" : "Incomplete"}
-            </Badge>
-          </div>
-          <div className="flex items-center gap-2">
-            <Badge variant="outline">{consultant.status}</Badge>
-          </div>
-          <div className="text-xs text-gray-500 flex items-center gap-1">
-            <Calendar className="h-3 w-3" />
-            Joined: {formatDate(consultant.createdAt)}
-          </div>
-          {consultant.lastLoginAt && (
-            <div className="text-xs text-gray-500">
-              Last login: {formatDate(consultant.lastLoginAt)}
-            </div>
-          )}
-        </div>
-      </td>
-    </tr>
-  );
-};
 
 export default function AdminPage() {
   const {
@@ -204,16 +76,78 @@ export default function AdminPage() {
   } = useConsultantManagement();
   
   const stats = useAdminStats(consultants);
+  
+  // Selection state for bulk operations
+  const [selectedConsultantIds, setSelectedConsultantIds] = React.useState<string[]>([]);
 
-  // Data is now loaded through useConsultantManagement hook
+  // Mock admin user data (in real app, this would come from authentication context)
+  const adminUser = {
+    id: 'admin-1',
+    email: 'admin@nakksha.in',
+    firstName: 'Admin',
+    lastName: 'User',
+    role: 'admin'
+  };
 
-  // Filtering is now handled in the hook
-
-  // Status updates are now handled by the updateConsultantStatus function from the hook
+  // Enhanced data update function that handles both status and data updates
+  const handleDataUpdate = async (id: string, updates: Partial<ConsultantData>) => {
+    // TODO: Implement API call to update consultant data
+    console.log('Updating consultant data:', id, updates);
+    // This would call the admin API endpoint to update consultant information
+    // await adminApi.updateConsultant(id, updates);
+    // Then refresh the data
+    refresh();
+  };
 
   const handleExport = () => {
     // TODO: Implement CSV export functionality
     console.log('Export functionality to be implemented');
+  };
+
+  // Bulk operations handlers
+  const handleSelectionChange = (ids: string[]) => {
+    setSelectedConsultantIds(ids);
+  };
+
+  const handleIndividualSelection = (id: string, selected: boolean) => {
+    if (selected) {
+      setSelectedConsultantIds(prev => [...prev, id]);
+    } else {
+      setSelectedConsultantIds(prev => prev.filter(consultantId => consultantId !== id));
+    }
+  };
+
+  const handleBulkAction = async (action: string, consultantIds: string[]) => {
+    console.log(`Executing bulk action: ${action} on consultants:`, consultantIds);
+    
+    // TODO: Implement actual bulk operations
+    switch (action) {
+      case 'approve_all':
+        // Call API to approve all selected consultants
+        // await adminApi.bulkApproveConsultants(consultantIds);
+        break;
+      case 'reject_all':
+        // Call API to reject all selected consultants
+        // await adminApi.bulkRejectConsultants(consultantIds);
+        break;
+      case 'verify_emails':
+        // Call API to verify emails of selected consultants
+        // await adminApi.bulkVerifyEmails(consultantIds);
+        break;
+      case 'export_selected':
+        // Export selected consultants data
+        // await adminApi.exportConsultants(consultantIds);
+        break;
+      case 'deactivate_all':
+        // Call API to deactivate selected consultants
+        // await adminApi.bulkDeactivateConsultants(consultantIds);
+        break;
+      default:
+        console.warn(`Unknown bulk action: ${action}`);
+    }
+    
+    // Refresh data after action
+    refresh();
   };
 
   if (isLoading) {
@@ -229,12 +163,17 @@ export default function AdminPage() {
 
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
-      <div className="bg-white border-b border-gray-200">
-        <div className="px-6 py-4">
+      <AdminNavigation 
+        adminUser={adminUser} 
+        pendingApprovalsCount={stats.pendingApproval}
+      />
+      
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        {/* Header */}
+        <div className="mb-8">
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-2xl font-bold text-gray-900">Admin Dashboard</h1>
+              <h1 className="text-3xl font-bold text-gray-900">Consultant Management</h1>
               <p className="text-gray-600">Manage consultant accounts and permissions</p>
             </div>
             <div className="flex items-center gap-3">
@@ -249,10 +188,8 @@ export default function AdminPage() {
             </div>
           </div>
         </div>
-      </div>
 
-      {/* Stats Cards */}
-      <div className="px-6 py-6">
+        {/* Stats Cards */}
         <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-6">
           <Card>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
@@ -352,11 +289,22 @@ export default function AdminPage() {
               )}
             </CardTitle>
           </CardHeader>
+          
+          {/* Bulk Operations */}
+          <BulkOperations
+            consultants={consultants}
+            selectedIds={selectedConsultantIds}
+            onSelectionChange={handleSelectionChange}
+            onBulkAction={handleBulkAction}
+            isLoading={isUpdating}
+          />
+          
           <CardContent className="p-0">
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead className="bg-gray-50 border-b border-gray-200">
                   <tr>
+                    <th className="px-4 py-3 w-12"></th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Consultant
                     </th>
@@ -367,20 +315,26 @@ export default function AdminPage() {
                       Stats
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                      Pricing
+                    </th>
+                    <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                       Status Controls
                     </th>
                     <th className="px-4 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Metadata
+                      Metadata & Actions
                     </th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
                   {consultants.map((consultant) => (
-                    <ConsultantRow
+                    <EditableConsultantRow
                       key={consultant.id}
                       consultant={consultant}
                       onStatusUpdate={updateConsultantStatus}
+                      onDataUpdate={handleDataUpdate}
                       isUpdating={isUpdating}
+                      isSelected={selectedConsultantIds.includes(consultant.id)}
+                      onSelectionChange={handleIndividualSelection}
                     />
                   ))}
                 </tbody>

@@ -733,6 +733,258 @@ export const getAdminDashboard = async (req: Request, res: Response): Promise<vo
 };
 
 // ============================================================================
+// SESSION MANAGEMENT (ADMIN VIEW)
+// ============================================================================
+
+/**
+ * Get all sessions across all consultants (admin view)
+ */
+export const getAllSessions = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const page = parseInt(req.query.page as string) || 1;
+    const limit = parseInt(req.query.limit as string) || 20;
+    const status = req.query.status as string;
+    const paymentStatus = req.query.paymentStatus as string;
+    const consultantId = req.query.consultantId as string;
+    const search = req.query.search as string;
+    const startDate = req.query.startDate as string;
+    const endDate = req.query.endDate as string;
+
+    const skip = (page - 1) * limit;
+
+    // Build where clause
+    const where: any = {};
+    
+    if (status && status !== 'all') {
+      where.status = status;
+    }
+
+    if (paymentStatus && paymentStatus !== 'all') {
+      where.paymentStatus = paymentStatus;
+    }
+
+    if (consultantId) {
+      where.consultantId = consultantId;
+    }
+
+    if (startDate && endDate) {
+      where.scheduledDate = {
+        gte: new Date(startDate),
+        lte: new Date(endDate)
+      };
+    }
+
+    if (search) {
+      where.OR = [
+        { title: { contains: search, mode: 'insensitive' } },
+        { client: { name: { contains: search, mode: 'insensitive' } } },
+        { client: { email: { contains: search, mode: 'insensitive' } } },
+        { consultant: { firstName: { contains: search, mode: 'insensitive' } } },
+        { consultant: { lastName: { contains: search, mode: 'insensitive' } } }
+      ];
+    }
+
+    // Get sessions with related data
+    const [sessions, totalCount] = await Promise.all([
+      prisma.session.findMany({
+        where,
+        skip,
+        take: limit,
+        include: {
+          consultant: {
+            select: {
+              id: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              slug: true,
+              profilePhotoUrl: true
+            }
+          },
+          client: {
+            select: {
+              id: true,
+              name: true,
+              firstName: true,
+              lastName: true,
+              email: true,
+              phoneNumber: true,
+              phoneCountryCode: true
+            }
+          }
+        },
+        orderBy: [
+          { scheduledDate: 'desc' },
+          { createdAt: 'desc' }
+        ]
+      }),
+      prisma.session.count({ where })
+    ]);
+
+    // Format the response
+    const formattedSessions = sessions.map((session: any) => ({
+      ...session,
+      amount: Number(session.amount),
+      consultant: {
+        ...session.consultant,
+        fullName: `${session.consultant.firstName} ${session.consultant.lastName}`
+      },
+      client: {
+        ...session.client,
+        fullName: session.client.name || `${session.client.firstName || ''} ${session.client.lastName || ''}`.trim(),
+        phone: session.client.phoneCountryCode && session.client.phoneNumber 
+          ? `${session.client.phoneCountryCode} ${session.client.phoneNumber}`
+          : null
+      }
+    }));
+
+    const totalPages = Math.ceil(totalCount / limit);
+
+    logger.logBusiness('admin_sessions_viewed', {
+      adminId: req.user?.id,
+      filters: { status, paymentStatus, consultantId, search, startDate, endDate },
+      page,
+      count: sessions.length
+    });
+
+    res.json({
+      message: 'Sessions retrieved successfully',
+      data: {
+        sessions: formattedSessions,
+        pagination: {
+          page,
+          limit,
+          totalCount,
+          totalPages,
+          hasNextPage: page < totalPages,
+          hasPrevPage: page > 1
+        }
+      }
+    });
+
+  } catch (error) {
+    logger.error('Get all sessions error:', error);
+    res.status(500).json({
+      error: 'Failed to retrieve sessions',
+      message: 'Could not fetch sessions list',
+      code: 'SESSIONS_FETCH_ERROR'
+    });
+  }
+};
+
+/**
+ * Get session details for admin review
+ */
+export const getSessionDetails = async (req: Request, res: Response): Promise<void> => {
+  try {
+    const { sessionId } = req.params;
+
+    const session = await prisma.session.findUnique({
+      where: { id: sessionId },
+      include: {
+        consultant: {
+          select: {
+            id: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            slug: true,
+            profilePhotoUrl: true,
+            consultancySector: true,
+            personalSessionPrice: true,
+            webinarSessionPrice: true
+          }
+        },
+        client: {
+          select: {
+            id: true,
+            name: true,
+            firstName: true,
+            lastName: true,
+            email: true,
+            phoneNumber: true,
+            phoneCountryCode: true,
+            address: true,
+            city: true,
+            state: true,
+            country: true,
+            totalSessions: true,
+            totalAmountPaid: true
+          }
+        },
+        paymentTransactions: {
+          select: {
+            id: true,
+            amount: true,
+            status: true,
+            paymentMethod: true,
+            gatewayPaymentId: true,
+            createdAt: true,
+            processedAt: true
+          },
+          orderBy: { createdAt: 'desc' }
+        }
+      }
+    });
+
+    if (!session) {
+      throw new NotFoundError('Session not found');
+    }
+
+    const formattedSession = {
+      ...session,
+      amount: Number(session.amount),
+      consultant: {
+        ...session.consultant,
+        fullName: `${session.consultant.firstName} ${session.consultant.lastName}`,
+        personalSessionPrice: session.consultant.personalSessionPrice ? Number(session.consultant.personalSessionPrice) : null,
+        webinarSessionPrice: session.consultant.webinarSessionPrice ? Number(session.consultant.webinarSessionPrice) : null
+      },
+      client: {
+        ...session.client,
+        fullName: session.client.name || `${session.client.firstName || ''} ${session.client.lastName || ''}`.trim(),
+        phone: session.client.phoneCountryCode && session.client.phoneNumber 
+          ? `${session.client.phoneCountryCode} ${session.client.phoneNumber}`
+          : null,
+        totalAmountPaid: Number(session.client.totalAmountPaid)
+      },
+      paymentTransactions: session.paymentTransactions.map((transaction: any) => ({
+        ...transaction,
+        amount: Number(transaction.amount)
+      }))
+    };
+
+    logger.logBusiness('admin_session_viewed', {
+      adminId: req.user?.id,
+      sessionId,
+      consultantId: session.consultantId,
+      clientId: session.clientId
+    });
+
+    res.json({
+      message: 'Session details retrieved successfully',
+      data: { session: formattedSession }
+    });
+
+  } catch (error) {
+    if (error instanceof NotFoundError) {
+      res.status(404).json({
+        error: 'Session not found',
+        message: 'The specified session does not exist',
+        code: 'SESSION_NOT_FOUND'
+      });
+    } else {
+      logger.error('Get session details error:', error);
+      res.status(500).json({
+        error: 'Failed to retrieve session details',
+        message: 'Could not fetch session information',
+        code: 'SESSION_DETAILS_ERROR'
+      });
+    }
+  }
+};
+
+// ============================================================================
 // EMAIL TEMPLATES FOR APPROVAL/REJECTION
 // ============================================================================
 
