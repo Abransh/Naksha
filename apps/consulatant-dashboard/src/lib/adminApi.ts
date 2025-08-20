@@ -179,10 +179,20 @@ class AdminApiClient {
           }
         }
         
+        // Log detailed error information for debugging
+        console.error('API Error Details:', {
+          status: response.status,
+          endpoint,
+          method,
+          body,
+          errorData
+        });
+        
         throw new ApiError(
           response.status,
           errorData.code || 'API_ERROR',
-          errorData.message || `HTTP ${response.status}: ${response.statusText}`
+          errorData.message || `HTTP ${response.status}: ${response.statusText}`,
+          errorData.details || errorData
         );
       }
 

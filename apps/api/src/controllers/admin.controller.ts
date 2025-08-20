@@ -19,7 +19,7 @@ import bcrypt from 'bcryptjs';
 // ============================================================================
 
 const approveConsultantSchema = z.object({
-  consultantId: z.string().uuid('Invalid consultant ID'),
+  consultantId: z.string().min(1, 'Consultant ID is required'),
   approved: z.boolean(),
   adminNotes: z.string().optional()
 });

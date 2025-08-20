@@ -137,7 +137,20 @@ export function useConsultantManagement() {
       });
 
     } catch (err) {
-      const errorMessage = err instanceof Error ? err.message : 'Failed to update status';
+      let errorMessage = 'Failed to update status';
+      
+      if (err instanceof Error) {
+        errorMessage = err.message;
+        
+        // If there are validation details, show them
+        if ((err as any).details?.details) {
+          const validationErrors = (err as any).details.details;
+          errorMessage = validationErrors.map((e: any) => e.message).join(', ');
+        }
+      }
+      
+      console.error('Status update error:', err);
+      
       toast({
         title: "Update Failed",
         description: errorMessage,
