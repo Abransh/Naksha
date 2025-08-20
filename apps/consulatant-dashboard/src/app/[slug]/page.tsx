@@ -33,7 +33,7 @@ interface ConsultantProfileProps {
 
 export default function ConsultantProfile({ params }: ConsultantProfileProps) {
   const [currentTestimonial, setCurrentTestimonial] = useState(0);
-  const [consultantSlug, setConsultantSlug] = useState<string | null>(null);
+  const [consultantSlug, setConsultantSlug] = useState<string>('');
   const { formatPrice } = usePriceFormatter();
   
   // Resolve params asynchronously
@@ -52,7 +52,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
     isLoading,
     error,
     refetch,
-  } = useConsultantShowcase(consultantSlug || '');
+  } = useConsultantShowcase(consultantSlug);
 
   // Review system integration
   const {
@@ -65,7 +65,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
     totalReviews,
     averageRating
   } = useReviews({
-    consultantSlug: consultantSlug || '',
+    consultantSlug: consultantSlug,
     autoFetch: !!consultantSlug
   });
 

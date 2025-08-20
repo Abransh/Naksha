@@ -15,6 +15,8 @@ export interface ConsultantData {
   phoneCountryCode: string;
   consultancySector?: string;
   profilePhotoUrl?: string;
+  personalSessionPrice?: number;
+  webinarSessionPrice?: number;
   isEmailVerified: boolean;
   isApprovedByAdmin: boolean;
   isActive: boolean;

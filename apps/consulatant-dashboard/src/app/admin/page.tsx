@@ -4,12 +4,12 @@ import React from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { Badge } from "@/components/ui/badge";
 import { 
   Search, 
   Users, 
   UserCheck, 
   UserX, 
+  Mail,
   Download,
   RefreshCw,
   Loader2,
@@ -21,45 +21,6 @@ import { ConsultantData } from "@/lib/adminApi";
 import AdminNavigation from "@/components/navigation/AdminNavigation";
 import EditableConsultantRow from "@/components/admin/EditableConsultantRow";
 import BulkOperations from "@/components/admin/BulkOperations";
-
-// Using types from adminApi
-type Consultant = ConsultantData;
-
-// Status Toggle Component
-const StatusToggle = ({ 
-  label, 
-  checked, 
-  onChange, 
-  disabled = false,
-  variant = "default"
-}: { 
-  label: string; 
-  checked: boolean; 
-  onChange: (checked: boolean) => void; 
-  disabled?: boolean;
-  variant?: "default" | "success" | "warning" | "danger";
-}) => {
-  const getVariantClasses = () => {
-    switch (variant) {
-      case "success": return "data-[state=checked]:bg-green-600";
-      case "warning": return "data-[state=checked]:bg-yellow-600";
-      case "danger": return "data-[state=checked]:bg-red-600";
-      default: return "data-[state=checked]:bg-blue-600";
-    }
-  };
-
-  return (
-    <div className="flex items-center space-x-2">
-      <Switch
-        checked={checked}
-        onCheckedChange={onChange}
-        disabled={disabled}
-        className={getVariantClasses()}
-      />
-      <label className="text-sm font-medium">{label}</label>
-    </div>
-  );
-};
 
 
 export default function AdminPage() {

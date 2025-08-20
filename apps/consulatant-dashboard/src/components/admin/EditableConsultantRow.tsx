@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from "react";
+import React, { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
@@ -14,7 +14,6 @@ import {
   Edit3,
   Save,
   X,
-  Check,
   Loader2,
   DollarSign
 } from "lucide-react";
@@ -31,8 +30,8 @@ interface EditableConsultantRowProps {
 }
 
 interface EditableFields {
-  personalSessionPrice: number | null;
-  webinarSessionPrice: number | null;
+  personalSessionPrice: number | undefined;
+  webinarSessionPrice: number | undefined;
   consultancySector: string;
   phoneNumber: string;
   experienceMonths: number;
@@ -49,8 +48,8 @@ const EditableConsultantRow: React.FC<EditableConsultantRowProps> = ({
   const [isEditing, setIsEditing] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editValues, setEditValues] = useState<EditableFields>({
-    personalSessionPrice: consultant.personalSessionPrice || null,
-    webinarSessionPrice: consultant.webinarSessionPrice || null,
+    personalSessionPrice: consultant.personalSessionPrice || undefined,
+    webinarSessionPrice: consultant.webinarSessionPrice || undefined,
     consultancySector: consultant.consultancySector || '',
     phoneNumber: consultant.phoneNumber || '',
     experienceMonths: consultant.experienceMonths || 0
@@ -65,7 +64,7 @@ const EditableConsultantRow: React.FC<EditableConsultantRowProps> = ({
     });
   };
 
-  const formatCurrency = (amount: number | null) => {
+  const formatCurrency = (amount: number | undefined) => {
     if (!amount) return '₹0';
     return `₹${amount.toLocaleString('en-IN')}`;
   };
@@ -73,11 +72,11 @@ const EditableConsultantRow: React.FC<EditableConsultantRowProps> = ({
   const validateFields = (): boolean => {
     const newErrors: Partial<EditableFields> = {};
 
-    if (editValues.personalSessionPrice !== null && editValues.personalSessionPrice < 0) {
+    if (editValues.personalSessionPrice !== undefined && editValues.personalSessionPrice < 0) {
       newErrors.personalSessionPrice = -1; // Use -1 to indicate error
     }
 
-    if (editValues.webinarSessionPrice !== null && editValues.webinarSessionPrice < 0) {
+    if (editValues.webinarSessionPrice !== undefined && editValues.webinarSessionPrice < 0) {
       newErrors.webinarSessionPrice = -1;
     }
 
@@ -96,8 +95,8 @@ const EditableConsultantRow: React.FC<EditableConsultantRowProps> = ({
   const handleEdit = () => {
     setIsEditing(true);
     setEditValues({
-      personalSessionPrice: consultant.personalSessionPrice || null,
-      webinarSessionPrice: consultant.webinarSessionPrice || null,
+      personalSessionPrice: consultant.personalSessionPrice || undefined,
+      webinarSessionPrice: consultant.webinarSessionPrice || undefined,
       consultancySector: consultant.consultancySector || '',
       phoneNumber: consultant.phoneNumber || '',
       experienceMonths: consultant.experienceMonths || 0
@@ -108,8 +107,8 @@ const EditableConsultantRow: React.FC<EditableConsultantRowProps> = ({
   const handleCancel = () => {
     setIsEditing(false);
     setEditValues({
-      personalSessionPrice: consultant.personalSessionPrice || null,
-      webinarSessionPrice: consultant.webinarSessionPrice || null,
+      personalSessionPrice: consultant.personalSessionPrice || undefined,
+      webinarSessionPrice: consultant.webinarSessionPrice || undefined,
       consultancySector: consultant.consultancySector || '',
       phoneNumber: consultant.phoneNumber || '',
       experienceMonths: consultant.experienceMonths || 0
@@ -292,7 +291,7 @@ const EditableConsultantRow: React.FC<EditableConsultantRowProps> = ({
               <Input
                 type="number"
                 value={editValues.personalSessionPrice || ''}
-                onChange={(e) => handleFieldChange('personalSessionPrice', e.target.value ? parseFloat(e.target.value) : null)}
+                onChange={(e) => handleFieldChange('personalSessionPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder="₹0"
                 className={`h-6 w-20 text-xs ${errors.personalSessionPrice !== undefined ? 'border-red-500' : ''}`}
                 min="0"
@@ -308,7 +307,7 @@ const EditableConsultantRow: React.FC<EditableConsultantRowProps> = ({
               <Input
                 type="number"
                 value={editValues.webinarSessionPrice || ''}
-                onChange={(e) => handleFieldChange('webinarSessionPrice', e.target.value ? parseFloat(e.target.value) : null)}
+                onChange={(e) => handleFieldChange('webinarSessionPrice', e.target.value ? parseFloat(e.target.value) : undefined)}
                 placeholder="₹0"
                 className={`h-6 w-20 text-xs ${errors.webinarSessionPrice !== undefined ? 'border-red-500' : ''}`}
                 min="0"
