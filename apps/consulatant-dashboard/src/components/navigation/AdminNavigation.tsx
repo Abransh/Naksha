@@ -28,6 +28,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Badge } from "@/components/ui/badge";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { adminApi } from "@/lib/adminApi";
 
 interface AdminNavigationProps {
   adminUser?: {
@@ -87,9 +88,8 @@ const AdminNavigation: React.FC<AdminNavigationProps> = ({
   }
 
   const handleLogout = () => {
-    // TODO: Implement logout functionality
-    localStorage.clear();
-    router.push('/admin/login');
+    // Use adminApi logout method for proper cleanup
+    adminApi.logout();
   };
 
   const isActivePath = (href: string) => {

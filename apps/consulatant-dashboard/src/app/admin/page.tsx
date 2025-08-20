@@ -1,6 +1,7 @@
 "use client";
 
-import React from "react";
+import React, { useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -17,13 +18,17 @@ import {
   AlertCircle
 } from "lucide-react";
 import { useConsultantManagement, useAdminStats } from "@/hooks/useAdminData";
-import { ConsultantData } from "@/lib/adminApi";
+import { ConsultantData, adminApi } from "@/lib/adminApi";
 import AdminNavigation from "@/components/navigation/AdminNavigation";
 import EditableConsultantRow from "@/components/admin/EditableConsultantRow";
 import BulkOperations from "@/components/admin/BulkOperations";
 
 
 export default function AdminPage() {
+  const router = useRouter();
+  const [adminUser, setAdminUser] = useState<any>(null);
+  const [isAuthenticating, setIsAuthenticating] = useState(true);
+  
   const {
     consultants,
     isLoading,
@@ -41,14 +46,38 @@ export default function AdminPage() {
   // Selection state for bulk operations
   const [selectedConsultantIds, setSelectedConsultantIds] = React.useState<string[]>([]);
 
-  // Mock admin user data (in real app, this would come from authentication context)
-  const adminUser = {
-    id: 'admin-1',
-    email: 'admin@nakksha.in',
-    firstName: 'Admin',
-    lastName: 'User',
-    role: 'admin'
-  };
+  // Check admin authentication on mount
+  useEffect(() => {
+    const checkAuthentication = () => {
+      if (!adminApi.isAuthenticated()) {
+        router.push('/admin/login');
+        return;
+      }
+      
+      const currentAdmin = adminApi.getCurrentAdmin();
+      if (!currentAdmin) {
+        router.push('/admin/login');
+        return;
+      }
+      
+      setAdminUser(currentAdmin);
+      setIsAuthenticating(false);
+    };
+
+    checkAuthentication();
+  }, [router]);
+
+  // Show loading while checking authentication
+  if (isAuthenticating) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <div className="flex items-center gap-3">
+          <Loader2 className="h-8 w-8 animate-spin text-blue-600" />
+          <span className="text-lg text-gray-600">Verifying admin access...</span>
+        </div>
+      </div>
+    );
+  }
 
   // Enhanced data update function that handles both status and data updates
   const handleDataUpdate = async (id: string, updates: Partial<ConsultantData>) => {

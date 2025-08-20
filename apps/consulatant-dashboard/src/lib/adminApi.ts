@@ -70,6 +70,59 @@ export interface ConsultantsResponse {
 }
 
 class AdminApiClient {
+  // Admin authentication methods
+  async login(email: string, password: string): Promise<{ admin: any; tokens: any; permissions: any }> {
+    const response = await fetch(`${API_BASE_URL}/api/v1/auth/admin/login`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ email, password }),
+    });
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}));
+      throw new ApiError(
+        response.status,
+        errorData.code || 'LOGIN_ERROR',
+        errorData.message || 'Login failed'
+      );
+    }
+
+    const data = await response.json();
+    
+    // Store tokens in localStorage
+    localStorage.setItem('adminToken', data.data.tokens.accessToken);
+    localStorage.setItem('adminRefreshToken', data.data.tokens.refreshToken);
+    localStorage.setItem('adminUser', JSON.stringify(data.data.admin));
+    
+    return data.data;
+  }
+
+  logout(): void {
+    // Clear all admin data from localStorage
+    localStorage.removeItem('adminToken');
+    localStorage.removeItem('adminRefreshToken');
+    localStorage.removeItem('adminUser');
+    
+    // Redirect to admin login
+    if (typeof window !== 'undefined') {
+      window.location.href = '/admin/login';
+    }
+  }
+
+  getCurrentAdmin(): any | null {
+    try {
+      const adminData = localStorage.getItem('adminUser');
+      return adminData ? JSON.parse(adminData) : null;
+    } catch {
+      return null;
+    }
+  }
+
+  isAuthenticated(): boolean {
+    return !!localStorage.getItem('adminToken');
+  }
   private async makeRequest<T>(
     endpoint: string,
     options: {
@@ -84,6 +137,10 @@ class AdminApiClient {
     const token = localStorage.getItem('adminToken') || localStorage.getItem('token');
     
     if (!token) {
+      // Redirect to admin login if no token
+      if (typeof window !== 'undefined') {
+        window.location.href = '/admin/login';
+      }
       throw new ApiError(401, 'AUTH_REQUIRED', 'Authentication required');
     }
 
@@ -109,6 +166,19 @@ class AdminApiClient {
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        // Handle authentication errors
+        if (response.status === 401) {
+          // Clear invalid token and redirect to login
+          localStorage.removeItem('adminToken');
+          localStorage.removeItem('adminRefreshToken');
+          localStorage.removeItem('adminUser');
+          
+          if (typeof window !== 'undefined') {
+            window.location.href = '/admin/login';
+          }
+        }
+        
         throw new ApiError(
           response.status,
           errorData.code || 'API_ERROR',
