@@ -229,7 +229,19 @@ class AdminApiClient {
     if (params.status && params.status !== 'all') searchParams.set('status', params.status);
     if (params.search?.trim()) searchParams.set('search', params.search.trim());
 
-    return this.makeRequest<ConsultantsResponse>('/consultants', { searchParams });
+    console.log('🔍 Admin API - Making request to get consultants with params:', params);
+    console.log('🔍 Admin API - Search params:', searchParams.toString());
+    console.log('🔍 Admin API - API Base URL:', API_BASE_URL);
+    console.log('🔍 Admin API - Token available:', !!localStorage.getItem('adminToken'));
+
+    try {
+      const result = await this.makeRequest<ConsultantsResponse>('/consultants', { searchParams });
+      console.log('✅ Admin API - Successfully got consultants:', result.data?.consultants?.length || 0);
+      return result;
+    } catch (error) {
+      console.error('❌ Admin API - Failed to get consultants:', error);
+      throw error;
+    }
   }
 
   // Get detailed consultant information

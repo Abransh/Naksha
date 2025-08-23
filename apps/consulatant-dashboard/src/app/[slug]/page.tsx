@@ -426,7 +426,7 @@ export default function ConsultantProfile({ params }: ConsultantProfileProps) {
                             {item.text}
                           </p>
                           
-                          <div className="absolute bottom-6 left-6 right-6">
+                          <div className=" bottom-6 left-6 right-6">
                             <span className="text-base font-bold text-black font-inter mt-12">
                               {item.author}
                             </span>
