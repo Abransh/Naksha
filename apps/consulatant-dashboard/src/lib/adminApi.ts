@@ -161,11 +161,27 @@ class AdminApiClient {
       config.body = JSON.stringify(body);
     }
 
+    console.log('🔍 Admin API - Making request:', {
+      url: url.toString(),
+      method,
+      hasToken: !!token,
+      headers: config.headers
+    });
+
     try {
       const response = await fetch(url.toString(), config);
+      
+      console.log('🔍 Admin API - Response status:', response.status, response.statusText);
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
+        
+        console.error('❌ Admin API - Error response:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData,
+          url: url.toString()
+        });
         
         // Handle authentication errors
         if (response.status === 401) {
@@ -179,15 +195,6 @@ class AdminApiClient {
           }
         }
         
-        // Log detailed error information for debugging
-        console.error('API Error Details:', {
-          status: response.status,
-          endpoint,
-          method,
-          body,
-          errorData
-        });
-        
         throw new ApiError(
           response.status,
           errorData.code || 'API_ERROR',
@@ -196,8 +203,16 @@ class AdminApiClient {
         );
       }
 
-      return await response.json();
+      const responseData = await response.json();
+      console.log('✅ Admin API - Success response:', {
+        status: response.status,
+        dataKeys: Object.keys(responseData),
+        consultantsCount: responseData?.data?.consultants?.length
+      });
+      
+      return responseData;
     } catch (error) {
+      console.error('❌ Admin API - Network/Parse error:', error);
       if (error instanceof ApiError) {
         throw error;
       }
@@ -259,18 +274,29 @@ class AdminApiClient {
       isActive?: boolean;
     }
   ): Promise<{ consultant: ConsultantData }> {
+    console.log('🔍 Admin API - updateConsultantStatus called:', { consultantId, updates });
+    
     // For approval/rejection, use the approve endpoint
     if ('isApprovedByAdmin' in updates) {
+      console.log('🔍 Admin API - Using approve endpoint for admin approval');
       return this.approveConsultant(consultantId, updates.isApprovedByAdmin!, 'Status updated by admin');
     }
 
     // For other updates, use the update endpoint
-    const response = await this.makeRequest<{ data: { consultant: ConsultantData } }>(`/consultants/${consultantId}`, {
-      method: 'PUT',
-      body: updates,
-    });
+    console.log('🔍 Admin API - Using PUT endpoint for status update');
     
-    return response.data;
+    try {
+      const response = await this.makeRequest<{ data: { consultant: ConsultantData } }>(`/consultants/${consultantId}`, {
+        method: 'PUT',
+        body: updates,
+      });
+      
+      console.log('✅ Admin API - Status update successful:', response);
+      return response.data;
+    } catch (error) {
+      console.error('❌ Admin API - Status update failed:', error);
+      throw error;
+    }
   }
 
   // Approve or reject consultant

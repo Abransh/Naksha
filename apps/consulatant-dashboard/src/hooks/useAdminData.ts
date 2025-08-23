@@ -64,6 +64,14 @@ export function useConsultantManagement() {
     status?: string;
     search?: string;
   }) => {
+    console.log('🔍 useAdminData - fetchConsultants called with params:', params);
+    console.log('🔍 useAdminData - Current state:', { 
+      page: pagination.page, 
+      statusFilter, 
+      searchQuery,
+      isLoading 
+    });
+    
     try {
       setIsLoading(true);
       setError(null);
@@ -75,7 +83,9 @@ export function useConsultantManagement() {
         search: params?.search || searchQuery,
       };
 
+      console.log('🔍 useAdminData - Calling adminApi.getAllConsultants with:', queryParams);
       const response = await adminApi.getAllConsultants(queryParams);
+      console.log('✅ useAdminData - Got response:', response);
       
       setConsultants(response.data.consultants);
       setFilteredConsultants(response.data.consultants);
@@ -85,8 +95,11 @@ export function useConsultantManagement() {
         totalCount: response.data.pagination.totalCount,
         totalPages: response.data.pagination.totalPages,
       });
+      
+      console.log('✅ useAdminData - Updated state with consultants:', response.data.consultants.length);
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : 'Failed to load consultants';
+      console.error('❌ useAdminData - Error fetching consultants:', err);
       setError(errorMessage);
       toast({
         title: "Error",
@@ -104,14 +117,17 @@ export function useConsultantManagement() {
     field: 'isEmailVerified' | 'isApprovedByAdmin' | 'isActive',
     value: boolean
   ) => {
+    console.log('🔍 useAdminData - updateConsultantStatus called:', { consultantId, field, value });
     setIsUpdating(true);
     
     try {
       // Create update object
       const updates = { [field]: value };
       
+      console.log('🔍 useAdminData - Calling adminApi.updateConsultantStatus with:', updates);
       // Make API call
       const result = await adminApi.updateConsultantStatus(consultantId, updates);
+      console.log('✅ useAdminData - Update successful:', result);
       
       // Update local state
       setConsultants(prev => prev.map(consultant => 
@@ -149,7 +165,7 @@ export function useConsultantManagement() {
         }
       }
       
-      console.error('Status update error:', err);
+      console.error('❌ useAdminData - Status update error:', err);
       
       toast({
         title: "Update Failed",
