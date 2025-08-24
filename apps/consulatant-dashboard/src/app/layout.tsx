@@ -20,7 +20,7 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "Dashboard - Nakksha",
+  title: "Nakksha",
   description: "Professional consulting platform for experts and clients",
   icons: {
     icon: '/assets/nakksha-small.ico',
